@@ -2,9 +2,9 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Sunny Days Front Desk",
+  title: "Albuquerque DCFD Family Front Desk",
   description:
-    "An AI front desk for Sunny Days Learning Center — answers parent questions from the handbook and escalates to a human when uncertain.",
+    "An AI front desk for the City of Albuquerque Division of Child and Family Development. Answers family questions from the official program handbook and escalates to a human when uncertain.",
 };
 
 export const viewport: Viewport = {

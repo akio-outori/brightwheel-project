@@ -121,7 +121,7 @@ APP=http://localhost:3000
 # Step A: ask a question that the seed handbook does not cover
 ASK1=$(curl -sS -X POST "$APP/api/ask" \
   -H "content-type: application/json" \
-  -d '{"question":"Do you have a class hamster?"}')
+  -d '{"question":"How can I schedule a tour?"}')
 echo "Initial ask: $ASK1"
 
 # Verify the response escalated (high-level check; refine in code)
@@ -133,7 +133,7 @@ echo "$ASK1" | grep -q '"escalate":true' || {
 # Step B: verify the event landed in needs-attention
 EVENTS=$(curl -sS "$APP/api/needs-attention")
 echo "Events: $EVENTS"
-echo "$EVENTS" | grep -q "hamster" || {
+echo "$EVENTS" | grep -q "tour" || {
   echo "FAIL: needs-attention feed does not contain the new event"
   exit 1
 }
@@ -142,7 +142,7 @@ echo "$EVENTS" | grep -q "hamster" || {
 EVENT_ID=$(echo "$EVENTS" | jq -r '.[0].id')
 ENTRY=$(curl -sS -X POST "$APP/api/handbook" \
   -H "content-type: application/json" \
-  -d '{"title":"Class hamster","body":"Yes, our toddler room has a hamster named Pickles. He lives in a tank near the reading corner.","tags":["pets","toddler-room"]}')
+  -d '{"title":"Scheduling a tour","body":"Prospective families can schedule a tour by calling the center office Monday-Friday 9am-3pm. Tours are offered on Tuesdays and Thursdays and last about 30 minutes.","tags":["tours","enrollment","prospective-families"]}')
 ENTRY_ID=$(echo "$ENTRY" | jq -r '.id')
 
 curl -sS -X POST "$APP/api/needs-attention/$EVENT_ID" \
@@ -151,7 +151,7 @@ curl -sS -X POST "$APP/api/needs-attention/$EVENT_ID" \
 
 # Step D: verify the event is gone from the open feed
 EVENTS_AFTER=$(curl -sS "$APP/api/needs-attention")
-echo "$EVENTS_AFTER" | grep -q "hamster" && {
+echo "$EVENTS_AFTER" | grep -q "tour" && {
   echo "FAIL: event still in needs-attention feed after resolution"
   exit 1
 }
@@ -159,13 +159,13 @@ echo "$EVENTS_AFTER" | grep -q "hamster" && {
 # Step E: ask the same question again, verify a high-confidence answer
 ASK2=$(curl -sS -X POST "$APP/api/ask" \
   -H "content-type: application/json" \
-  -d '{"question":"Do you have a class hamster?"}')
+  -d '{"question":"How can I schedule a tour?"}')
 echo "Second ask: $ASK2"
 echo "$ASK2" | grep -q '"confidence":"high"' || {
   echo "FAIL: expected high-confidence answer after handbook update, got: $ASK2"
   exit 1
 }
-echo "$ASK2" | grep -q "Pickles" || {
+echo "$ASK2" | grep -q "Tuesdays" || {
   echo "FAIL: answer should reference the new handbook entry content"
   exit 1
 }

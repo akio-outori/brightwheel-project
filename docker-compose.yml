@@ -1,0 +1,84 @@
+# Brightwheel AI Front Desk — local stack.
+#
+# Layer 1: minio + minio-init + app. Run `docker compose up` from a clean
+# clone to bring the stack up — buckets, policies, and the seed handbook
+# are created idempotently on first boot, and the Next.js app starts
+# once the init container has exited successfully.
+#
+# Requires Docker Compose v2.20+ for `service_completed_successfully`.
+
+services:
+  minio:
+    image: minio/minio:RELEASE.2025-07-23T15-54-02Z
+    container_name: brightwheel-minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
+      # Built-in KMS so SSE-S3 works without an external KES container.
+      # Format: <key-name>:<base64-encoded-32-byte-key>. The key here is a
+      # demo value — production AWS would use SSE-KMS with a customer-managed
+      # CMK rotated through KMS, not an env-var key.
+      MINIO_KMS_SECRET_KEY: "brightwheel-dev:OClbe+mXN+dSes0wf3orlGwiIdZvpq5Ufyn4W0lpb8c="
+    volumes:
+      - minio-data:/data
+    ports:
+      - "9000:9000" # S3 API
+      - "9001:9001" # Web console (dev convenience; not a feature)
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
+    restart: unless-stopped
+
+  minio-init:
+    # Custom image: extends minio/mc and bakes the init script + seed data in.
+    # See docker/minio-init/Dockerfile for the rationale (no bind mounts).
+    build:
+      context: .
+      dockerfile: docker/minio-init/Dockerfile
+    image: brightwheel-minio-init:local
+    container_name: brightwheel-minio-init
+    depends_on:
+      minio:
+        condition: service_healthy
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
+      STORAGE_HANDBOOK_BUCKET: ${STORAGE_HANDBOOK_BUCKET:-handbook}
+      STORAGE_EVENTS_BUCKET: ${STORAGE_EVENTS_BUCKET:-events}
+    restart: "no"
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: brightwheel-app:local
+    container_name: brightwheel-app
+    depends_on:
+      minio-init:
+        condition: service_completed_successfully
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      HOSTNAME: 0.0.0.0
+      # S3 / MinIO wiring. The storage adapter (Layer 2) will read these.
+      STORAGE_ENDPOINT: http://minio:9000
+      STORAGE_REGION: us-east-1
+      STORAGE_ACCESS_KEY: ${MINIO_ROOT_USER:-minioadmin}
+      STORAGE_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-minioadmin}
+      STORAGE_HANDBOOK_BUCKET: ${STORAGE_HANDBOOK_BUCKET:-handbook}
+      STORAGE_EVENTS_BUCKET: ${STORAGE_EVENTS_BUCKET:-events}
+      # Anthropic key is injected at runtime; the app should boot without it
+      # but /api/ask will fail until it's set. Sourced from a host .env file
+      # or the shell environment, never baked into the image.
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+    ports:
+      - "3000:3000"
+    restart: unless-stopped
+
+volumes:
+  minio-data:
+    name: brightwheel-minio-data

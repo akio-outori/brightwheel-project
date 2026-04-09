@@ -1,0 +1,12 @@
+{
+  "entries": [
+    {
+      "id": "stub-placeholder",
+      "title": "Placeholder entry",
+      "category": "general",
+      "body": "This is a stub seed file used to unblock the Layer 1 stack build. It will be replaced with the real DCFD Family Handbook extraction before Layer 1 is committed.",
+      "sourcePages": [0],
+      "lastUpdated": "2026-04-09"
+    }
+  ]
+}

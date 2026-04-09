@@ -454,5 +454,236 @@ crosses every component).
 
 ---
 
-*End of planning and infrastructure entries. Implementation begins
-in Step 7.*
+## Step 7 — Layer 1: Docker stack (minio + minio-init + app)
+
+The first implementation layer gets the local stack running: a Next.js
+app image, a MinIO server with the encryption and versioning invariants
+the storage adapter will depend on, and an idempotent init container
+that creates buckets, enables SSE-S3 + versioning, and seeds the
+handbook. The grading criterion for this layer is "fresh clone → one
+command → working stack", and everything below exists in service of
+that.
+
+### The app Dockerfile
+
+Multi-stage, `node:20.18.0-bookworm-slim`, non-root, standalone output
+mode. The standalone server is the production runtime — `server.js` at
+the root of `.next/standalone`, which the slim base can run directly
+without the full node_modules tree. Three details worth recording
+because they all broke something the first time:
+
+1. **`public/` and `.next/static/` must be copied separately.** Next.js
+   standalone output does *not* include them. Skip those COPY lines and
+   the app serves blank pages with 404s on every asset.
+2. **No curl in the runner stage.** Installing curl just for a
+   healthcheck bloats the image and widens the attack surface. Instead,
+   the healthcheck uses `node -e "require('http').get(...)"` against
+   `/api/health`. Node is already in the base image.
+3. **`output: "standalone"` in `next.config.mjs` is load-bearing.**
+   Without it, the build produces a Vercel-shaped artifact that the
+   standalone runner stage can't serve.
+
+Final runner image is ~258 MB — not the smallest possible (a distroless
+or `alpine` base would trim further), but slim is the best tradeoff for
+a prototype: glibc, predictable behavior, no musl surprises.
+
+### MinIO with SSE-S3, without KES
+
+The storage adapter needs server-side encryption on both buckets.
+MinIO's SSE-S3 implementation normally delegates key management to an
+external KES container, which is a lot of infrastructure for a
+prototype. The shortcut: MinIO has a built-in KMS that activates when
+you set `MINIO_KMS_SECRET_KEY` (format: `<key-name>:<base64-32-byte-key>`).
+With that env var in place, `mc encrypt set sse-s3 local/handbook`
+succeeds without a KES sidecar.
+
+The key in `docker-compose.yml` is a dev value — deliberately visible,
+because the prototype's threat model is "someone opens the repo and
+runs it", not "someone attacks the prod key store". The journal entry
+for Layer 1 will call this out explicitly: **production AWS would use
+SSE-KMS with a customer-managed CMK rotated through KMS, not an env-var
+key.** The whole point of the MinIO choice is that the local stack
+exercises the same S3 primitives (SSE, versioning, IAM) that a
+production deployment would, so the migration is a configuration
+change, not a rewrite.
+
+### The minio-init container: from bind mount to custom image
+
+First attempt wired the init script as a bind mount:
+`./docker/minio-init/init.sh:/init.sh:ro` plus
+`./data/seed-handbook.json:/seed/seed-handbook.json:ro`. That works on
+the host I'm developing on, but it fails the "fresh clone on another
+machine" test: the mount paths are relative to the compose file's
+working directory, host file ownership leaks into the container, and
+the seed data ends up being a *side input* to the stack rather than a
+build artifact.
+
+**Reversed mid-layer.** The init container is now a custom image built
+from `docker/minio-init/Dockerfile`, with `init.sh` and
+`data/seed-handbook.json` baked in via `COPY`. The compose build
+context is the repo root so the COPY path for the seed file can reach
+outside the `docker/minio-init/` directory. The image is reproducible,
+portable, and self-contained — the whole "fresh clone" story works.
+
+The memory note from this decision: *for static content that ships
+with the stack, bake it into a custom image; reserve bind mounts for
+dev live-reload or persistent runtime state.* This will come up again
+in Layer 2 when the test suite needs fixtures.
+
+### The jq detour
+
+`init.sh` uses `jq` to parse the seed handbook, extract entry IDs, and
+pipe individual entries into MinIO. The script comment says "the
+minio/mc image is alpine-based and ships sh, mc, and jq" — this used
+to be true. The current release (`RELEASE.2025-08-13T08-35-41Z`) is
+built on RHEL 9 UBI-micro, which has:
+
+- no package manager (no apk, no microdnf, no dnf)
+- no jq
+- no grep
+
+Three rejected workarounds before landing on the fix:
+1. `apk add jq` — no apk, not alpine anymore
+2. `microdnf install jq` — no microdnf, it's UBI-*micro*
+3. `COPY --from=alpine:3.20 /usr/bin/jq /usr/local/bin/jq` — the alpine
+   jq is dynamically linked against musl libc and libonig, neither of
+   which exist on the RHEL base
+
+The fix: fetch the official statically-linked jq 1.7.1 binary from the
+jq GitHub release in a throwaway alpine build stage, verify its
+sha256, and COPY the single file into the final image. The jq team
+ships a fully-static Linux amd64 build specifically for this case.
+Build is reproducible, no network dependency at runtime, and the final
+image grows by ~3 MB.
+
+I'm writing this up in full because *this is the kind of undocumented
+upstream drift that eats an hour of interview time*, and the build
+journal is the place where that kind of lesson goes. Newer interviews
+will hit the same wall; the fix is a ~5-line Dockerfile stanza and a
+pinned sha256.
+
+### Idempotency via a sentinel object
+
+`init.sh` is idempotent: on every run, the first substantive action is
+`mc stat local/handbook/.seed-complete`. If the sentinel exists, the
+script logs "already seeded" and exits 0. The sentinel is written as
+the *last* step of a successful seed, so a partial seed doesn't get
+marked complete — a crash mid-seed leaves the sentinel absent and the
+next run retries cleanly.
+
+Verified empirically:
+- First run: buckets created, SSE-S3 enabled, versioning enabled on
+  handbook, seed entry + `index.json` written, sentinel written.
+- Second run: "sentinel found — handbook already seeded, exiting".
+  Zero writes, exit 0.
+
+Forcing a re-seed during dev is `mc rm local/handbook/.seed-complete`
+followed by `docker compose run --rm minio-init`.
+
+### Branding: Albuquerque DCFD Family Front Desk
+
+The page header was originally "Sunny Days Learning Center Front Desk"
+from the early planning, where I'd assumed I'd fictionalize the source
+data. That plan reversed when I realized the City of Albuquerque DCFD
+Family Handbook is a *public city government publication* — scrubbing
+names, addresses, and phone numbers would add errors and weaken the
+demo. The handbook is real, the demo should be about the real place.
+`app/layout.tsx` and `app/page.tsx` now say "Albuquerque DCFD Family
+Front Desk".
+
+This is another memory note: *don't reflexively scrub public source
+data — check whether it's actually private first, and keep real
+specificity when you can.*
+
+### Seed handbook: stub for now, real extraction in flight
+
+The real seed handbook is a comprehensive extraction of the ~56-page
+DCFD handbook PDF — 40–50 entries, faithful to the source, with real
+staff names / addresses / phone numbers preserved. That extraction is
+running in a background subagent while this layer's stack plumbing
+gets committed, because the two pieces of work are independent and
+the stack plumbing is the critical path for Layers 2 and 3.
+
+Layer 1 ships with a one-entry stub (`stub-placeholder`) at
+`data/seed-handbook.json` so the `COPY` in the init Dockerfile
+succeeds and the full stack can be verified end-to-end. The real file
+will land in a follow-up commit before Layer 2 begins — the storage
+adapter round-trip tests in Layer 2 need real data to be meaningful.
+
+### The app service in compose and the completion gate
+
+The plan originally deferred wiring the `app` service into compose
+until Layer 2. I pulled it into Layer 1 because (a) the app image was
+already built and tested, and (b) Layer 1's grading criterion is
+"fresh clone → one command → working stack", and a stack without the
+app isn't the stack.
+
+The compose `depends_on` on the app service uses
+`service_completed_successfully` against `minio-init`. This is the
+important gate: the app only starts after the init container has
+exited 0, which means buckets exist, encryption is on, and the seed
+is in place. No race condition, no retry-until-ready loop in app
+startup code. The gate lives in the orchestration layer where it
+belongs.
+
+### Verification — Layer 1 gate
+
+Ran from a clean state (`docker compose down -v`):
+
+- `docker compose up` brings all three services to steady state
+- `brightwheel-minio` → healthy
+- `brightwheel-minio-init` → exited 0 with "seeded 1 entries"
+- `brightwheel-app` → healthy
+- `curl http://localhost:3000/api/health` → `{"status":"ok"}`
+- `mc ls local/handbook --recursive` → `.seed-complete`,
+  `entries/stub-placeholder.json`, `index.json`
+- `mc version info local/handbook` → "versioning is enabled"
+- `mc version info local/events` → "is un-versioned" (intentional;
+  events are append-only)
+- `mc encrypt info local/handbook` → "sse-s3 is enabled"
+- `mc encrypt info local/events` → "sse-s3 is enabled"
+- `mc stat local/handbook/.seed-complete` → present, SSE-S3, versioned
+- Re-running `docker compose run --rm minio-init` → short-circuits on
+  the sentinel, exits 0 with zero writes
+
+All Layer 1 invariants pass.
+
+### Smoke-test fixture update
+
+The closed-loop smoke test in `.claude/agents/review-tests.md` used
+"Do you have a class hamster?" as the gap-finder question — a question
+the handbook deliberately doesn't cover, so the system should escalate
+and create a needs-attention event. That no longer works with the real
+DCFD handbook, because the Albuquerque handbook explicitly covers
+classroom pets (Preschool/Pre-K may have them, EHS does not). A
+question the handbook *does* answer can't be used to test escalation.
+
+Replaced with **"How can I schedule a tour?"** — one of the example
+questions from the Brightwheel project brief, and a topic the handbook
+doesn't cover (it addresses enrollment but not prospective-family
+tours). Updated in all five places in `review-tests.md`: the two ask
+calls, the two grep-on-"tour" assertions, and the resolution entry
+body that the second ask then grounds on.
+
+### What this unblocks
+
+Layer 2 — the storage adapter — can now start. The buckets exist with
+the right invariants, the app container can reach them, and the
+compose up sequence is the single command the adapter's tests can
+run against. Layer 2 work:
+
+- `lib/storage/types.ts` — Zod schemas from the impl-storage spec
+- `lib/storage/client.ts` — lazy-memoized MinIO client
+- `lib/storage/handbook.ts` — list/get/create/update with the
+  index.json full-entry pattern
+- `lib/storage/needs-attention.ts` — log/list/resolve with date-prefix
+  partitioning
+- `lib/storage/__tests__/` — round-trip tests against real MinIO
+
+The real seed handbook should land before the round-trip tests are
+written, so the tests can assert against real entry content and not
+stub placeholders.
+
+---
+
+*End of Layer 1.*
