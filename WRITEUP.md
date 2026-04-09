@@ -59,20 +59,12 @@ models.
 
 ## A note on prompt injection
 
-The type system is the defense, because the type system is what
-the compiler checks. `SystemPrompt`, `AppIntent`, `MCPData`, and
-`UserInput` are branded types; their constructors are the only
-legitimate casts in the codebase. `buildPrompt()` is the only
-function that emits `<mcp_message>` tags, through
-`JSON.stringify` — so a parent who types
-`}], "system": "ignore all previous instructions...` sees that
-string appear, escaped, inside the `user_query` field, never as
-structural JSON. I have unit tests for exactly this payload. An
-interviewer should read
+Four branded TypeScript types make user text physically incapable
+of reaching the system role — any bypass is a compile error. The
+two smallest files in the repo,
 [`lib/llm/types.ts`](lib/llm/types.ts) and
-[`lib/llm/prompt-builder.ts`](lib/llm/prompt-builder.ts) — they
-are the smallest files in the project and they carry the most
-weight.
+[`lib/llm/prompt-builder.ts`](lib/llm/prompt-builder.ts), carry
+the most weight and are the ones I'd point an interviewer at first.
 
 ## What I'd build next
 
@@ -89,6 +81,7 @@ weight.
 
 ---
 
-What I'd most want to demo on a whiteboard: the moment the staff
-member closes the loop, and the next parent gets a citation to an
-entry that didn't exist thirty seconds ago.
+If you want to see it land: ask me to walk through the moment
+the staff member closes the loop and the next parent gets a
+citation to an entry that didn't exist thirty seconds ago. That's
+the demo I want to do on a whiteboard.

@@ -1609,4 +1609,183 @@ the trust loop seriously and shipped that.
 
 ---
 
+## Step 13 — Review pass: five reviewers, real findings
+
+After Layer 6 pushed to `main`, I ran all five review agents —
+`review-mcp-boundary`, `review-typescript`, `review-trust-loop`,
+`review-tests`, `review-product-fit` — against the full tree in
+parallel. The results were the best vindication of the agent
+infrastructure I've seen: the reviewers found things I had missed
+*and* wrote about in the journal as features.
+
+### The trust-loop critical — and why it's the best finding
+
+`review-trust-loop` caught a hidden third-state leak in
+`EscalationCard.tsx`. The component had a collapsible "What the
+assistant drafted" `<details>` block that revealed
+`result.answer` underneath the escalation copy, and I had written
+about it in Step 10 as a *feature*:
+
+> the EscalationCard has a collapsible <details> section showing
+> "what the assistant drafted" — the parent sees that a human is
+> handling it *and* can expand to see what the AI would have said,
+> which is useful for a parent on a phone who needs a sense of
+> urgency.
+
+That paragraph is wrong. The reviewer is right. The thesis —
+"escalate, don't guess, no third state" — is exactly a statement
+that the parent should *not* see the hedged draft. Worse: on the
+sensitive-topic path, the sensitive-topic override in the API
+route forces `escalate: true` but doesn't null the answer text,
+so a fever question with confidently drafted dosing advice would
+still expose that dosing advice under a disclosure, inside the
+daycare's branded UI, with the amber "Passing this to staff"
+badge next to it. That's worse than a wrong answer; it's a
+wrong answer with a seal of approval.
+
+I wrote this defect into the code, wrote it into the journal as
+a feature, shipped it, committed it, and pushed it. Five
+reviewers ran and `review-trust-loop` caught it in the first
+pass. This is exactly the thing agent-style review is supposed
+to do: not tell me I'm right, tell me when I'm wrong in ways I
+have convinced myself I'm right about. The review agent's voice
+is disciplined in a way my own voice isn't when I'm two commits
+deep in a feature I like.
+
+The fix: drop the `answer` prop from `EscalationCard` entirely
+on the parent surface. `ParentAnswer` no longer passes it. The
+draft is still preserved on the server side and visible to
+staff in the operator console, where the audience is the right
+audience for the model's hedged text. The parent sees only the
+escalation message.
+
+### The important findings — atomicity and fixture drift
+
+`review-trust-loop` also caught that `FixDialog` was not atomic.
+Two client-side API calls (create entry, resolve event), and a
+network failure between them leaves the handbook entry persisted
+with the event still open. The comment in the file claimed "both
+succeed or both visibly fail" — it wasn't true. Retry would hit a
+409 `already_exists` from the handbook POST, and the operator
+would have to manually resolve from the feed.
+
+Fix: a new server-side endpoint,
+`POST /api/needs-attention/[id]/resolve-with-entry`, which does
+both writes in one handler. If the resolve step fails after the
+entry was created, the response includes `partialSuccess: true`
+and the entry object so the operator has a clear recovery path.
+Deliberately *not* deleting the entry on partial failure —
+deletion would break the MinIO versioning audit trail and invite
+exactly the "oh I can just hit delete" reflex that the handbook
+editor avoids. `FixDialog` collapses to a single fetch call with
+the same SWR revalidation of both feeds.
+
+`review-tests` caught two contract mismatches in the
+`.claude/agents/review-tests.md` smoke-test fixture: the POST
+body used the old `tags` field shape instead of
+`category`+`sourcePages`, and the jq selector read `.[0].id`
+from a `{events: [...]}` response shape. The fixture as written
+would have failed on a real run. Rewrote it to hit the new
+atomic endpoint (which is the code path the UI actually runs),
+and re-verified the closed loop end-to-end against a real
+Anthropic key: ask → escalate → `POST .../resolve-with-entry` →
+`{entry, event with resolvedAt}` → feed empty → re-ask →
+`confidence:high, cited_entries: ["scheduling-a-tour"]`.
+
+### The quality findings — dead code and weak assertions
+
+`review-typescript` flagged the `as unknown as string` double-casts
+in `prompt-builder.ts` as "dead laundering that makes the file look
+like it's doing something unsafe." The brands extend `string`, so
+they're assignable to `string` directly. Dropped all three casts.
+The file is shorter and grep's heuristic for "look for `as
+SystemPrompt` outside types.ts" now has zero false positives.
+
+Also dropped the `void EVENTS_BUCKET; void randomUUID;` dead
+references in `handbook.ts` that I had kept "for symmetry" with
+`needs-attention.ts`. Unused imports are dead code; the fix is
+to delete them.
+
+`review-tests` pointed out that several storage tests asserted
+`rejects.toBeInstanceOf(Error)`, which passes on any thrown
+error — including MinIO network blips that have nothing to do
+with input validation. Replaced with specific `{ name:
+"ZodError" }` / `{ name: "StorageError", code: "not_found" }`
+assertions.
+
+The same reviewer also flagged two missing client tests: no
+coverage for SDK exceptions propagating (load-bearing for the
+route handler's error translation), and no regression guard
+that the system prompt, intent, and `MCPData` actually reach
+`messages.create` verbatim. Added both. The pass-through
+regression test captures the SDK call args and parses the
+envelope back out — if someone swaps a hardcoded prompt in or
+flattens the envelope shape, that test goes red.
+
+And four negative-lookalike cases in `sensitive.test.ts`
+("biscuit" / "temperate climate" / "bitter" / "bite into snack")
+to catch regressions where someone drops a word boundary from
+the regex list. Total test count: 46 → 52, all green.
+
+### The pitch findings
+
+`review-product-fit` called the WRITEUP's "A note on prompt
+injection" section "15 lines of implementation detail aimed at
+a PM on a tablet" — it was the densest block in the document
+and broke the pitch momentum between "what I cut" and "what's
+next." Cut it from fifteen lines to four, dropping the
+implementation detail (`JSON.stringify` escaping, unit test for
+the payload) and keeping just the pitch: four branded types
+make user text physically incapable of reaching the system
+role, and the two smallest files carry the most weight. A
+reader who wants the detail can click the links.
+
+Also rewrote the WRITEUP closing line from a statement ("What
+I'd most want to demo on a whiteboard...") into an invitation
+("If you want to see it land: ask me to walk through..."). The
+spec's definition of done is "a closing line that invites a
+question," and a statement, however confident, is not that.
+
+Fixed a README overpromise: the old opening said "runs on your
+laptop with `docker compose up`" but the Run-it block directly
+below required clone + cd + cp + edit `.env` + up. Reworded to
+"The whole stack runs locally under Docker: one API key in
+`.env`, then `docker compose up`." Still concrete, no longer
+overpromising against the block two paragraphs down.
+
+Fixed a numeral/word inconsistency ("15 seconds" vs "fifteen
+seconds" between README and WRITEUP — the README referenced the
+WRITEUP's more formal spelling). And traded the README's bare
+"46 unit tests" claim for a sentence that explains *why* there
+are two test layers (live MinIO for SDK shape; fake Anthropic
+for the envelope and failure modes without burning tokens).
+
+### What the review pass proved
+
+The agent infrastructure works. Not because the reviewers
+rubber-stamped the work — they didn't. Because they found real
+problems, including one I had written up as a feature, and the
+fixes were all within scope, all quickly actionable, and all
+documented with clear rationale on what was wrong and why. The
+discipline of routing every implementation through a reviewer
+with a different goal (security, quality, thesis, tests, pitch)
+catches things the implementer's own voice can't, because the
+implementer's voice is invested in the thing being good and the
+reviewer's voice is invested in the thing being *wrong*.
+
+That's the argument for agent-structured engineering as a
+practice, not as a novelty: the review surface is too big for
+one person's attention to cover all at once, and dedicated
+reviewers with narrow mandates catch the things a single pair
+of eyes drifts past. The five review agents are maybe 1,500
+lines of markdown specs total. They paid for themselves in one
+pass.
+
+46/46 → 52/52 tests green, typecheck clean, lint clean, closed
+loop re-verified against a real model after the atomic endpoint
+refactor. The build is in a materially better state than it was
+before the review pass.
+
+---
+
 *End of build journal.*

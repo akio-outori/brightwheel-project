@@ -4,8 +4,8 @@ A prototype AI front desk for the City of Albuquerque Division of
 Child and Family Development (DCFD). A parent asks a question. The
 assistant answers from the real 2019 Family Handbook with a citation,
 or — when it isn't sure — hands the question to a staff member and
-lets them close the loop in one click. The whole thing runs on your
-laptop with `docker compose up`.
+lets them close the loop in one click. The whole stack runs locally
+under Docker: one API key in `.env`, then `docker compose up`.
 
 The point of this project isn't "wraps a handbook in a chatbot." It's
 the **trust loop**: we have to get the answer right, *and* we have to
@@ -28,8 +28,8 @@ still gets the right answer instead of the same wrong one.
 - **A closed loop that actually closes.** Staff members see the gaps
   the AI admitted to, fill them in, and the *next* parent asking
   the same question gets a high-confidence answer with a citation
-  pointing to the brand-new entry — in about 15 seconds on a live
-  demo, no index rebuild, no restart.
+  pointing to the brand-new entry — in about fifteen seconds on a
+  live demo, no index rebuild, no restart.
 - **S3 primitives, not a hand-rolled KV store.** Versioning on the
   handbook bucket, SSE-S3 on both buckets, date-partitioned event
   log. The migration story to AWS is "swap the endpoint."
@@ -116,10 +116,14 @@ Five layers, each a single commit on `main`:
    that closes the loop in two API calls and a single `mutate()`
    round.
 
-46 unit tests run against a live MinIO + fake Anthropic client.
-An end-to-end closed-loop test against a real Anthropic key
-(ask → escalate → fix → re-ask → cite) is documented in the
-build journal and reproducible from any clean checkout.
+Tests run in two layers, matched to what they're verifying: the
+storage adapter hits a live MinIO in a dedicated test bucket to
+catch SDK-shape drift, and the LLM boundary uses an injected fake
+Anthropic client to assert the prompt envelope, JSON parsing, and
+failure modes without burning real tokens. The closed-loop
+end-to-end test (ask → escalate → fix → re-ask → cite) runs
+against a real Anthropic key and is documented in the build
+journal as a reproducible script.
 
 ## Where to read more
 
