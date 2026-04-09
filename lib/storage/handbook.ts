@@ -10,8 +10,7 @@
 // N body fetches. The tradeoff is that every write has to rewrite the
 // index — acceptable for a prototype where write volume is low.
 
-import { randomUUID } from "node:crypto";
-import { EVENTS_BUCKET, HANDBOOK_BUCKET, getClient } from "./client";
+import { HANDBOOK_BUCKET, getClient } from "./client";
 import {
   HandbookEntry,
   HandbookEntryDraft,
@@ -23,12 +22,6 @@ import {
   HandbookIndexSchema,
   StorageError,
 } from "./types";
-
-// Silence lint — EVENTS_BUCKET + randomUUID are imported for symmetry
-// with needs-attention.ts but aren't used here. Keep the file self-
-// contained otherwise.
-void EVENTS_BUCKET;
-void randomUUID;
 
 const INDEX_KEY = "index.json";
 const ENTRY_PREFIX = "entries/";

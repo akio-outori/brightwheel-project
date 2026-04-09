@@ -27,15 +27,20 @@ export function buildPrompt(
   data: MCPData,
   user: UserInput,
 ): BuiltPrompt {
+  // Branded types extend `string`, so they're assignable to `string`
+  // without any cast. An earlier version had `as unknown as string`
+  // laundering here which made this file look like it was doing
+  // something unsafe — the double-cast was dead code and got dropped
+  // per review-typescript feedback.
   const envelope = {
     type: "parent_question",
-    intent: intent as unknown as string,
+    intent,
     data: data.value,
-    user_query: user as unknown as string,
+    user_query: user,
   };
 
   return {
-    system: system as unknown as string,
+    system,
     messages: [
       {
         role: "user",

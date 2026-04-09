@@ -41,4 +41,20 @@ describe("isSensitiveTopic", () => {
       expect(isSensitiveTopic(question)).toBe(false);
     });
   }
+
+  // Negative-lookalike tests — words that contain sensitive keyword
+  // substrings but shouldn't trip the \b-anchored regexes. These
+  // catch regressions where someone drops a word boundary.
+  const lookalikes = [
+    "We took a biscuit out of the snack rotation", // "bit" substring
+    "The temperate climate makes outdoor play easy", // "temperature" prefix
+    "Is there a bitter taste in the new yogurt?", // "bit" substring
+    "What did the children bite into at snack?", // "bite" is not in the list; "bit" is, so verify \b works
+  ];
+
+  for (const question of lookalikes) {
+    it(`does not flag lookalike: ${JSON.stringify(question)}`, () => {
+      expect(isSensitiveTopic(question)).toBe(false);
+    });
+  }
 });

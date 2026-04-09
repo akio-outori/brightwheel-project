@@ -57,12 +57,10 @@ export async function askLLM(
     messages: prompt.messages,
   });
 
-  // The SDK returns a union of content blocks; we only care about text.
+  // The SDK returns a discriminated union of content blocks; we
+  // only want the text ones. TS narrows on the discriminant.
   const text = response.content
-    .filter(
-      (b): b is { type: "text"; text: string } =>
-        (b as { type?: string }).type === "text",
-    )
+    .filter((b) => b.type === "text")
     .map((b) => b.text)
     .join("")
     .trim();

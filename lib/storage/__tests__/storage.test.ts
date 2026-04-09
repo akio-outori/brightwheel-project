@@ -22,7 +22,6 @@ import {
   getClient,
 } from "../client";
 import {
-  StorageError,
   createHandbookEntry,
   getHandbookEntry,
   listHandbookEntries,
@@ -149,6 +148,10 @@ describe("handbook adapter", () => {
   });
 
   it("createHandbookEntry rejects invalid input at the schema boundary", async () => {
+    // The schema rejects both the empty title and the bogus category.
+    // We assert it's specifically a ZodError — not any Error — so
+    // this test can't pass if the adapter accidentally swallowed a
+    // network error from MinIO and treated it as invalid input.
     await expect(
       createHandbookEntry({
         title: "",
@@ -157,7 +160,7 @@ describe("handbook adapter", () => {
         body: "x",
         sourcePages: [],
       }),
-    ).rejects.toBeInstanceOf(Error);
+    ).rejects.toMatchObject({ name: "ZodError" });
   });
 });
 
@@ -203,10 +206,15 @@ describe("needs-attention adapter", () => {
         "00000000-0000-0000-0000-000000000000",
         "some-entry",
       ),
-    ).rejects.toBeInstanceOf(StorageError);
+    ).rejects.toMatchObject({
+      name: "StorageError",
+      code: "not_found",
+    });
   });
 
   it("logNeedsAttention rejects invalid draft input", async () => {
+    // Assert ZodError specifically so a MinIO network blip can't
+    // accidentally satisfy this test.
     await expect(
       logNeedsAttention({
         question: "",
@@ -218,6 +226,6 @@ describe("needs-attention adapter", () => {
           escalate: false,
         },
       }),
-    ).rejects.toBeInstanceOf(Error);
+    ).rejects.toMatchObject({ name: "ZodError" });
   });
 });
