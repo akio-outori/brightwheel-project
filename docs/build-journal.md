@@ -1033,4 +1033,238 @@ of route handler. Most of the work is already done.
 
 ---
 
-*End of Layer 3.*
+## Step 10 — Layer 4: Parent UX (chat surface + /api/ask)
+
+Layer 4 is the first layer where every previous layer gets stitched
+together into something a user can actually use. The parent opens
+`/`, types a question, sees an answer. Under the hood, that one
+round-trip runs:
+
+- Zod validation of the request body
+- Static sensitive-topic regex on the raw text
+- A full handbook index fetch from MinIO (S3 API)
+- A branded-types assembly of the MCPData envelope
+- A real Anthropic call through the trust-mechanic wrapper
+- A structural sensitive-topic override on the result
+- A conditional write of a needs-attention event
+- A JSON response the client branches on to pick one of two
+  render paths
+
+All of that is ~120 lines of route handler, because every piece has
+its own module and all the route does is orchestrate them. The
+discipline paid off — the integration was mechanical, not surgical.
+
+### The route handler
+
+`app/api/ask/route.ts` is the *only* file in the parent surface that
+imports from `@/lib/llm` or `@/lib/storage`. React components
+consume the JSON response, never the LLM or storage modules
+directly. That's the architectural rule from the spec and it holds
+without any gymnastics.
+
+Two decisions worth recording:
+
+1. **The sensitive-topic override preserves the model's answer
+   text.** When the static check fires, the final result keeps
+   `modelResult.answer` but forces `confidence: "low"`,
+   `escalate: true`, and an `escalation_reason` of
+   `"sensitive_topic"` (or whatever the model already put there).
+   This matters because the `EscalationCard` has a collapsible
+   `<details>` section showing "what the assistant drafted" — the
+   parent sees that a human is handling it *and* can expand to
+   see what the AI would have said, which is useful for a
+   parent on a phone who needs a sense of urgency. The staff
+   member sees the draft too, in the operator console.
+
+2. **Errors are translated at the boundary.** A malformed JSON
+   body returns 400 with a fixed string. An unexpected exception
+   returns 500 with "Something went wrong. Please try again."
+   The actual error is `console.error`'d server-side.
+   No stack traces reach the parent. This is one of the spec's
+   common-mistakes items.
+
+### System-prompt loader
+
+`lib/llm/system-prompts/loader.ts` is a tiny file that reads
+`parent.md` from disk and caches it in production. In dev, it
+re-reads on every request so edits to the prompt don't require
+a restart. The loader lives in `lib/llm/` rather than being
+inlined into the route handler because the prompt file is
+*owned* by the trust mechanic component — the parent surface
+consumes the string, but the spec says where the string comes
+from.
+
+In the Docker build, `parent.md` ships inside the Next.js
+standalone bundle because `output: "standalone"` copies the
+`lib/` tree as-is. This is one of the three or four ways the
+standalone output mode pays off — the alternative (reading from
+the repo root at runtime) wouldn't work in a container where
+the repo root isn't there.
+
+### Components: the two-branch render
+
+`components/parent/ParentAnswer.tsx` is seven lines of logic:
+
+```tsx
+if (result.escalate || result.confidence === "low") {
+  return <EscalationCard reason={...} answer={result.answer} />;
+}
+return <AnswerCard ... />;
+```
+
+That's the entire product thesis encoded as a Boolean. Any time
+you look at this file and think "should I add a third branch?",
+the answer is no. The thesis is "escalate, don't guess" and a
+third render path — the "answer with a caveat" state — is the
+thing the thesis exists to prevent.
+
+The split into seven component files (`AnswerCard`,
+`EscalationCard`, `ParentAnswer`, `CitationPills`,
+`ConfidenceBadge`, `HandbookEntryModal`, `ChatInput`,
+`ParentChat`) is not over-engineering. Each file is small and
+has one job, and `review-trust-loop` can verify each invariant
+in isolation. Collapsing them into one `page.tsx` would make the
+review job into a grep exercise.
+
+### Mobile-first styling
+
+Everything is sized for 375px first. The main column is
+`max-w-xl` with `px-4` on small screens bumping to `sm:px-6`;
+answer cards are `max-w-full` so long citation pills wrap
+instead of forcing horizontal scroll; the chat input uses a
+`<textarea rows={2}>` that grows before it overflows; the
+escalation card is full-width. The modal uses native
+`<dialog showModal()>` so backdrop dismiss, focus trap, and
+`Escape` key handling all work without a modal library.
+
+Citation pills are `<button>` elements, not `<span>`s, so they're
+keyboard-accessible. Tabbing through an answer hits each pill in
+order, `Enter` opens the modal, `Escape` closes it.
+
+### The build-time dynamic rendering fix
+
+First attempt at building the app image failed during
+`next build`:
+
+```
+Export encountered an error on /page: /, exiting the build.
+```
+
+The page is a server component that calls `listHandbookEntries()`
+in its body. Next.js tries to prerender the page at build time by
+calling that function, which tries to connect to MinIO, which
+doesn't exist inside `docker build`. It crashes.
+
+Fix: `export const dynamic = "force-dynamic"` on `app/page.tsx`.
+That tells Next.js to render the page per-request instead of at
+build time, which is also the correct behavior — the handbook
+index changes when operators add entries, and we don't want the
+build artifact to contain a frozen snapshot. One line, documented
+in a comment.
+
+This is the kind of issue where the docs describe the feature
+(`dynamic = "force-dynamic"`) but not the failure mode that
+leads you to it. Putting it in the build journal so next time
+the answer is two seconds away.
+
+### End-to-end smoke check — the real one
+
+With `ANTHROPIC_API_KEY` loaded from AWS Secrets Manager and the
+full stack up, three asks that exercise every branch of the trust
+loop:
+
+**1. Known question** — "What time do you open?":
+
+```json
+{
+  "confidence": "high",
+  "escalate": false,
+  "cited_entries": [
+    "hours-of-operation", "alamosa-center", "barelas-zoo-center",
+    "herman-sanchez-center", "la-luz-center", "tomasita-center"
+  ],
+  "answer": "Our centers open at different times depending on which
+  location you're enrolled in. Most centers open at either 7:00 a.m.
+  or 8:00 a.m. For example, centers like Alamosa, Barelas/Zoo, and
+  Vincent E. Griego open at 7:00 a.m., while centers like Herman
+  Sanchez, La Luz, and Tomasita open at 8:00 a.m. If you let me know
+  which center your child attends (or is applying to), I can give
+  you the exact hours for that location!"
+}
+```
+
+Six citations, a direct answer, and a graceful pivot ("let me
+know which center") because the real handbook has per-center
+variation and the model honored that instead of flattening to
+a single answer. This is the kind of grounded, source-faithful
+response that the whole architecture was built to produce.
+
+**2. Unknown question** — "How can I schedule a tour?":
+
+```json
+{
+  "confidence": "low",
+  "escalate": true,
+  "escalation_reason": "No handbook entry covers tour scheduling;
+  routing to staff so they can assist directly.",
+  "answer": "That's a great first step! The handbook doesn't include
+  a specific tour-scheduling process, so your best bet is to call the
+  DCFD Main Office directly at 505-767-6500, Monday through Friday,
+  8:00 a.m. – 4:30 p.m. ..."
+}
+```
+
+Note the model correctly identified that it didn't know, escalated,
+*and* surfaced the DCFD main office phone number from a related
+entry. That's exactly the "honest hedge with useful pointer"
+behavior the prompt asks for. The event landed in
+`events/needs-attention/2026-04-09/04-40-07-<uuid>.json`.
+
+**3. Sensitive question** — "My daughter has a fever, should I
+bring her in?":
+
+```json
+{
+  "confidence": "low",
+  "escalate": true,
+  "escalation_reason": "Medical/health sensitive topic: fever.
+  Always escalated to human staff per policy.",
+  "answer": "I want to make sure this is handled right — please
+  keep your daughter home and reach out to your center's Head
+  Teacher or call the DCFD main office at 505-767-6500 for
+  guidance. A staff member will be able to help you directly."
+}
+```
+
+The model's own response already escalated — it caught the
+sensitive topic via the system prompt. The static regex check
+would have escalated it anyway; both layers agree. Defense in
+depth worked.
+
+Confirmed via `mc ls --recursive local/events`: two events in the
+needs-attention feed from this smoke check — the tour question and
+the fever question. The "hours" question correctly didn't produce
+one.
+
+### What this unblocks
+
+Layer 5 — the operator console — can start. The last piece of the
+loop is the staff member seeing the escalated question, writing a
+new handbook entry, and closing the needs-attention event. Layer 5
+work:
+
+- `app/operator/page.tsx` — operator landing
+- `app/operator/needs-attention/page.tsx` — open event feed
+- `app/operator/handbook/page.tsx` — handbook entry list + create/edit
+- `app/api/needs-attention/route.ts` — list open + resolve
+- `app/api/handbook/route.ts` — CRUD pass-through to storage
+
+Once Layer 5 lands, the smoke-test script in
+`.claude/agents/review-tests.md` should pass end-to-end: ask an
+unknown question, see it escalate, create a handbook entry,
+resolve the event, ask the same question again, see a
+high-confidence answer.
+
+---
+
+*End of Layer 4.*
