@@ -174,9 +174,9 @@ describe("needs-attention adapter", () => {
       result: {
         answer: "I'm not sure — I don't have information about tours yet.",
         confidence: "low",
-        citedEntryIds: [],
+        cited_entries: [],
         escalate: true,
-        escalationReason: "no matching handbook entry",
+        escalation_reason: "no matching handbook entry",
       },
     });
     expect(logged.id).toMatch(
@@ -214,7 +214,7 @@ describe("needs-attention adapter", () => {
           answer: "ok",
           // @ts-expect-error — invalid enum value
           confidence: "medium",
-          citedEntryIds: [],
+          cited_entries: [],
           escalate: false,
         },
       }),

@@ -70,15 +70,12 @@ export type HandbookEntryPatch = z.infer<typeof HandbookEntryPatchSchema>;
 
 // The "result" block is the AnswerContract the LLM emitted for this
 // question. It lives here verbatim so the operator console can show
-// what the system actually said and why it escalated.
-export const AnswerContractSchema = z.object({
-  answer: z.string(),
-  confidence: z.enum(["high", "low"]),
-  citedEntryIds: z.array(z.string()).default([]),
-  escalate: z.boolean(),
-  escalationReason: z.string().optional(),
-});
-export type AnswerContract = z.infer<typeof AnswerContractSchema>;
+// what the system actually said and why it escalated. The canonical
+// schema is defined in lib/llm/contract.ts — storage re-imports it so
+// there's one source of truth for the contract shape.
+import { AnswerContractSchema } from "../llm/contract";
+export { AnswerContractSchema };
+export type { AnswerContract } from "../llm/contract";
 
 export const NeedsAttentionEventSchema = z.object({
   id: z.string().uuid(),
