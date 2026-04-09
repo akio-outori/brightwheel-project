@@ -27,7 +27,7 @@ import {
   isSensitiveTopic,
   type AnswerContract,
 } from "@/lib/llm";
-import { loadParentSystemPrompt } from "@/lib/llm/system-prompts/loader";
+import { getActiveAgentConfig } from "@/lib/llm/config";
 import {
   listHandbookEntries,
   logNeedsAttention,
@@ -76,8 +76,12 @@ export async function POST(req: Request): Promise<Response> {
     // 3. Load handbook entries for grounding.
     const handbook = await listHandbookEntries();
 
-    // 4. Build MCPData and call the LLM.
-    const systemPromptText = await loadParentSystemPrompt();
+    // 4. Build MCPData and call the LLM. The active agent config
+    // gives us the system prompt (loaded from a markdown file) plus
+    // model/temperature/maxTokens — the client wrapper consumes the
+    // same config for its own settings.
+    const cfg = await getActiveAgentConfig();
+    const systemPromptText = cfg.systemPrompt;
     const mcpData = MCPData({
       center_name: "Albuquerque DCFD Family Front Desk",
       handbook_entries: handbook.map((e) => ({

@@ -1,0 +1,13 @@
+{
+  "id": "parent-front-desk-haiku",
+  "name": "DCFD Family Front Desk (Haiku 4.5)",
+  "version": "1.0.0",
+  "metadata": {
+    "system_prompt_file": "config/prompts/parent-front-desk.md",
+    "llm_provider": "anthropic",
+    "llm_model": "claude-haiku-4-5",
+    "llm_temperature": 0.3,
+    "llm_max_tokens": 1024,
+    "llm_api_key_env": "ANTHROPIC_API_KEY"
+  }
+}

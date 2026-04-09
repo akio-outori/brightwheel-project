@@ -41,6 +41,14 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 
+# The LLM config and prompt files are read at runtime by
+# lib/llm/config.ts. next.config.mjs already declares them in
+# outputFileTracingIncludes, but that tracing only kicks in when
+# Next's compiler can find a route importing the path — which it
+# doesn't, because readFile isn't an import. Copy config/ in
+# explicitly as a safety net.
+COPY --from=builder --chown=nextjs:nodejs /app/config ./config
+
 USER nextjs
 EXPOSE 3000
 

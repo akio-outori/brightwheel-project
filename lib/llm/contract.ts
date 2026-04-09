@@ -9,12 +9,22 @@
 
 import { z } from "zod";
 
+// `escalation_reason` uses `.nullish()` (accepts undefined AND null)
+// rather than `.optional()` because models differ in how they
+// represent "no value": some omit the field entirely, others emit
+// `null`, others emit an empty string. All three should parse
+// cleanly. We transform away null/empty-string at parse time so
+// downstream code only sees `string | undefined` — callers don't
+// have to care which model was on the other end.
 export const AnswerContractSchema = z.object({
   answer: z.string().min(1).max(2000),
   confidence: z.enum(["high", "low"]),
   cited_entries: z.array(z.string()).default([]),
   escalate: z.boolean(),
-  escalation_reason: z.string().optional(),
+  escalation_reason: z
+    .union([z.string(), z.null(), z.undefined()])
+    .transform((v) => (v == null || v === "" ? undefined : v))
+    .optional(),
 });
 export type AnswerContract = z.infer<typeof AnswerContractSchema>;
 
