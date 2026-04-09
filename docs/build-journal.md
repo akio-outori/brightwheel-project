@@ -686,4 +686,154 @@ stub placeholders.
 
 ---
 
-*End of Layer 1.*
+## Step 8 — Layer 2: Storage adapter + real seed data
+
+With the stack plumbing in place, Layer 2 is the TypeScript surface
+the rest of the app reads and writes through. The discipline from the
+impl-storage spec — *the adapter is the only code that talks to
+MinIO, schemas are the contract, errors propagate* — maps cleanly
+onto five files in `lib/storage/`.
+
+### Schema reshape: from operator-wiki to source-document
+
+The original schema in `impl-storage.md` had
+`{id, title, body, tags, last_updated_by, last_updated_at}`. That
+shape assumes a wiki where entries are written by named operators
+and carry free-form tags. It made sense when I was planning to
+fictionalize the seed data as "Sunny Days Learning Center".
+
+Reversing the scrub-the-data decision in Layer 1 reversed this too.
+The real seed is a 2019 public document — there is no "operator"
+who wrote any of it, and fake names would be worse than no names.
+The new shape is
+`{id, title, category, body, sourcePages, lastUpdated}`:
+
+- **`category`** is a closed enum of 15 values (enrollment, hours,
+  health, safety, food, curriculum, staff, policies, communication,
+  fees, transportation, special-needs, discipline, emergencies,
+  general). A closed set is easier for the prompt builder to reason
+  over than freeform tags, and it lets the operator console filter
+  by category without agreeing on a taxonomy.
+- **`sourcePages`** is an array of integers pointing back at the
+  PDF. This is *the* move that strengthens the trust loop:
+  answers can cite "page 14 of the DCFD Family Handbook" rather
+  than an abstract entry id, which is the kind of concreteness
+  operators actually trust.
+- **`lastUpdated`** is a string, not a datetime, on purpose — it
+  has to fit both static source entries (`"2019"`) and operator-
+  created entries (an ISO 8601 timestamp) without forcing the
+  former to fake a fractional-second precision they don't have.
+
+I updated `.claude/agents/impl-storage.md` with the new schema and
+a rationale comment explaining the reshape. That file is the source
+of truth for this layer's contract; keeping it in sync matters.
+
+### The adapter surface
+
+Five files:
+
+- `types.ts` — Zod schemas (`HandbookEntry`, `NeedsAttentionEvent`,
+  `AnswerContract`), derived TypeScript types, a typed `StorageError`.
+- `client.ts` — lazy-memoized MinIO SDK client, env-driven config,
+  a `__resetClientForTests` escape hatch for vitest.
+- `handbook.ts` — `listHandbookEntries` / `getHandbookEntry` /
+  `createHandbookEntry` / `updateHandbookEntry`. Reads hit
+  `handbook/index.json` in a single GET; writes rewrite the
+  entry object *and* the index, in that order, so a crash mid-
+  write leaves a newer entry file with a stale index rather than
+  a dangling index pointer.
+- `needs-attention.ts` — `logNeedsAttention` / `listOpenNeedsAttention` /
+  `resolveNeedsAttention`. Date-partitioned keys
+  (`events/needs-attention/{YYYY-MM-DD}/{HH-mm-ss}-{uuid}.json`).
+  The "open feed" scans the last 14 days of partitions; resolving
+  an event older than that is unsupported and throws not_found.
+- `index.ts` — barrel export. The rest of the codebase imports from
+  `@/lib/storage` and never sees a bucket name or SDK client.
+
+Two small details worth calling out:
+
+1. **`slugify()` in `handbook.ts` is not reversible.** Create-by-
+   title generates a url-safe id by lowercasing, stripping
+   accents, and collapsing non-alphanumerics into hyphens. If two
+   different titles collapse to the same slug, the second create
+   throws `already_exists`. This is fine for a prototype where the
+   operator is looking at the list while they create — collisions
+   are discoverable — but a real deployment would want a suffix
+   fallback or a conflict-resolution UX.
+2. **The `index.json` rewrite pattern is write-through, not
+   background-rebuilt.** Every create or update reads the index,
+   mutates in memory, and writes it back. This is an O(N) write
+   amplification per mutation, which is fine for 73 entries and
+   a prototype's write volume but would be a problem at 10k
+   entries. A real deployment would either add an async rebuilder
+   or move to a database. The spec calls this out as a conscious
+   tradeoff.
+
+### The static jq binary, continued
+
+The seed agent finished mid-Layer-2 with 73 entries (all 15
+coverage topics hit) at ~50 KB. Dropping it in, rebuilding the
+init image, and running `docker compose down -v && docker compose
+up -d` produced:
+
+```
+[minio-init] seeding 73 handbook entries
+[minio-init] seeded 73 entries and index.json
+[minio-init] complete
+```
+
+`mc ls local/handbook/entries/ | wc -l` → 73. `jq '.entries |
+length' index.json` → 73. Zod validation of all 73 entries against
+the adapter schema → 73/73 pass. No manual fixups.
+
+### Tests against real MinIO
+
+`lib/storage/__tests__/storage.test.ts` runs eight round-trip tests
+against the live container, targeting separate `handbook-test` and
+`events-test` buckets (set in `vitest.setup.ts`). Each test
+truncates its buckets in `beforeEach`, so the tests are
+order-independent.
+
+Coverage:
+
+1. Handbook create → list → get → update round-trip, including
+   slug generation and lastUpdated stamping
+2. `getHandbookEntry` returns null for unknown ids
+3. Duplicate slugs reject with `StorageError { code: "already_exists" }`
+4. Update on a missing id throws `StorageError { code: "not_found" }`
+5. Invalid input (empty title, bad category enum) rejects at the
+   schema boundary
+6. Needs-attention log → list → resolve round-trip, including
+   date-partition key generation and the resolvedAt stamp
+7. Resolving an unknown event throws `StorageError`
+8. Invalid draft input (empty question, bad confidence enum) rejects
+
+All eight pass in ~200 ms. These tests target a live MinIO, not a
+mock — running `npm test -- lib/storage` requires the compose stack
+to be up. The point is to catch the actual shape of the SDK's
+behavior (how it signals not-found, how it streams object bodies,
+how versioning interacts with list operations) rather than the
+shape we imagined it had.
+
+### What this unblocks
+
+Layer 3 — the trust mechanic — can now start. The storage adapter
+gives the LLM layer a clean `listHandbookEntries()` to build the
+prompt context from, and a clean `logNeedsAttention()` to write
+escalations to. Layer 3's work:
+
+- `lib/llm/types.ts` — the branded `MCPData` input types and the
+  `AnswerContract` output (re-imported from storage)
+- `lib/llm/prompt.ts` — `buildPrompt()` that turns a question +
+  handbook entries into a single Anthropic messages request
+- `lib/llm/client.ts` — the Anthropic SDK client wrapper
+- `lib/llm/answer.ts` — the top-level `answerQuestion()` that
+  ties it all together and calls `logNeedsAttention` when the
+  AnswerContract says to escalate
+
+The prompt builder is the place the "trust loop" actually gets
+enforced. That's where the next journal entry will live.
+
+---
+
+*End of Layer 2.*

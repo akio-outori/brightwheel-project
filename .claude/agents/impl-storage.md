@@ -25,8 +25,8 @@ exporting the adapter functions they call.
 - `docker-compose.yml` — the `minio` and `minio-init` service definitions
 - `docker/minio-init/` — the init script (uses `mc` client) that creates
   buckets, sets policies, and seeds initial handbook content
-- `data/seed-handbook.json` — the starter handbook for Sunny Days Learning
-  Center
+- `data/seed-handbook.json` — the starter handbook, extracted from the
+  City of Albuquerque DCFD Family Handbook (2019, public)
 - `lib/storage/types.ts` — TypeScript types and Zod schemas for handbook
   entries and needs-attention events
 - `lib/storage/handbook.ts` — read/write adapter for handbook entries
@@ -85,15 +85,43 @@ operation can scan a single day instead of the whole bucket.
 // lib/storage/types.ts
 import { z } from "zod";
 
+export const HandbookCategory = z.enum([
+  "enrollment",
+  "hours",
+  "health",
+  "safety",
+  "food",
+  "curriculum",
+  "staff",
+  "policies",
+  "communication",
+  "fees",
+  "transportation",
+  "special-needs",
+  "discipline",
+  "emergencies",
+  "general",
+]);
+export type HandbookCategory = z.infer<typeof HandbookCategory>;
+
 export const HandbookEntrySchema = z.object({
-  id: z.string().regex(/^[a-z0-9-]+$/),         // url-safe slug
-  title: z.string().min(1).max(120),
-  body: z.string().min(1).max(10_000),          // markdown
-  tags: z.array(z.string()).default([]),
-  last_updated_by: z.string(),                  // operator name (fictional)
-  last_updated_at: z.string().datetime(),
+  id: z.string().regex(/^[a-z0-9-]+$/),           // url-safe slug
+  title: z.string().min(1).max(200),
+  category: HandbookCategory,
+  body: z.string().min(1).max(20_000),            // prose, may be long
+  sourcePages: z.array(z.number().int().nonnegative()).default([]),
+  lastUpdated: z.string().min(1),                 // "2019" or ISO 8601
 });
 export type HandbookEntry = z.infer<typeof HandbookEntrySchema>;
+
+// Note: the schema uses `sourcePages` + `lastUpdated` rather than
+// `tags` + `last_updated_by` (the older shape). Rationale: the seed
+// data is a real public document (DCFD Family Handbook 2019), not
+// an operator-authored wiki. Page refs give the trust loop concrete
+// citations ("see page 14 of the handbook"), and a single
+// `lastUpdated` field fits both static source entries ("2019") and
+// operator-created entries (ISO datetime) without forcing fake
+// operator names onto static content.
 
 export const NeedsAttentionEventSchema = z.object({
   id: z.string().uuid(),
@@ -124,7 +152,7 @@ from `lib/storage/`.
 // lib/storage/handbook.ts
 export async function listHandbookEntries(): Promise<HandbookEntry[]>;
 export async function getHandbookEntry(id: string): Promise<HandbookEntry | null>;
-export async function createHandbookEntry(draft: Omit<HandbookEntry, "id" | "last_updated_at">): Promise<HandbookEntry>;
+export async function createHandbookEntry(draft: Omit<HandbookEntry, "id" | "lastUpdated">): Promise<HandbookEntry>;
 export async function updateHandbookEntry(id: string, patch: Partial<Omit<HandbookEntry, "id">>): Promise<HandbookEntry>;
 
 // lib/storage/needs-attention.ts
