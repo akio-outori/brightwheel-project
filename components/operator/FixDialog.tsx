@@ -1,8 +1,10 @@
-// The one-tap fix dialog. Two API calls (create entry, resolve event)
-// happen on submit. Both succeed or both visibly fail — we do NOT
-// leave a dangling entry if the resolve fails. On success, SWR
-// revalidates both feeds so the event disappears and the entry
-// appears in the same render tick.
+// The one-tap fix dialog. Hits a single atomic endpoint
+// (/api/needs-attention/[id]/resolve-with-entry) that creates the
+// handbook entry and resolves the event on the server side — so
+// network failures between the two writes can no longer leave a
+// dangling entry with an open event. On success, SWR revalidates
+// both feeds so the event disappears and the entry appears in the
+// same render tick.
 
 "use client";
 
@@ -61,43 +63,32 @@ export function FixDialog({
     setSubmitting(true);
 
     try {
-      // 1. Create the handbook entry
-      const entryRes = await fetch("/api/handbook", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          title,
-          category,
-          body,
-          sourcePages: [],
-        }),
-      });
-      if (!entryRes.ok) {
-        const detail = await entryRes.json().catch(() => ({}));
-        throw new Error(
-          detail.error ?? `Could not create entry (HTTP ${entryRes.status})`,
-        );
-      }
-      const entry = (await entryRes.json()) as { id: string };
-
-      // 2. Resolve the needs-attention event, linking to the new entry
-      const resolveRes = await fetch(
-        `/api/needs-attention/${event.id}`,
+      // Single atomic server-side call: create the entry and resolve
+      // the event in one handler. Partial-success responses (entry
+      // created but event not resolved) come back with an error
+      // message and `partialSuccess: true` so the operator can see
+      // what happened.
+      const res = await fetch(
+        `/api/needs-attention/${event.id}/resolve-with-entry`,
         {
           method: "POST",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify({ resolvedByEntryId: entry.id }),
+          body: JSON.stringify({
+            title,
+            category,
+            body,
+            sourcePages: [],
+          }),
         },
       );
-      if (!resolveRes.ok) {
-        const detail = await resolveRes.json().catch(() => ({}));
+      if (!res.ok) {
+        const detail = await res.json().catch(() => ({}));
         throw new Error(
-          detail.error ??
-            `Could not resolve event (HTTP ${resolveRes.status})`,
+          detail.error ?? `Could not save (HTTP ${res.status})`,
         );
       }
 
-      // 3. Revalidate both feeds so the UI catches up immediately
+      // Revalidate both feeds so the UI catches up immediately.
       await Promise.all([
         mutate("/api/needs-attention"),
         mutate("/api/handbook"),

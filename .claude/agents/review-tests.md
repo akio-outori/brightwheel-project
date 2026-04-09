@@ -130,24 +130,38 @@ echo "$ASK1" | grep -q '"escalate":true' || {
   exit 1
 }
 
-# Step B: verify the event landed in needs-attention
+# Step B: verify the event landed in needs-attention. The GET returns
+# { events: [...] }, so we pull the id out of .events[0], not .[0].
 EVENTS=$(curl -sS "$APP/api/needs-attention")
 echo "Events: $EVENTS"
+echo "$EVENTS" | jq -e '.events | length > 0' >/dev/null || {
+  echo "FAIL: needs-attention feed is empty after the ask"
+  exit 1
+}
 echo "$EVENTS" | grep -q "tour" || {
   echo "FAIL: needs-attention feed does not contain the new event"
   exit 1
 }
 
-# Step C: extract the event id and resolve it by creating a handbook entry
-EVENT_ID=$(echo "$EVENTS" | jq -r '.[0].id')
-ENTRY=$(curl -sS -X POST "$APP/api/handbook" \
+# Step C: close the loop via the atomic resolve-with-entry endpoint.
+# This is the same code path the FixDialog hits in the operator UI —
+# one call creates the handbook entry and resolves the event. The
+# request shape is the HandbookEntryDraft contract:
+# { title, category, body, sourcePages }.
+EVENT_ID=$(echo "$EVENTS" | jq -r '.events[0].id')
+FIX=$(curl -sS -X POST "$APP/api/needs-attention/$EVENT_ID/resolve-with-entry" \
   -H "content-type: application/json" \
-  -d '{"title":"Scheduling a tour","body":"Prospective families can schedule a tour by calling the center office Monday-Friday 9am-3pm. Tours are offered on Tuesdays and Thursdays and last about 30 minutes.","tags":["tours","enrollment","prospective-families"]}')
-ENTRY_ID=$(echo "$ENTRY" | jq -r '.id')
-
-curl -sS -X POST "$APP/api/needs-attention/$EVENT_ID" \
-  -H "content-type: application/json" \
-  -d "{\"resolvedByEntryId\":\"$ENTRY_ID\"}"
+  -d '{
+    "title":"Scheduling a tour",
+    "category":"enrollment",
+    "body":"Prospective families can schedule a tour by calling the center office Monday-Friday 9am-3pm. Tours are offered on Tuesdays and Thursdays and last about 30 minutes.",
+    "sourcePages":[]
+  }')
+echo "Fix: $FIX"
+echo "$FIX" | jq -e '.entry.id and .event.resolvedAt' >/dev/null || {
+  echo "FAIL: resolve-with-entry did not return both entry and resolved event"
+  exit 1
+}
 
 # Step D: verify the event is gone from the open feed
 EVENTS_AFTER=$(curl -sS "$APP/api/needs-attention")

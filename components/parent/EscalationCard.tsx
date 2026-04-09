@@ -26,15 +26,17 @@ const REASON_COPY: Record<string, { heading: string; body: string }> = {
   },
 };
 
-export function EscalationCard({
-  reason,
-  answer,
-}: {
-  reason: string;
-  // The model's own answer text, if any. Shown as supplementary
-  // context below the escalation message, not as the primary response.
-  answer?: string;
-}) {
+// The parent never sees the model's draft answer when the result
+// escalates. An earlier version of this component had a collapsible
+// "What the assistant drafted" <details> block for context, but that
+// created exactly the "answer with a warning" third state the trust
+// loop exists to prevent — and it was especially dangerous on the
+// sensitive-topic path (a fever question could surface drafted
+// dosing advice under a disclosure inside the daycare's branded UI).
+// The draft is still preserved on the server side and visible to
+// staff in the operator console; parents get only the escalation.
+
+export function EscalationCard({ reason }: { reason: string }) {
   const copy =
     REASON_COPY[reason] ?? REASON_COPY["low_confidence"]!;
 
@@ -50,14 +52,6 @@ export function EscalationCard({
       <p className="mt-1 text-sm leading-relaxed text-amber-900/80">
         {copy.body}
       </p>
-      {answer && answer.trim().length > 0 && (
-        <details className="mt-3 text-xs text-amber-900/70">
-          <summary className="cursor-pointer select-none font-medium">
-            What the assistant drafted
-          </summary>
-          <p className="mt-2 whitespace-pre-wrap">{answer}</p>
-        </details>
-      )}
     </article>
   );
 }

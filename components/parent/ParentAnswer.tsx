@@ -23,7 +23,6 @@ export function ParentAnswer({
     return (
       <EscalationCard
         reason={result.escalation_reason ?? "low_confidence"}
-        answer={result.answer}
       />
     );
   }
