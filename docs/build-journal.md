@@ -1267,4 +1267,207 @@ high-confidence answer.
 
 ---
 
-*End of Layer 4.*
+## Step 11 — Layer 5: Operator console + closed-loop demo
+
+Layer 5 is the *other* half of the trust loop. Until now, the parent
+surface could escalate a question and log a needs-attention event,
+but nobody could actually answer it. Layer 5 is where a staff member
+opens `/admin`, sees the gap the AI admitted to, fills it in, and
+— within one user action — the event disappears from the feed and
+the next parent gets a grounded answer to the same question.
+
+That's the demo moment the whole project is built around. It either
+works on stage or it doesn't.
+
+### Four API routes, thin by design
+
+The routes are wrappers around the storage adapter, and that's
+almost all they are:
+
+- `GET /api/handbook` → `listHandbookEntries()` → `{ entries }`
+- `POST /api/handbook` → validate draft → `createHandbookEntry()`
+- `GET /api/handbook/[id]` → `getHandbookEntry()` (404 if null)
+- `PUT /api/handbook/[id]` → validate patch → `updateHandbookEntry()`
+- `GET /api/needs-attention` → `listOpenNeedsAttention()`
+- `POST /api/needs-attention/[id]` → validate → `resolveNeedsAttention()`
+
+Each route parses with Zod at the boundary, calls the adapter,
+catches typed `StorageError`s (translating `not_found` → 404,
+`already_exists` → 409), and falls through to 500 on anything
+else. No business logic lives in the route layer — that's the
+adapter's job, and Layer 2's round-trip tests already verify it.
+
+This thinness is the payoff from the earlier layers. If the
+adapter were hand-rolled in the route handlers, each of these
+files would be 150 lines and the review surface would be four
+times as large.
+
+### Seven operator components
+
+The component split:
+
+- `AdminShell` — header, nav, content frame (server component)
+- `NeedsAttentionFeed` — SWR-backed open-events list with an
+  empty state that's celebratory, not blank
+- `NeedsAttentionItem` — single row with the prominent "Answer
+  this" CTA
+- `FixDialog` — the one-tap fix form
+- `HandbookList` — grouped-by-category entry list with SWR
+- `HandbookEntryBody` — `react-markdown` wrapper (never
+  `dangerouslySetInnerHTML`; operators paste things)
+- `HandbookEntryEditor` — edit-in-place on the entry detail page
+
+Plus four pages under `app/admin/`:
+
+- `/admin` — landing; feed is the headline, handbook summary
+  below it
+- `/admin/needs-attention` — the full feed
+- `/admin/handbook` — grouped list
+- `/admin/handbook/[id]` — entry detail with inline editor
+- `/admin/handbook/new` — create form
+
+No auth. The spec says design as if auth will be added, which
+means: don't bake an operator name into any component, don't
+fake a login form, and don't put anything at a URL that would
+look weird when protected later. `/admin` is a protectable
+route; that's the whole contract.
+
+### The FixDialog — the one-tap fix, honestly
+
+The whole demo hinges on this one component. The flow inside
+`handleSubmit`:
+
+1. `POST /api/handbook` with `{title, category, body, sourcePages: []}`
+2. If that fails, show the error and stop. The event is still
+   open, no state is left dangling.
+3. `POST /api/needs-attention/<event.id>` with the new entry id.
+4. If *that* fails, the handbook entry is already persisted.
+   Show the error and stop. The operator can retry, or manually
+   resolve the event from the feed later — the partial state is
+   recoverable because the entry exists and is cited-able.
+5. If both succeed, `mutate()` both SWR keys
+   (`/api/needs-attention` and `/api/handbook`) so the UI
+   reflects the new truth in the same render tick.
+6. Close the dialog.
+
+The only place this design can drop the ball is the narrow
+window between step 3 and step 4: if the process crashes exactly
+there, the handbook entry exists and the event is still open.
+That's recoverable (the operator can re-open the event, see the
+new entry, and resolve it by id) but it's the failure mode to
+call out. The spec says "both succeed or both visibly fail";
+"both succeed or the entry exists and the event is visibly
+unresolved" is as close as we get without a transaction.
+
+A real deployment would either use an S3 batch write or stage
+the resolution as a follow-up job. For a prototype on stage,
+the window is sub-millisecond and the recovery path is obvious.
+
+### Markdown rendering on entry bodies
+
+Every entry body on the admin surface is rendered through
+`react-markdown`, not `dangerouslySetInnerHTML`. This is one of
+the spec's explicit rules and it matters because operator-
+authored content is still untrusted on the render path —
+operators are humans, humans paste things, paste things include
+scripts. react-markdown produces a tree of React elements, which
+means any `<script>` or `<img onerror=...>` a malicious paste
+contained becomes text in the output, not executed HTML.
+
+Tailwind Typography (`prose prose-sm`) handles the styling so
+the rendered markdown looks native to the rest of the console.
+
+### The closed-loop end-to-end test
+
+With `ANTHROPIC_API_KEY` loaded from AWS Secrets Manager and a
+fresh stack (`docker compose down -v && docker compose up -d`),
+the full closed-loop test from `.claude/agents/review-tests.md`:
+
+**Step A** — Ask "How can I schedule a tour?" on `/api/ask`.
+The model returned `confidence: "low"`, `escalate: true`, a
+thoughtful draft that even surfaced real enrollment staff names
+from related handbook entries ("Lisa Lopez (Enrollment
+Specialist) at 505-767-6504"), and a clean escalation reason.
+
+**Step B** — Hit `/api/needs-attention`. The event was there at
+the top of the feed, with the full draft answer preserved so
+the operator can see what the assistant would have said.
+
+**Step C** — Two API calls back-to-back, exactly the pair the
+FixDialog makes:
+
+1. `POST /api/handbook` with title "Scheduling a tour",
+   category "enrollment", body "Prospective families can
+   schedule a tour by calling the DCFD main office at
+   505-767-6500 Monday-Friday 8am-4:30pm. Tours are offered on
+   Tuesdays and Thursdays and last about 30 minutes."
+   → created `scheduling-a-tour`
+2. `POST /api/needs-attention/<event-id>` with
+   `{resolvedByEntryId: "scheduling-a-tour"}` → resolved, with
+   `resolvedAt` and `resolvedByEntryId` both set
+
+**Step D** — `GET /api/needs-attention` → `{"events":[]}`. The
+event was gone from the open feed. The underlying object is
+still in the bucket (resolved, not deleted), but the 14-day
+"open" scan correctly filters it out.
+
+**Step E** — Re-ask "How can I schedule a tour?". The model
+returned:
+
+```json
+{
+  "confidence": "high",
+  "escalate": false,
+  "cited_entries": ["scheduling-a-tour"],
+  "answer": "You can schedule a tour by calling the DCFD main
+  office at 505-767-6500, Monday through Friday, 8:00 a.m. –
+  4:30 p.m. Tours are offered on Tuesdays and Thursdays and
+  last about 30 minutes. We'd love to show you around!"
+}
+```
+
+The answer paraphrases the new entry verbatim. The citation
+points at `scheduling-a-tour`, the brand-new id. No extra model
+training, no index rebuild, no restart — the next request after
+the write saw the new state because the storage adapter's
+index-rewrite-on-write pattern kept `index.json` in sync and
+the `app/api/ask/route.ts` re-reads the index on every request.
+
+This is the first time I've seen the full loop close on a real
+model call, not a mock. The timing: from the first ask (Step A)
+to the second ask (Step E) is five HTTP requests and about
+fifteen seconds, including two full Claude calls. That's a live
+demo at interview pace.
+
+### Mobile viewport check
+
+Verified at 375px: the admin header stacks vertically, nav wraps,
+the feed rows stay readable, the fix dialog uses `max-w-lg` so it
+fills the screen on narrow viewports, the textarea in the dialog
+is usable with a soft keyboard up, the citation pill area doesn't
+force horizontal scroll. The spec's 768px (tablet) check was
+clean without any tablet-specific styles — the mobile-first
+classes carried through.
+
+### What this unblocks
+
+Layer 6 — the writeup — is the last layer. With the closed loop
+working end-to-end, the README and WRITEUP have a concrete demo
+script to hand off:
+
+1. Visit `/`, ask "How can I schedule a tour?", see the
+   escalation card
+2. Open `/admin`, see the event at the top of the feed
+3. Click "Answer this," fill in a short answer, save
+4. Go back to `/`, ask the same question, see the high-
+   confidence answer with a clickable citation that opens the
+   entry you just wrote
+
+That's the story the interview is actually about. Everything in
+the previous 10 steps exists to make that story honest — to make
+the grounding real, the escalation real, the citations real, the
+closed loop real.
+
+---
+
+*End of Layer 5.*
