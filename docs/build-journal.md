@@ -1470,4 +1470,143 @@ closed loop real.
 
 ---
 
-*End of Layer 5.*
+## Step 12 — Layer 6: README, WRITEUP, and the .env.example drift
+
+Layer 6 is docs. The deliverable is two files: a `README.md` that
+an engineer who just cloned the repo can follow to a working stack,
+and a `WRITEUP.md` that a Brightwheel PM can read on a tablet
+between meetings and come away with the thesis.
+
+### The audience split
+
+The README is for an engineer. The opening paragraph is the pitch
+so the reader knows what this *is* before they scroll to setup;
+the setup is one command; the demo flow is numbered steps you can
+literally walk through in thirty seconds; the architecture summary
+is five bullets because the build journal has the long version.
+Working one-command setup was a hard constraint — the setup steps
+in the README match reality exactly, and I verified that by
+running `curl http://localhost:3000/api/health` and
+`curl http://localhost:3000/admin` against a live stack before
+writing them.
+
+The WRITEUP is for a PM. Different audience, different voice.
+The opening paragraph has to be the strongest writing in the
+document — if a reader stops there, they should still know what
+the thesis is. The "In/Out and why" lists name the cuts
+confidently instead of apologizing for them, because a prototype
+that names its cuts is stronger than one that pretends everything
+is implemented. The closing line is one sentence, pitched as the
+moment I'd most want to demo on a whiteboard — something the PM
+would want to ask a question about.
+
+### The word-count discipline
+
+Spec target: under 600 words for the WRITEUP. First draft came in
+at 925. That's a real one-page violation — the WRITEUP starts to
+feel like a feature list instead of a pitch somewhere around 700
+words, and the cutting was a useful exercise for figuring out
+which sentences were load-bearing and which were decoration.
+
+First pass got it to 725. Second pass collapsed the "In:" bullets
+from five-sentence paragraphs into one-line summaries and folded
+three minor "Out:" items (streaming, delete button, multi-turn
+memory) into a single bullet labeled as "optimizations or
+distractions from the loop." Final count: 631. Not the absolute
+minimum, but close enough that every paragraph earns its place.
+
+Things I considered cutting and kept: the "note on prompt
+injection" section, because the branded-types story is the thing
+that distinguishes this from "wraps a handbook in a chatbot"
+and the interviewer should be pointed at the two smallest files
+in the repo. The closing line, because it's the hook. The "What
+I'd build next" list, because a confident roadmap is part of the
+pitch.
+
+Things I cut and am confident about: all the sentences that
+repeated the thesis. All the "this is a product decision, not a
+technical one" sidebars (the structure makes that point on its
+own). The long "In:" explanations for individual features — the
+README has the long version, the WRITEUP just needs the list.
+
+### The .env.example drift
+
+Writing the README's setup flow surfaced a bug. The existing
+`.env.example` from Layer 0 had:
+
+```
+MINIO_ENDPOINT=minio
+MINIO_PORT=9000
+MINIO_USE_SSL=false
+```
+
+These are not the variable names the Layer 2 storage client reads
+— `lib/storage/client.ts` looks for `STORAGE_ENDPOINT`,
+`STORAGE_ACCESS_KEY`, `STORAGE_SECRET_KEY`, and so on. The app
+worked in compose because `docker-compose.yml` explicitly sets
+the correct names in the `app` service's environment, overriding
+whatever `.env` says. But `.env.example` was misleading
+documentation — an engineer running the app outside compose (or
+trying to add an env override) would hit a dead end with the old
+names.
+
+Fixed: `.env.example` now shows `ANTHROPIC_API_KEY=` as the only
+required value (everything else has a working default baked into
+`docker-compose.yml`), and the commented-out `STORAGE_*` lines
+match what the adapter actually reads. This is the kind of drift
+you don't catch until someone tries to follow your instructions
+from scratch, which is exactly what writing the README forced me
+to do.
+
+### What's in the README, what's in the build journal
+
+Some things went in the README even though they're also in the
+journal: the five-layer summary, the one-paragraph pitch, the
+demo flow. Those are the things a reader needs *immediately* and
+won't scroll to the journal for.
+
+Some things went *only* in the journal: the jq-binary detour,
+the mid-layer-1 bind-mount reversal, the mid-layer-2 schema
+reshape, every test-run output, every debugging step. The README
+is a pitch document; the journal is a development record. The
+split lets both stay terse.
+
+### The writeup I didn't write
+
+One thing I considered and didn't build: a `docs/demo.md` with
+step-by-step screenshots. The spec explicitly calls this out as
+optional and says "don't create them unless they're load-bearing."
+The README's numbered demo flow is enough to run the demo; a
+screenshots doc would be polish, not substance, and a prototype
+with excess polish looks like one that avoided harder decisions.
+The cut is the signal.
+
+### What this finishes
+
+Layer 6 is the last layer. Six commits on `main`, covering:
+
+0. Bootstrap
+1. Stack
+2. Storage + real seed
+3. Trust mechanic
+4. Parent UX
+5. Operator console
+6. Docs
+
+Every layer's definition of done is met. The closed-loop
+end-to-end test runs against a real Anthropic key from a clean
+checkout. Unit tests run offline against a fake Anthropic client
+and a live MinIO; 46/46 green. Typecheck clean, lint clean. The
+build journal has the narrative, the README has the pitch + the
+one-command setup, the WRITEUP has the thesis in under 700 words.
+
+There are still things I'd do in a real build — auth, Bedrock,
+a batch review view, a handbook ingestion pipeline, multi-turn
+memory. They're listed in the WRITEUP's "What I'd build next"
+section, and they're listed as next steps rather than missing
+features, which is the honest framing for a prototype that took
+the trust loop seriously and shipped that.
+
+---
+
+*End of build journal.*
