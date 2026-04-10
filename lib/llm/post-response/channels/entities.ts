@@ -147,13 +147,21 @@ export function extractEntities(text: string): string[] {
     // Allowlist?
     if (CAPITALIZATION_ALLOWLIST.has(word)) continue;
 
-    // Sentence-initial check: look back for preceding `. ` / `! ` /
-    // `? ` / start-of-string, potentially through whitespace.
+    // Sentence-initial / list-item-initial check: look back for
+    // preceding sentence terminators (`.`, `!`, `?`), start-of-string,
+    // or list bullet markers (`•`, `-`, `*`, `\n`, digits+period).
+    // Bullet points produce capitalized common words ("Vomiting",
+    // "Continuous", "Children") that are not proper nouns.
     let i = start - 1;
     while (i >= 0 && /\s/.test(text[i]!)) i--;
     if (i < 0) continue; // start of string
     const prev = text[i];
     if (prev === "." || prev === "!" || prev === "?") continue;
+    if (prev === "•" || prev === "-" || prev === "*") continue;
+    if (prev === ":" || prev === ";") continue;
+    // Numbered list: "1. Fever" — prev is "." and the char before
+    // is a digit. Already caught by "." check above.
+    if (prev === "\n") continue;
 
     // Already captured as part of a multi-word entity?
     const key = word.toLowerCase();

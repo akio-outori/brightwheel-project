@@ -109,7 +109,7 @@ export async function POST(req: Request): Promise<Response> {
         docId,
         question,
         result: {
-          answer: "",
+          answer: "(Preflight held — no model draft was generated)",
           confidence: "low",
           cited_entries: [],
           escalate: true,
