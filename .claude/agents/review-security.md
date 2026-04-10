@@ -22,6 +22,7 @@ edit code.
 ## Threat Model
 
 The application has two surfaces:
+
 - **Parent surface** (`/`) — unauthenticated, accepts free-text
   questions via POST /api/ask. The parent sees rendered HTML from
   React server + client components.
@@ -51,6 +52,7 @@ const safeHref = url.startsWith("https://") ? url : "#";
 ```
 
 Check every `.tsx` file for:
+
 - `dangerouslySetInnerHTML` — should never appear with user or model content
 - Dynamic `href`, `src`, `action` attributes with unvalidated input
 - `eval()`, `new Function()`, `setTimeout(string)` — never acceptable
@@ -58,6 +60,7 @@ Check every `.tsx` file for:
 ### 2. API Route Input Validation
 
 Every `POST`/`PUT`/`DELETE` route must:
+
 - Parse the body with `req.json()` inside a try/catch (malformed JSON → 400)
 - Validate through a Zod schema before any processing
 - Return specific 400 errors for validation failures (not 500s)
@@ -74,6 +77,7 @@ return Response.json({ error: "Invalid request: question is required." });
 ### 3. Error Information Leakage
 
 Production error responses must never expose:
+
 - Stack traces
 - Internal file paths
 - Database/storage connection strings
@@ -92,6 +96,7 @@ return Response.json({ error: "Something went wrong." }, { status: 500 });
 ### 4. Server-Side Request Forgery (SSRF)
 
 The storage layer connects to MinIO. Verify:
+
 - The MinIO endpoint is from environment variables, not user input
 - No route accepts a URL parameter that gets fetched server-side
 - No `fetch()` or `http.get()` calls use user-controlled URLs
@@ -112,6 +117,7 @@ const schema = z.object({ title: z.string() }).strict();
 ### 6. Dependency Vulnerabilities
 
 Run `npm audit` and report:
+
 - Critical and high severity vulnerabilities
 - Dependencies that are significantly outdated (2+ major versions behind)
 - Any dependency that hasn't been updated in >2 years
@@ -119,6 +125,7 @@ Run `npm audit` and report:
 ### 7. Content Security Headers
 
 For production readiness, check if `next.config.js` or middleware sets:
+
 - `Content-Security-Policy` (at minimum, `default-src 'self'`)
 - `X-Content-Type-Options: nosniff`
 - `X-Frame-Options: DENY`
@@ -131,6 +138,7 @@ blocker. But any custom header that weakens security IS a blocker.
 
 The operator console is currently unauthenticated. This is acceptable
 for the demo but must be documented. Check that:
+
 - No route assumes authentication that doesn't exist
 - No route stores or compares passwords/tokens
 - If auth is added later, the patterns are sound (bcrypt not plain
@@ -143,14 +151,14 @@ automated half of security checking. This agent's job is to catch
 what automation misses — logic-level vulnerabilities, context-dependent
 patterns, and design issues that static tools can't reason about.
 
-| CI Job | What it catches | What this agent adds |
-|--------|----------------|---------------------|
-| `npm-audit` | Known CVEs in dependencies | Whether a vuln is actually reachable in our code |
-| `codeql` | XSS, injection, path traversal, info exposure | Context about whether a flagged pattern is a real risk vs. a false positive |
-| `semgrep` | OWASP top 10, React XSS, Node.js patterns | Architectural patterns (SSRF via indirect fetch, auth bypass by design) |
-| `secrets-scan` | Leaked API keys, tokens, passwords | Whether a value that looks like a secret is actually sensitive |
-| `license-check` | Copyleft license compliance | Whether a dual-licensed dep is used under the permissive license |
-| `container-scan` | OS-level CVEs in the Docker image | Whether base image choice is appropriate |
+| CI Job           | What it catches                               | What this agent adds                                                        |
+| ---------------- | --------------------------------------------- | --------------------------------------------------------------------------- |
+| `npm-audit`      | Known CVEs in dependencies                    | Whether a vuln is actually reachable in our code                            |
+| `codeql`         | XSS, injection, path traversal, info exposure | Context about whether a flagged pattern is a real risk vs. a false positive |
+| `semgrep`        | OWASP top 10, React XSS, Node.js patterns     | Architectural patterns (SSRF via indirect fetch, auth bypass by design)     |
+| `secrets-scan`   | Leaked API keys, tokens, passwords            | Whether a value that looks like a secret is actually sensitive              |
+| `license-check`  | Copyleft license compliance                   | Whether a dual-licensed dep is used under the permissive license            |
+| `container-scan` | OS-level CVEs in the Docker image             | Whether base image choice is appropriate                                    |
 
 ## Grep Patterns
 

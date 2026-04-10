@@ -48,7 +48,7 @@ satisfies them.
 ## Architectural Principles
 
 1. **Closed-loop is a single action.** The "answer this" button on a
-   needs-attention event creates a handbook entry *and* resolves the
+   needs-attention event creates a handbook entry _and_ resolves the
    event in one user action. Two API calls, one click, both succeed or
    the error surfaces.
 2. **The needs-attention feed is the headline.** When the operator opens
@@ -143,10 +143,7 @@ export function FixDialog({ event, onDone }: { event: NeedsAttentionEvent; onDon
     }
 
     // 3. revalidate both feeds so the UI catches up
-    await Promise.all([
-      mutate("/api/needs-attention"),
-      mutate("/api/handbook"),
-    ]);
+    await Promise.all([mutate("/api/needs-attention"), mutate("/api/handbook")]);
     onDone();
   }
 
@@ -164,7 +161,7 @@ export function FixDialog({ event, onDone }: { event: NeedsAttentionEvent; onDon
 
 Two API calls, one click. Both succeed or the error surfaces. The
 revalidate step is what makes the demo land — the operator clicks save,
-and they immediately see the event leave the feed *and* the entry
+and they immediately see the event leave the feed _and_ the entry
 appear in the handbook list.
 
 ## Self-Review Before Reporting Back
@@ -177,7 +174,7 @@ Before you tell the main thread you're done:
    phone — verify everything works at 768px and 375px.
 4. Invoke **`review-trust-loop`** on the diff. Address findings.
 5. Invoke **`review-typescript`** on the diff. Address findings.
-6. End-to-end closed-loop check: this is *the* test that has to pass.
+6. End-to-end closed-loop check: this is _the_ test that has to pass.
    - Ask a question on the parent surface that isn't covered by the
      seed handbook ("Do you have a hamster?").
    - Verify the escalation card renders and a needs-attention event

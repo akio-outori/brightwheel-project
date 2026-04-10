@@ -88,10 +88,7 @@ job. If `AnswerCard` and `EscalationCard` collapse into one file, the
 ```ts
 // app/api/ask/route.ts
 import { z } from "zod";
-import {
-  SystemPrompt, AppIntent, MCPData, UserInput,
-  askLLM, isSensitiveTopic,
-} from "@/lib/llm";
+import { SystemPrompt, AppIntent, MCPData, UserInput, askLLM, isSensitiveTopic } from "@/lib/llm";
 import { listHandbookEntries, logNeedsAttention } from "@/lib/storage";
 import { loadParentSystemPrompt } from "@/lib/llm/system-prompts/loader";
 
@@ -101,9 +98,9 @@ const AskRequest = z.object({
 
 const INTENT = AppIntent(
   "Answer the parent's question using only the provided handbook entries. " +
-  "Return JSON matching the AnswerContract. Cite the entry IDs you used. " +
-  "If no entry covers the question, set confidence to 'low' and escalate. " +
-  "Sensitive topics (medical, safety, custody, allergies) always escalate.",
+    "Return JSON matching the AnswerContract. Cite the entry IDs you used. " +
+    "If no entry covers the question, set confidence to 'low' and escalate. " +
+    "Sensitive topics (medical, safety, custody, allergies) always escalate.",
 );
 
 export async function POST(req: Request) {
@@ -138,7 +135,7 @@ export async function POST(req: Request) {
 }
 ```
 
-This is the *only* file in the parent surface that imports from
+This is the _only_ file in the parent surface that imports from
 `lib/llm`, `lib/storage`, or constructs `MCPData`. Components consume the
 API response, never the LLM directly.
 
@@ -152,11 +149,7 @@ import { EscalationCard } from "./EscalationCard";
 
 export function ParentAnswer({ result }: { result: AnswerContract }) {
   if (result.escalate || result.confidence === "low") {
-    return (
-      <EscalationCard
-        reason={result.escalation_reason ?? "low_confidence"}
-      />
-    );
+    return <EscalationCard reason={result.escalation_reason ?? "low_confidence"} />;
   }
   return (
     <AnswerCard

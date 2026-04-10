@@ -26,7 +26,7 @@ that get edited freely until they're right.
 - `README.md` — project overview, one-command setup, demo flow
 - `WRITEUP.md` — the <1 page deliverable for the interview, pitching
   the trust loop thesis and naming the cuts
-- Anything under `docs/` *except* `docs/build-journal.md`
+- Anything under `docs/` _except_ `docs/build-journal.md`
 - Inline code comments where the logic isn't self-evident (these are
   rare; most code shouldn't need them)
 
@@ -76,7 +76,7 @@ docs/
   demo.md            (optional) — step-by-step demo walkthrough with screenshots
 ```
 
-The optional files are *optional*. Don't create them unless they're
+The optional files are _optional_. Don't create them unless they're
 load-bearing. The README and the WRITEUP are the deliverable; the
 rest is supporting material.
 
@@ -85,7 +85,7 @@ rest is supporting material.
 The README has a fixed shape. Mimic the existing one (if any) or
 write to this template:
 
-```markdown
+````markdown
 # AI Front Desk
 
 [One-paragraph pitch — what this is and why it exists. The trust
@@ -96,6 +96,7 @@ something a friend would say, not a marketing page.]
 
 [3-5 bullets. Each bullet is a substantive design choice that
 distinguishes this from a typical chatbot demo. Examples:
+
 - The four-input-type security boundary (prompt injection
   prevention at the type level)
 - The closed-loop operator console (one-tap fix that immediately
@@ -104,11 +105,12 @@ distinguishes this from a typical chatbot demo. Examples:
   primitives, one command to run)
 - The structured-output answer contract (citation, confidence,
   escalation enforced by schema, not by hope)
-]
+  ]
 
 ## Try it
 
 ### Prerequisites
+
 - Docker (with `docker compose`)
 - An Anthropic API key
 
@@ -120,6 +122,7 @@ cd brightwheel-project
 echo "ANTHROPIC_API_KEY=sk-ant-..." > .env
 docker compose up
 ```
+````
 
 Then open `http://localhost:3000` for the parent surface and
 `http://localhost:3000/admin` for the operator console.
@@ -149,7 +152,8 @@ Brief, not exhaustive — the build journal has the long version.]
 - [`WRITEUP.md`](WRITEUP.md) — the design pitch
 - [`.claude/agents/`](.claude/agents/) — the subagent specs that
   structure the build process
-```
+
+````
 
 ## WRITEUP Structure
 
@@ -207,7 +211,7 @@ on day 1 of the real build.]
 
 [A closing line. One sentence. Confident. Something a Brightwheel
 PM would want to ask a question about.]
-```
+````
 
 The WRITEUP should fit on one printed page when rendered. If it
 runs longer, cut. The constraint is the deliverable.
