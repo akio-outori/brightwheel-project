@@ -1,0 +1,9 @@
+# Trivy CVE suppressions. Each entry must be justified and reviewed
+# periodically. Do not add entries without a comment explaining why.
+
+# CVE-2026-28390: OpenSSL DoS via NULL pointer dereference in CMS.
+# Fixed in libssl3 3.0.19-1~deb12u2 but the distroless base image
+# (gcr.io/distroless/nodejs22-debian12:nonroot) hasn't been rebuilt
+# with the patched package yet. We don't use CMS functionality.
+# Remove this entry when the distroless image ships with 3.0.19+.
+CVE-2026-28390
