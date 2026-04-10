@@ -86,5 +86,5 @@ Detailed engineering docs for each subsystem:
 | [Operator loop](docs/operator-loop.md) | Needs-attention feed, fix dialog, override CRUD, notification bell |
 | [Testing strategy](docs/testing-strategy.md) | Unit tests, integration tests, coverage thresholds, CI pipeline |
 | [Deployment & infrastructure](docs/deployment.md) | Docker stack, distroless runner, MinIO init, CI workflows, security scanning |
-| [Design pitch (WRITEUP)](WRITEUP.md) | The one-page thesis for reviewers who won't read source code |
+| [Design pitch](docs/writeup.md) | The product thesis for reviewers who won't read source code |
 | [Build journal](docs/build-journal.md) | Chronological development record — every decision, every reversal |
