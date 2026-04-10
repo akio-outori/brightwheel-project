@@ -4,7 +4,7 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "BrightDesk — AI Front Desk",
   description:
-    "An AI front desk assistant for Sunshine Academy. Answers parent questions instantly from the official handbook and escalates to staff when uncertain.",
+    "An AI front desk assistant for Albuquerque DCFD. Answers parent questions instantly from the official Family Handbook and escalates to staff when uncertain.",
 };
 
 export const viewport: Viewport = {

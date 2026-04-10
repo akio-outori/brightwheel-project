@@ -48,10 +48,14 @@ export default function OperatorDashboard() {
     fetcher,
     { refreshInterval: 10000 },
   );
+  const { data: hbData } = useSWR<{
+    document: { overrides: { id: string }[] };
+  }>("/api/handbook", fetcher);
 
   const events = naData?.events ?? [];
   const escalatedCount = events.filter((e) => e.result.escalate).length;
   const totalQuestions = events.length;
+  const overrideCount = hbData?.document?.overrides?.length ?? 0;
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -107,9 +111,9 @@ export default function OperatorDashboard() {
                 icon: Sparkles,
               },
               {
-                label: "Response time",
-                value: "< 2s",
-                sublabel: "AI avg response",
+                label: "Overrides",
+                value: overrideCount.toString(),
+                sublabel: "staff answers",
                 icon: Clock,
               },
             ].map((s) => (

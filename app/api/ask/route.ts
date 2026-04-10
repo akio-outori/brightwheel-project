@@ -123,7 +123,7 @@ export async function POST(req: Request): Promise<Response> {
     const cfg = await getActiveAgentConfig();
     const systemPromptText = cfg.systemPrompt;
     const mcpData = MCPData({
-      center_name: "Albuquerque DCFD Family Front Desk",
+      center_name: `${metadata.title} Front Desk`,
       document: {
         id: metadata.id,
         title: metadata.title,

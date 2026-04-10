@@ -9,6 +9,7 @@ export interface ChatMessageData {
   text: string;
   type?: "answer" | "uncertain" | "escalated";
   source?: string | null;
+  citedEntries?: string[];
   initials?: string;
 }
 
@@ -56,7 +57,20 @@ export default function ChatMessage({ message }: { message: ChatMessageData }) {
           <p className="whitespace-pre-line">{message.text}</p>
         </div>
 
-        {!isUser && message.source && (
+        {!isUser && message.citedEntries && message.citedEntries.length > 0 && (
+          <div className="flex flex-wrap gap-1.5 mt-2 ml-1">
+            {message.citedEntries.map((id) => (
+              <span
+                key={id}
+                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-indigo-50 text-[10px] font-medium text-indigo-700 ring-1 ring-inset ring-indigo-200"
+              >
+                <BookOpen className="w-2.5 h-2.5" />
+                {id.replace(/-/g, " ")}
+              </span>
+            ))}
+          </div>
+        )}
+        {!isUser && message.source && !message.citedEntries?.length && (
           <div className="flex items-center gap-1 mt-1.5 ml-1">
             <BookOpen className="w-3 h-3 text-gray-400" />
             <span className="text-[11px] text-gray-400">{message.source}</span>

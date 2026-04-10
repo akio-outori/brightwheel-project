@@ -13,7 +13,7 @@ import { AnswerContractSchema, type AnswerContract } from "@/lib/llm/contract";
 
 const GREETING: ChatMessageData = {
   role: "assistant",
-  text: `Hi there! \ud83d\udc4b I'm the Sunshine Academy front desk assistant.\n\nI can answer questions about our hours, tuition, health policies, meals, enrollment, and more \u2014 instantly, any time of day.\n\nWhat can I help you with?`,
+  text: `Hi there! \ud83d\udc4b I'm the ${CENTER.name} front desk assistant.\n\nI can answer questions about our hours, tuition, health policies, meals, enrollment, and more \u2014 instantly, any time of day.\n\nWhat can I help you with?`,
   type: "answer",
 };
 
@@ -33,6 +33,7 @@ function contractToMessage(contract: AnswerContract): ChatMessageData {
       text: contract.answer,
       type: "uncertain",
       source: contract.cited_entries.length > 0 ? "Family Handbook" : null,
+      citedEntries: contract.cited_entries,
     };
   }
 
@@ -41,6 +42,7 @@ function contractToMessage(contract: AnswerContract): ChatMessageData {
     text: contract.answer,
     type: "answer",
     source: contract.cited_entries.length > 0 ? "Family Handbook" : null,
+    citedEntries: contract.cited_entries,
   };
 }
 
@@ -77,7 +79,7 @@ export function ParentChat() {
           ...prev,
           {
             role: "assistant",
-            text: "I'm having trouble connecting right now. Please try again in a moment, or call us directly at (505) 867-5309.",
+            text: `I'm having trouble connecting right now. Please try again in a moment, or call us directly at ${CENTER.phone}.`,
             type: "escalated",
           },
         ]);
@@ -92,7 +94,7 @@ export function ParentChat() {
           ...prev,
           {
             role: "assistant",
-            text: "I'm having trouble processing that response. Please try again, or call us directly at (505) 867-5309.",
+            text: `I'm having trouble processing that response. Please try again, or call us directly at ${CENTER.phone}.`,
             type: "escalated",
           },
         ]);
@@ -105,7 +107,7 @@ export function ParentChat() {
         ...prev,
         {
           role: "assistant",
-          text: "I'm having trouble connecting right now. Please try again in a moment, or call us directly at (505) 867-5309.",
+          text: `I'm having trouble connecting right now. Please try again in a moment, or call us directly at ${CENTER.phone}.`,
           type: "escalated",
         },
       ]);

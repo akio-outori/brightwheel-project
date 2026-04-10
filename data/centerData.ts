@@ -1,7 +1,7 @@
 export const CENTER = {
-  name: "Sunshine Academy",
-  tagline: "Where little minds grow bright",
-  phone: "(505) 867-5309",
-  email: "hello@sunshineacademy.com",
-  address: "2810 Coors Blvd NW, Albuquerque, NM 87120",
+  name: "Albuquerque DCFD",
+  tagline: "Division of Child & Family Development",
+  phone: "(505) 767-6500",
+  email: "info@cabq.gov",
+  address: "1820 Randolph Rd SE, Albuquerque, NM 87106",
 };
