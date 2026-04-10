@@ -348,15 +348,8 @@ export function classifySpecificChild(question: string): PreflightVerdict {
   return { verdict: "pass" };
 }
 
-/**
- * Heuristic: does the question make a direct health CLAIM about a
- * specific child (not just mention health words in a policy context)?
- *
- * "My child has a fever" → true (has = condition verb)
- * "What do I need to enroll my child?" → false (no condition verb)
- */
-function hasDirectHealthClaim(question: string): boolean {
-  const conditionVerbs =
-    /\b(?:my|our)\s+(?:child|son|daughter|kid|baby|toddler)\s+(?:is|has|was|got|had|fell|seems?|looks?|feels?|needs?|can't|won't|doesn't|isn't)\b/i;
-  return conditionVerbs.test(question);
-}
+// hasDirectHealthClaim was previously used here to distinguish
+// policy questions from condition reports. Removed after the policy
+// patterns were expanded to be sufficient on their own — if a
+// question matches a policy pattern, it passes regardless of
+// whether the phrasing also looks like a condition report.
