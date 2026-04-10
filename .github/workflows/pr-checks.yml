@@ -81,7 +81,7 @@ jobs:
             curl -sf http://localhost:9000/minio/health/ready && break
             sleep 1
           done
-      - run: npm test -- --reporter=verbose
+      - run: npm test -- --reporter=verbose --coverage
 
   build:
     name: Next.js production build

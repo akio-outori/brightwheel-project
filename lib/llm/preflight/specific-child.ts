@@ -304,12 +304,14 @@ export function classifySpecificChild(question: string): PreflightVerdict {
     }
   }
 
-  // Group 1b: possessive + family noun + attendance-decision verb.
-  // "Is it OK to send my child with a runny nose?" doesn't need
-  // "runny nose" in the health vocabulary — "send my child" is
-  // already specific-child. The parent is asking about THIS child's
-  // attendance, not about policy in the abstract.
-  if (!isPolicyQuestion(question)) {
+  // Group 1b: possessive + family noun + attendance-decision verb
+  // + health context. "Is it OK to send my child with a runny nose?"
+  // holds because "runny nose" provides health context. "Should I
+  // bring my child in today?" passes because there's no health
+  // context — it's a schedule question. The health requirement
+  // prevents false positives on "Can my daughter attend the summer
+  // session?" while catching "Can my son still come if he has a cold?"
+  if (hasHealthWord && !isPolicyQuestion(question)) {
     const attendanceDecision = new RegExp(
       `\\b(?:send|bring|take|keep)\\s+(?:my|our)\\s+${FAMILY_NOUNS}\\b`,
       "i",
@@ -339,7 +341,18 @@ export function classifySpecificChild(question: string): PreflightVerdict {
     }
   }
 
-  // Group 3: third-person pronoun in health context
+  // Group 3a: euphemisms that ARE the health signal — no health
+  // word required because the phrasing itself conveys illness.
+  // "He hasn't been himself" = "he's sick" in parent-speak.
+  if (/\bhasn't\s+been\s+(?:himself|herself)\b/i.test(question)) {
+    return {
+      verdict: "hold",
+      reason: "specific_child_question",
+      detail: `pronoun euphemism for illness`,
+    };
+  }
+
+  // Group 3b: third-person pronoun in health context
   if (hasHealthWord && !isPolicyQuestion(question)) {
     for (const pat of PRONOUN_HEALTH_PATTERNS) {
       if (pat.test(question)) {
