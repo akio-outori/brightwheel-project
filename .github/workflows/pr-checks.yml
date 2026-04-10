@@ -50,11 +50,11 @@ jobs:
       - run: npx prettier --check "**/*.{ts,tsx,js,json,css}" --ignore-path .gitignore
 
   # ---------------------------------------------------------------
-  # Tests
+  # Tests — 304 unit tests with 80%+ coverage threshold
   # ---------------------------------------------------------------
 
   unit-tests:
-    name: Unit tests (1325+)
+    name: Unit tests (304, 89% coverage)
     runs-on: ubuntu-latest
     env:
       STORAGE_ENDPOINT: http://localhost:9000
@@ -96,11 +96,11 @@ jobs:
       - run: npm run build
 
   # ---------------------------------------------------------------
-  # Security — dependency vulnerabilities
+  # Security — dependency vulnerabilities (all severities)
   # ---------------------------------------------------------------
 
   npm-audit:
-    name: npm audit (critical + high)
+    name: npm audit (all severities)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -109,10 +109,10 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm ci
-      - name: Audit production deps
-        run: npm audit --omit=dev --audit-level=high
-      - name: Audit all deps (informational)
-        run: npm audit --audit-level=critical
+      - name: Audit production deps (fail on any severity)
+        run: npm audit --omit=dev
+      - name: Audit dev deps (informational)
+        run: npm audit
         continue-on-error: true
 
   trivy-fs:
@@ -192,16 +192,15 @@ jobs:
             --summary
 
   # ---------------------------------------------------------------
-  # Security — container image (if Dockerfile changed)
+  # Security — container image (every PR)
   # ---------------------------------------------------------------
 
   trivy-image:
     name: Trivy container image scan
     runs-on: ubuntu-latest
-    if: contains(github.event.pull_request.changed_files_names || '', 'Dockerfile') || contains(github.event.pull_request.changed_files_names || '', 'docker')
     steps:
       - uses: actions/checkout@v4
-      - name: Build image
+      - name: Build Docker image
         run: docker build -t brightwheel-app:scan .
       - name: Trivy vulnerability scan (image)
         uses: aquasecurity/trivy-action@master
