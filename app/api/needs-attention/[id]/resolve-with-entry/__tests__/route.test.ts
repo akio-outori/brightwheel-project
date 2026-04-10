@@ -39,10 +39,9 @@ function makeReq(body: unknown): Request {
 
 describe("POST /api/needs-attention/[id]/resolve-with-entry", () => {
   it("creates an override and resolves the event atomically", async () => {
-    const res = await POST(
-      makeReq({ title: "Fix", category: "general", body: "Fixed answer" }),
-      { params: Promise.resolve({ id: "evt-1" }) },
-    );
+    const res = await POST(makeReq({ title: "Fix", category: "general", body: "Fixed answer" }), {
+      params: Promise.resolve({ id: "evt-1" }),
+    });
     expect(res.status).toBe(201);
     const data = await res.json();
     expect(data.override.id).toBe("new-override");
@@ -60,10 +59,9 @@ describe("POST /api/needs-attention/[id]/resolve-with-entry", () => {
     vi.mocked(createOperatorOverride).mockRejectedValueOnce(
       new (await import("@/lib/storage")).StorageError("exists", "already_exists"),
     );
-    const res = await POST(
-      makeReq({ title: "Dup", category: "general", body: "body" }),
-      { params: Promise.resolve({ id: "evt-1" }) },
-    );
+    const res = await POST(makeReq({ title: "Dup", category: "general", body: "body" }), {
+      params: Promise.resolve({ id: "evt-1" }),
+    });
     expect(res.status).toBe(409);
   });
 });

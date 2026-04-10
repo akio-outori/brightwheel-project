@@ -109,9 +109,7 @@ describe("POST /api/ask", () => {
   });
 
   it("preflight-holds a specific-child health question", async () => {
-    const res = await POST(
-      makeRequest({ question: "My son has a fever, should I bring him in?" }),
-    );
+    const res = await POST(makeRequest({ question: "My son has a fever, should I bring him in?" }));
     expect(res.status).toBe(200);
     const data = await res.json();
     expect(data.escalate).toBe(true);
@@ -148,9 +146,7 @@ describe("POST /api/ask", () => {
       escalate: true,
       escalation_reason: "not covered in handbook",
     });
-    const res = await POST(
-      makeRequest({ question: "Do you offer summer camp?" }),
-    );
+    const res = await POST(makeRequest({ question: "Do you offer summer camp?" }));
     expect(res.status).toBe(200);
     const data = await res.json();
     expect(data.escalate).toBe(true);
@@ -159,9 +155,7 @@ describe("POST /api/ask", () => {
 
   it("returns 500 on LLM failure", async () => {
     vi.mocked(askLLM).mockRejectedValueOnce(new Error("API timeout"));
-    const res = await POST(
-      makeRequest({ question: "What are the program hours?" }),
-    );
+    const res = await POST(makeRequest({ question: "What are the program hours?" }));
     expect(res.status).toBe(500);
     const data = await res.json();
     expect(data.error).toBe("Something went wrong. Please try again.");

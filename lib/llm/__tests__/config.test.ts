@@ -4,10 +4,7 @@
 
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 import path from "node:path";
-import {
-  loadAgentConfig,
-  __resetConfigCacheForTests,
-} from "../config";
+import { loadAgentConfig, __resetConfigCacheForTests } from "../config";
 
 // Point at the real Sonnet config for the happy path
 const VALID_CONFIG = "config/agents/parent-front-desk-sonnet.json";
@@ -40,9 +37,7 @@ describe("loadAgentConfig", () => {
   });
 
   it("throws on missing config file", async () => {
-    await expect(loadAgentConfig("nonexistent.json")).rejects.toThrow(
-      /not found or unreadable/,
-    );
+    await expect(loadAgentConfig("nonexistent.json")).rejects.toThrow(/not found or unreadable/);
   });
 
   it("throws on invalid JSON", async () => {
@@ -60,14 +55,9 @@ describe("loadAgentConfig", () => {
   it("throws on schema validation failure", async () => {
     const fs = await import("node:fs/promises");
     const tmp = path.join(process.cwd(), ".tmp-bad-schema.json");
-    await fs.writeFile(
-      tmp,
-      JSON.stringify({ id: "x", name: "x", version: "1", metadata: {} }),
-    );
+    await fs.writeFile(tmp, JSON.stringify({ id: "x", name: "x", version: "1", metadata: {} }));
     try {
-      await expect(loadAgentConfig(tmp)).rejects.toThrow(
-        /failed schema validation/,
-      );
+      await expect(loadAgentConfig(tmp)).rejects.toThrow(/failed schema validation/);
     } finally {
       await fs.unlink(tmp);
     }
@@ -77,9 +67,7 @@ describe("loadAgentConfig", () => {
     const original = process.env.ANTHROPIC_API_KEY;
     delete process.env.ANTHROPIC_API_KEY;
     try {
-      await expect(loadAgentConfig(VALID_CONFIG)).rejects.toThrow(
-        /ANTHROPIC_API_KEY/,
-      );
+      await expect(loadAgentConfig(VALID_CONFIG)).rejects.toThrow(/ANTHROPIC_API_KEY/);
     } finally {
       process.env.ANTHROPIC_API_KEY = original;
     }
