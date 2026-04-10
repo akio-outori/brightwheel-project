@@ -61,9 +61,7 @@ export default function NewOverridePage() {
       });
       if (!res.ok) {
         const detail = await res.json().catch(() => ({}));
-        throw new Error(
-          detail.error ?? `Could not save (HTTP ${res.status})`,
-        );
+        throw new Error(detail.error ?? `Could not save (HTTP ${res.status})`);
       }
       const created = (await res.json()) as { id: string };
       await mutate("/api/handbook");
@@ -90,13 +88,10 @@ export default function NewOverridePage() {
         className="flex flex-col gap-4 rounded-lg border border-slate-200 bg-white p-5 shadow-sm"
       >
         <div>
-          <h2 className="text-base font-semibold text-slate-900">
-            New operator override
-          </h2>
+          <h2 className="text-base font-semibold text-slate-900">New operator override</h2>
           <p className="mt-1 text-xs text-slate-600">
-            Overrides sit on top of the seeded handbook at query time.
-            When an override directly answers a parent&rsquo;s question,
-            the model prefers it over seed content.
+            Overrides sit on top of the seeded handbook at query time. When an override directly
+            answers a parent&rsquo;s question, the model prefers it over seed content.
           </p>
         </div>
 
@@ -140,10 +135,7 @@ export default function NewOverridePage() {
         </label>
 
         {error && (
-          <p
-            role="alert"
-            className="rounded-md bg-rose-50 px-3 py-2 text-xs text-rose-800"
-          >
+          <p role="alert" className="rounded-md bg-rose-50 px-3 py-2 text-xs text-rose-800">
             {error}
           </p>
         )}
@@ -157,11 +149,7 @@ export default function NewOverridePage() {
           </Link>
           <button
             type="submit"
-            disabled={
-              submitting ||
-              title.trim().length === 0 ||
-              body.trim().length === 0
-            }
+            disabled={submitting || title.trim().length === 0 || body.trim().length === 0}
             className="rounded-md bg-sky-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-sky-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 disabled:bg-slate-300"
           >
             {submitting ? "Saving…" : "Create override"}

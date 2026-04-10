@@ -25,17 +25,13 @@ describe.skipIf(!hasApiKey())("grounding — literal fact recall", () => {
   // ----- Phone numbers ------------------------------------------------------
 
   it("recalls the main DCFD office phone number", async () => {
-    const result = await askViaRoute(
-      "What's the phone number for the DCFD main office?",
-    );
+    const result = await askViaRoute("What's the phone number for the DCFD main office?");
     await expectHighConfidence(result, "main-office-phone");
     expectAnswerContains(result, "505-767-6500");
   });
 
   it("recalls the Preschool/Pre-K enrollment specialist phone", async () => {
-    const result = await askViaRoute(
-      "Who should I call to enroll my child in Preschool or Pre-K?",
-    );
+    const result = await askViaRoute("Who should I call to enroll my child in Preschool or Pre-K?");
     await expectHighConfidence(result, "preschool-enrollment-phone");
     // The specialist phones are written as bare 7-digit extensions
     // in the seed entry body (`767-6504`), not fully qualified with
@@ -45,9 +41,7 @@ describe.skipIf(!hasApiKey())("grounding — literal fact recall", () => {
   });
 
   it("recalls the Early Head Start enrollment phone", async () => {
-    const result = await askViaRoute(
-      "Who handles Early Head Start enrollment?",
-    );
+    const result = await askViaRoute("Who handles Early Head Start enrollment?");
     await expectHighConfidence(result, "ehs-enrollment-phone");
     expectAnswerContains(result, "767-6512");
   });
@@ -55,9 +49,7 @@ describe.skipIf(!hasApiKey())("grounding — literal fact recall", () => {
   // ----- Dollar amounts -----------------------------------------------------
 
   it("recalls the $15 late fee", async () => {
-    const result = await askViaRoute(
-      "What happens if I'm late picking up my child?",
-    );
+    const result = await askViaRoute("What happens if I'm late picking up my child?");
     await expectHighConfidence(result, "late-fee");
     expectAnswerContains(result, "$15");
   });
@@ -73,9 +65,7 @@ describe.skipIf(!hasApiKey())("grounding — literal fact recall", () => {
   });
 
   it("recalls Monica Watrin for EHS intake", async () => {
-    const result = await askViaRoute(
-      "Who is the intake specialist for Early Head Start?",
-    );
+    const result = await askViaRoute("Who is the intake specialist for Early Head Start?");
     await expectHighConfidence(result, "monica-watrin");
     expectAnswerContains(result, "Monica Watrin");
   });
@@ -91,17 +81,13 @@ describe.skipIf(!hasApiKey())("grounding — literal fact recall", () => {
   // ----- Center names -------------------------------------------------------
 
   it("recalls the Alamosa center as a Preschool/Pre-K location", async () => {
-    const result = await askViaRoute(
-      "Does the Alamosa center offer Preschool and Pre-K?",
-    );
+    const result = await askViaRoute("Does the Alamosa center offer Preschool and Pre-K?");
     await expectHighConfidence(result, "alamosa-center");
     expectAnswerContains(result, "Alamosa");
   });
 
   it("recalls that Los Volcanes has an intergenerational center", async () => {
-    const result = await askViaRoute(
-      "Tell me about the Los Volcanes center.",
-    );
+    const result = await askViaRoute("Tell me about the Los Volcanes center.");
     await expectHighConfidence(result, "los-volcanes");
     expectAnswerContains(result, "Los Volcanes");
   });
@@ -109,9 +95,7 @@ describe.skipIf(!hasApiKey())("grounding — literal fact recall", () => {
   // ----- Policy specifics ---------------------------------------------------
 
   it("recalls the 100.4F fever exclusion threshold", async () => {
-    const result = await askViaRoute(
-      "At what temperature should I keep my child home?",
-    );
+    const result = await askViaRoute("At what temperature should I keep my child home?");
     await expectHighConfidence(result, "fever-threshold");
     expectAnswerContains(result, "100.4");
   });
@@ -127,9 +111,7 @@ describe.skipIf(!hasApiKey())("grounding — literal fact recall", () => {
   // ----- Program specifics --------------------------------------------------
 
   it("recalls the 6.5 hours/day attendance expectation", async () => {
-    const result = await askViaRoute(
-      "How many hours per day are children expected to attend?",
-    );
+    const result = await askViaRoute("How many hours per day are children expected to attend?");
     await expectHighConfidence(result, "daily-hours");
     expectAnswerContains(result, "6.5");
   });
@@ -141,9 +123,7 @@ describe.skipIf(!hasApiKey())("grounding — literal fact recall", () => {
   });
 
   it("recalls the Nurtured Heart discipline approach", async () => {
-    const result = await askViaRoute(
-      "What discipline approach do you use in Preschool?",
-    );
+    const result = await askViaRoute("What discipline approach do you use in Preschool?");
     await expectHighConfidence(result, "nurtured-heart");
     expectAnswerContains(result, "Nurtured Heart");
   });

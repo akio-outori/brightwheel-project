@@ -6,12 +6,7 @@
 // concluding there's a model problem.
 
 import { describe, it } from "vitest";
-import {
-  askViaRoute,
-  expectHighConfidence,
-  hasApiKey,
-  setupIntegrationTest,
-} from "./_helpers";
+import { askViaRoute, expectHighConfidence, hasApiKey, setupIntegrationTest } from "./_helpers";
 
 describe.skipIf(!hasApiKey())("accuracy — grounded high-confidence answers", () => {
   setupIntegrationTest();
@@ -28,9 +23,7 @@ describe.skipIf(!hasApiKey())("accuracy — grounded high-confidence answers", (
   });
 
   it("answers 'When does the Early Head Start program run?'", async () => {
-    const result = await askViaRoute(
-      "When does the Early Head Start program run?",
-    );
+    const result = await askViaRoute("When does the Early Head Start program run?");
     await expectHighConfidence(result, "ehs-hours");
   });
 
@@ -41,16 +34,12 @@ describe.skipIf(!hasApiKey())("accuracy — grounded high-confidence answers", (
   });
 
   it("answers 'What is the sick-child exclusion policy?'", async () => {
-    const result = await askViaRoute(
-      "What is the sick-child exclusion policy?",
-    );
+    const result = await askViaRoute("What is the sick-child exclusion policy?");
     await expectHighConfidence(result, "illness-policy-specific");
   });
 
   it("answers 'When should I keep my child home if they're sick?'", async () => {
-    const result = await askViaRoute(
-      "When should I keep my child home if they're sick?",
-    );
+    const result = await askViaRoute("When should I keep my child home if they're sick?");
     await expectHighConfidence(result, "illness-exclusion");
   });
 
@@ -61,9 +50,7 @@ describe.skipIf(!hasApiKey())("accuracy — grounded high-confidence answers", (
   });
 
   it("answers 'How does the program handle food allergies?'", async () => {
-    const result = await askViaRoute(
-      "How does the program handle food allergies?",
-    );
+    const result = await askViaRoute("How does the program handle food allergies?");
     await expectHighConfidence(result, "food-allergies");
   });
 
@@ -74,16 +61,12 @@ describe.skipIf(!hasApiKey())("accuracy — grounded high-confidence answers", (
   });
 
   it("answers 'What documents do I need for enrollment?'", async () => {
-    const result = await askViaRoute(
-      "What documents do I need for enrollment?",
-    );
+    const result = await askViaRoute("What documents do I need for enrollment?");
     await expectHighConfidence(result, "enrollment-docs");
   });
 
   it("answers 'Can I give my child sunscreen at the center?'", async () => {
-    const result = await askViaRoute(
-      "Can I give my child sunscreen at the center?",
-    );
+    const result = await askViaRoute("Can I give my child sunscreen at the center?");
     await expectHighConfidence(result, "sunscreen-policy");
   });
 
@@ -100,9 +83,7 @@ describe.skipIf(!hasApiKey())("accuracy — grounded high-confidence answers", (
 
   // Safety / emergencies
   it("answers 'What happens in case of an emergency?'", async () => {
-    const result = await askViaRoute(
-      "What happens in case of an emergency?",
-    );
+    const result = await askViaRoute("What happens in case of an emergency?");
     await expectHighConfidence(result, "emergency-procedures");
   });
 
@@ -129,9 +110,7 @@ describe.skipIf(!hasApiKey())("accuracy — grounded high-confidence answers", (
   });
 
   it("answers 'How do parent-teacher conferences work?'", async () => {
-    const result = await askViaRoute(
-      "How do parent-teacher conferences work?",
-    );
+    const result = await askViaRoute("How do parent-teacher conferences work?");
     await expectHighConfidence(result, "conferences");
   });
 
@@ -142,25 +121,19 @@ describe.skipIf(!hasApiKey())("accuracy — grounded high-confidence answers", (
   });
 
   it("answers 'What support do you offer for children with disabilities?'", async () => {
-    const result = await askViaRoute(
-      "What support do you offer for children with disabilities?",
-    );
+    const result = await askViaRoute("What support do you offer for children with disabilities?");
     await expectHighConfidence(result, "disability-support");
   });
 
   // Operations / withdrawal
   it("answers 'What happens if we don't pay tuition?'", async () => {
-    const result = await askViaRoute(
-      "What happens if we don't pay tuition?",
-    );
+    const result = await askViaRoute("What happens if we don't pay tuition?");
     await expectHighConfidence(result, "non-payment-consequences");
   });
 
   // Communication
   it("answers 'How will the teachers communicate with me?'", async () => {
-    const result = await askViaRoute(
-      "How will the teachers communicate with me?",
-    );
+    const result = await askViaRoute("How will the teachers communicate with me?");
     await expectHighConfidence(result, "teacher-communication");
   });
 
@@ -171,9 +144,7 @@ describe.skipIf(!hasApiKey())("accuracy — grounded high-confidence answers", (
   });
 
   it("answers 'What's the main DCFD office phone number?'", async () => {
-    const result = await askViaRoute(
-      "What's the main DCFD office phone number?",
-    );
+    const result = await askViaRoute("What's the main DCFD office phone number?");
     await expectHighConfidence(result, "main-office-phone");
   });
 });

@@ -40,10 +40,7 @@ export async function GET(
     return Response.json(override);
   } catch (err) {
     console.error(`[/api/overrides/${id} GET] failed:`, err);
-    return Response.json(
-      { error: "Could not load override." },
-      { status: 500 },
-    );
+    return Response.json({ error: "Could not load override." }, { status: 500 });
   }
 }
 
@@ -57,10 +54,7 @@ export async function PUT(
   try {
     body = await req.json();
   } catch {
-    return Response.json(
-      { error: "Request body must be valid JSON." },
-      { status: 400 },
-    );
+    return Response.json({ error: "Request body must be valid JSON." }, { status: 400 });
   }
 
   const parsed = UpdateRequestSchema.safeParse(body);
@@ -77,10 +71,7 @@ export async function PUT(
       return Response.json({ error: "Not found." }, { status: 404 });
     }
     console.error(`[/api/overrides/${id} PUT] failed:`, err);
-    return Response.json(
-      { error: "Could not update override." },
-      { status: 500 },
-    );
+    return Response.json({ error: "Could not update override." }, { status: 500 });
   }
 }
 
@@ -95,9 +86,6 @@ export async function DELETE(
     return new Response(null, { status: 204 });
   } catch (err) {
     console.error(`[/api/overrides/${id} DELETE] failed:`, err);
-    return Response.json(
-      { error: "Could not delete override." },
-      { status: 500 },
-    );
+    return Response.json({ error: "Could not delete override." }, { status: 500 });
   }
 }

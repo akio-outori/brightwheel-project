@@ -11,11 +11,7 @@ import { getActiveDocumentId, getHandbookEntry } from "@/lib/storage";
 
 export const dynamic = "force-dynamic";
 
-export default async function HandbookEntryPage({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
+export default async function HandbookEntryPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const docId = getActiveDocumentId();
   const entry = await getHandbookEntry(docId, id);
@@ -37,9 +33,7 @@ export default async function HandbookEntryPage({
           <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
             {entry.category.replace(/-/g, " ")}
           </p>
-          <h2 className="mt-1 text-lg font-semibold text-slate-900">
-            {entry.title}
-          </h2>
+          <h2 className="mt-1 text-lg font-semibold text-slate-900">{entry.title}</h2>
           <p className="mt-1 text-xs text-slate-500">
             Last updated: {entry.lastUpdated}
             {entry.sourcePages.length > 0 && (
@@ -56,9 +50,8 @@ export default async function HandbookEntryPage({
         </div>
 
         <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
-          This entry is part of the immutable seeded handbook. To add
-          a clarification or correct this content, create an operator
-          override from the{" "}
+          This entry is part of the immutable seeded handbook. To add a clarification or correct
+          this content, create an operator override from the{" "}
           <Link
             href="/admin/overrides/new"
             className="font-semibold underline decoration-amber-500 underline-offset-2 hover:text-amber-950"

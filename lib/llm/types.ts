@@ -65,9 +65,7 @@ export function UserInput(value: string): UserInput {
     throw new Error("UserInput may not be empty");
   }
   if (value.length > 4000) {
-    throw new Error(
-      `UserInput exceeds max length: ${value.length} > 4000`,
-    );
+    throw new Error(`UserInput exceeds max length: ${value.length} > 4000`);
   }
   return value as UserInput;
 }

@@ -13,9 +13,7 @@ export default function AdminHomePage() {
     <AdminShell active="home">
       <section>
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-base font-semibold text-slate-900">
-            Needs attention
-          </h2>
+          <h2 className="text-base font-semibold text-slate-900">Needs attention</h2>
           <Link
             href="/admin/needs-attention"
             className="text-xs font-medium text-sky-600 hover:text-sky-700"
@@ -28,9 +26,7 @@ export default function AdminHomePage() {
 
       <section className="mt-10">
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-base font-semibold text-slate-900">
-            Family handbook
-          </h2>
+          <h2 className="text-base font-semibold text-slate-900">Family handbook</h2>
           <Link
             href="/admin/handbook"
             className="text-xs font-medium text-sky-600 hover:text-sky-700"
@@ -39,9 +35,8 @@ export default function AdminHomePage() {
           </Link>
         </div>
         <p className="text-sm text-slate-600">
-          The source of truth the AI uses to answer family questions.
-          Add or edit entries to change what the assistant can answer
-          on its own.
+          The source of truth the AI uses to answer family questions. Add or edit entries to change
+          what the assistant can answer on its own.
         </p>
       </section>
     </AdminShell>

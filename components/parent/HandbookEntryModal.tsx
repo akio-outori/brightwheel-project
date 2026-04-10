@@ -53,9 +53,7 @@ export function HandbookEntryModal({
               <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
                 {source.category.replace(/-/g, " ")}
               </p>
-              <h2 className="mt-0.5 text-lg font-semibold text-slate-900">
-                {source.title}
-              </h2>
+              <h2 className="mt-0.5 text-lg font-semibold text-slate-900">{source.title}</h2>
             </div>
             <button
               type="button"
@@ -81,8 +79,7 @@ export function HandbookEntryModal({
             ) : source.sourcePages.length > 0 ? (
               <span>
                 Source: {document.title} ({document.version}), page
-                {source.sourcePages.length > 1 ? "s" : ""}{" "}
-                {source.sourcePages.join(", ")}
+                {source.sourcePages.length > 1 ? "s" : ""} {source.sourcePages.join(", ")}
               </span>
             ) : (
               <span>

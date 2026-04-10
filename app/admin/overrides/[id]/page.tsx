@@ -29,11 +29,7 @@ const CATEGORIES: HandbookCategory[] = [
   "general",
 ];
 
-export default function OverrideDetailPage({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
+export default function OverrideDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
   const { id } = use(params);
 
@@ -103,9 +99,7 @@ export default function OverrideDetailPage({
   async function handleDelete() {
     if (deleting) return;
     if (
-      !window.confirm(
-        "Delete this override? Parents will stop seeing it in answers immediately.",
-      )
+      !window.confirm("Delete this override? Parents will stop seeing it in answers immediately.")
     ) {
       return;
     }
@@ -163,14 +157,11 @@ export default function OverrideDetailPage({
           >
             override
           </span>
-          <h2 className="text-base font-semibold text-slate-900">
-            {override.title}
-          </h2>
+          <h2 className="text-base font-semibold text-slate-900">{override.title}</h2>
         </div>
         <p className="-mt-2 text-xs text-slate-500">
           Created {new Date(override.createdAt).toLocaleString()}
-          {override.updatedAt &&
-            ` · updated ${new Date(override.updatedAt).toLocaleString()}`}
+          {override.updatedAt && ` · updated ${new Date(override.updatedAt).toLocaleString()}`}
         </p>
 
         <label className="flex flex-col gap-1 text-xs font-medium text-slate-700">
@@ -211,10 +202,7 @@ export default function OverrideDetailPage({
         </label>
 
         {error && (
-          <p
-            role="alert"
-            className="rounded-md bg-rose-50 px-3 py-2 text-xs text-rose-800"
-          >
+          <p role="alert" className="rounded-md bg-rose-50 px-3 py-2 text-xs text-rose-800">
             {error}
           </p>
         )}
@@ -230,11 +218,7 @@ export default function OverrideDetailPage({
           </button>
           <button
             type="submit"
-            disabled={
-              saving ||
-              title.trim().length === 0 ||
-              body.trim().length === 0
-            }
+            disabled={saving || title.trim().length === 0 || body.trim().length === 0}
             className="rounded-md bg-sky-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-sky-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 disabled:bg-slate-300"
           >
             {saving ? "Saving…" : "Save changes"}

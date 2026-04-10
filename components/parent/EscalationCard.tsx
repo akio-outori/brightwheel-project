@@ -37,8 +37,7 @@ const REASON_COPY: Record<string, { heading: string; body: string }> = {
 // staff in the operator console; parents get only the escalation.
 
 export function EscalationCard({ reason }: { reason: string }) {
-  const copy =
-    REASON_COPY[reason] ?? REASON_COPY["low_confidence"]!;
+  const copy = REASON_COPY[reason] ?? REASON_COPY["low_confidence"]!;
 
   return (
     <article className="rounded-xl border border-amber-200 bg-amber-50 p-4 shadow-sm">
@@ -49,9 +48,7 @@ export function EscalationCard({ reason }: { reason: string }) {
         </span>
       </div>
       <h3 className="text-sm font-semibold text-amber-900">{copy.heading}</h3>
-      <p className="mt-1 text-sm leading-relaxed text-amber-900/80">
-        {copy.body}
-      </p>
+      <p className="mt-1 text-sm leading-relaxed text-amber-900/80">{copy.body}</p>
     </article>
   );
 }

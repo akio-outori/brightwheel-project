@@ -46,11 +46,7 @@ export function CitationPills({
                 ? "inline-flex max-w-full items-center gap-1 rounded-full bg-amber-50 px-3 py-1 text-xs font-medium text-amber-800 ring-1 ring-inset ring-amber-600/20 transition hover:bg-amber-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500"
                 : "inline-flex max-w-full items-center gap-1 rounded-full bg-sky-50 px-3 py-1 text-xs font-medium text-sky-700 ring-1 ring-inset ring-sky-600/20 transition hover:bg-sky-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
             }
-            title={
-              isOverride
-                ? "Clarified by a staff member"
-                : undefined
-            }
+            title={isOverride ? "Clarified by a staff member" : undefined}
           >
             <span aria-hidden="true">{isOverride ? "✏️" : "📎"}</span>
             <span className="truncate">{source.title}</span>

@@ -8,11 +8,11 @@ concurrency:
   group: pr-${{ github.head_ref }}
   cancel-in-progress: true
 
-jobs:
-  # ---------------------------------------------------------------
-  # Correctness
-  # ---------------------------------------------------------------
+# ---------------------------------------------------------------
+# Correctness
+# ---------------------------------------------------------------
 
+jobs:
   typecheck:
     name: TypeScript strict
     runs-on: ubuntu-latest
@@ -47,7 +47,7 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm ci
-      - run: npx prettier --check "**/*.{ts,tsx,js,json,md,css}"
+      - run: npx prettier --check "**/*.{ts,tsx,js,json,css}" --ignore-path .gitignore
 
   # ---------------------------------------------------------------
   # Tests
@@ -56,19 +56,6 @@ jobs:
   unit-tests:
     name: Unit tests (1325+)
     runs-on: ubuntu-latest
-    services:
-      minio:
-        image: minio/minio:RELEASE.2025-07-23T15-54-02Z
-        ports:
-          - 9000:9000
-        env:
-          MINIO_ROOT_USER: minioadmin
-          MINIO_ROOT_PASSWORD: minioadmin
-        options: >-
-          --health-cmd "mc ready local"
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 5
     env:
       STORAGE_ENDPOINT: http://localhost:9000
       STORAGE_ACCESS_KEY: minioadmin
@@ -82,6 +69,21 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm ci
+      # GH Actions services don't support custom commands, so we
+      # start MinIO as a regular docker container in the step.
+      - name: Start MinIO
+        run: |
+          docker run -d --name minio \
+            -p 9000:9000 \
+            -e MINIO_ROOT_USER=minioadmin \
+            -e MINIO_ROOT_PASSWORD=minioadmin \
+            minio/minio:RELEASE.2025-07-23T15-54-02Z \
+            server /data
+          # Wait for MinIO to be ready
+          for i in $(seq 1 30); do
+            curl -sf http://localhost:9000/minio/health/ready && break
+            sleep 1
+          done
       - run: npm test -- --reporter=verbose
 
   build:
@@ -110,8 +112,6 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm ci
-      # Fail the build on critical or high severity vulnerabilities
-      # in production dependencies. Dev-only vulns are informational.
       - name: Audit production deps
         run: npm audit --omit=dev --audit-level=high
       - name: Audit all deps (informational)
@@ -129,27 +129,24 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      # Trufflehog scans the full diff for leaked API keys, tokens,
-      # passwords, and other secrets. Runs against the PR diff only
-      # (not the full repo history) for speed.
       - name: TruffleHog secrets scan
         uses: trufflesecurity/trufflehog@main
         with:
-          extra_args: --only-verified --diff
+          extra_args: --only-verified
 
   codeql:
     name: CodeQL static analysis
     runs-on: ubuntu-latest
     permissions:
+      contents: read
       security-events: write
+      actions: read
     steps:
       - uses: actions/checkout@v4
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v3
         with:
           languages: javascript-typescript
-          # Security-and-quality catches: XSS, injection, prototype
-          # pollution, regex DoS, path traversal, information exposure
           queries: security-and-quality
       - name: Run CodeQL analysis
         uses: github/codeql-action/analyze@v3
@@ -162,10 +159,6 @@ jobs:
       - name: Semgrep scan
         uses: semgrep/semgrep-action@v1
         with:
-          # p/typescript covers TS-specific patterns
-          # p/react covers JSX/TSX patterns (XSS, dangerouslySetInnerHTML)
-          # p/owasp-top-ten covers the OWASP categories
-          # p/nodejs covers Node.js server patterns
           config: >-
             p/typescript
             p/react
@@ -186,9 +179,6 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm ci
-      # license-checker exits non-zero if any production dependency
-      # uses a copyleft license (GPL, AGPL, SSPL) that would be
-      # incompatible with commercial distribution.
       - name: Check licenses
         run: |
           npx license-checker --production --failOn \

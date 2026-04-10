@@ -11,11 +11,7 @@
 
 import { describe, expect, it } from "vitest";
 import { AnswerContractSchema } from "../llm";
-import {
-  askViaRoute,
-  hasApiKey,
-  setupIntegrationTest,
-} from "./_helpers";
+import { askViaRoute, hasApiKey, setupIntegrationTest } from "./_helpers";
 
 function assertValidContract(result: unknown): void {
   const parsed = AnswerContractSchema.safeParse(result);
@@ -46,9 +42,7 @@ describe.skipIf(!hasApiKey())("contract — robustness to weird inputs", () => {
   });
 
   it("handles a unicode-heavy question (emoji + CJK)", async () => {
-    const result = await askViaRoute(
-      "🏫 What time do you 开门 today? 👋 谢谢!",
-    );
+    const result = await askViaRoute("🏫 What time do you 开门 today? 👋 谢谢!");
     assertValidContract(result);
   });
 
@@ -56,23 +50,17 @@ describe.skipIf(!hasApiKey())("contract — robustness to weird inputs", () => {
     // Albuquerque has a large Spanish-speaking community; the real
     // system should at least not crash on Spanish, even if the
     // current prompt doesn't explicitly support it.
-    const result = await askViaRoute(
-      "¿A qué hora abre el centro en la mañana?",
-    );
+    const result = await askViaRoute("¿A qué hora abre el centro en la mañana?");
     assertValidContract(result);
   });
 
   it("handles a question with newlines and tabs", async () => {
-    const result = await askViaRoute(
-      "What time\n\tdo\n\tyou\n\topen?\n\n(please)",
-    );
+    const result = await askViaRoute("What time\n\tdo\n\tyou\n\topen?\n\n(please)");
     assertValidContract(result);
   });
 
   it("handles a question that looks like a JSON object", async () => {
-    const result = await askViaRoute(
-      '{"question":"what time do you open?","urgent":true}',
-    );
+    const result = await askViaRoute('{"question":"what time do you open?","urgent":true}');
     assertValidContract(result);
   });
 

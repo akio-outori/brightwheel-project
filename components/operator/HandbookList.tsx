@@ -9,11 +9,7 @@
 
 import Link from "next/link";
 import useSWR from "swr";
-import type {
-  DocumentMetadata,
-  HandbookEntry,
-  OperatorOverride,
-} from "@/lib/storage";
+import type { DocumentMetadata, HandbookEntry, OperatorOverride } from "@/lib/storage";
 
 interface HandbookResponse {
   document: {
@@ -63,12 +59,10 @@ export function HandbookList() {
       <section>
         <div className="flex items-baseline justify-between gap-3">
           <div>
-            <h2 className="text-sm font-semibold text-slate-900">
-              {metadata.title}
-            </h2>
+            <h2 className="text-sm font-semibold text-slate-900">{metadata.title}</h2>
             <p className="mt-0.5 text-xs text-slate-500">
-              Version {metadata.version} · seeded{" "}
-              {new Date(metadata.seededAt).toLocaleDateString()} · read-only
+              Version {metadata.version} · seeded {new Date(metadata.seededAt).toLocaleDateString()}{" "}
+              · read-only
             </p>
           </div>
           <span className="text-xs text-slate-500">
@@ -81,12 +75,10 @@ export function HandbookList() {
       <section>
         <div className="mb-2 flex items-baseline justify-between gap-3">
           <div>
-            <h2 className="text-sm font-semibold text-slate-900">
-              Operator overrides
-            </h2>
+            <h2 className="text-sm font-semibold text-slate-900">Operator overrides</h2>
             <p className="mt-0.5 text-xs text-slate-500">
-              Clarifications and corrections added by staff. These
-              layer on top of the handbook at query time.
+              Clarifications and corrections added by staff. These layer on top of the handbook at
+              query time.
             </p>
           </div>
           <Link
@@ -140,17 +132,12 @@ function SeedEntriesList({ entries }: { entries: HandbookEntry[] }) {
                       className="flex items-center justify-between gap-3 px-4 py-3 transition hover:bg-slate-50"
                     >
                       <div className="min-w-0">
-                        <p className="truncate text-sm font-medium text-slate-900">
-                          {entry.title}
-                        </p>
+                        <p className="truncate text-sm font-medium text-slate-900">{entry.title}</p>
                         <p className="mt-0.5 truncate text-xs text-slate-500">
                           {entry.body.slice(0, 120)}
                         </p>
                       </div>
-                      <span
-                        aria-hidden="true"
-                        className="shrink-0 text-slate-400"
-                      >
+                      <span aria-hidden="true" className="shrink-0 text-slate-400">
                         →
                       </span>
                     </Link>
@@ -168,9 +155,8 @@ function OverridesList({ overrides }: { overrides: OperatorOverride[] }) {
   if (overrides.length === 0) {
     return (
       <div className="rounded-lg border border-dashed border-slate-300 bg-white p-6 text-center text-sm text-slate-500">
-        No overrides yet. Overrides are created automatically when you
-        answer an escalated question from the needs-attention feed,
-        or you can add one directly with the button above.
+        No overrides yet. Overrides are created automatically when you answer an escalated question
+        from the needs-attention feed, or you can add one directly with the button above.
       </div>
     );
   }
@@ -194,9 +180,7 @@ function OverridesList({ overrides }: { overrides: OperatorOverride[] }) {
                   >
                     override
                   </span>
-                  <p className="truncate text-sm font-medium text-slate-900">
-                    {override.title}
-                  </p>
+                  <p className="truncate text-sm font-medium text-slate-900">{override.title}</p>
                 </div>
                 <p className="mt-0.5 truncate text-xs text-slate-500">
                   {override.body.slice(0, 120)}

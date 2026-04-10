@@ -71,10 +71,7 @@ export async function POST(req: Request): Promise<Response> {
   try {
     body = await req.json();
   } catch {
-    return Response.json(
-      { error: "Request body must be valid JSON." },
-      { status: 400 },
-    );
+    return Response.json({ error: "Request body must be valid JSON." }, { status: 400 });
   }
 
   const parsed = AskRequestSchema.safeParse(body);
@@ -220,9 +217,6 @@ export async function POST(req: Request): Promise<Response> {
   } catch (err) {
     // Generic failure — log server-side, return a safe error to the parent.
     console.error("[/api/ask] request failed:", err);
-    return Response.json(
-      { error: "Something went wrong. Please try again." },
-      { status: 500 },
-    );
+    return Response.json({ error: "Something went wrong. Please try again." }, { status: 500 });
   }
 }

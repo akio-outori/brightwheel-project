@@ -74,9 +74,7 @@ function migrateEvent(parsed: NeedsAttentionEvent): NeedsAttentionEvent {
 // Public API
 // ---------------------------------------------------------------------------
 
-export async function logNeedsAttention(
-  draft: NeedsAttentionDraft,
-): Promise<NeedsAttentionEvent> {
+export async function logNeedsAttention(draft: NeedsAttentionDraft): Promise<NeedsAttentionEvent> {
   const validated = NeedsAttentionDraftSchema.parse(draft);
 
   const createdAt = new Date();

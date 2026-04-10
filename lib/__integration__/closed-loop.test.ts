@@ -86,14 +86,11 @@ describe.skipIf(!hasApiKey())("closed-loop — full ask-fix-reask cycle", () => 
     expect(createRes.ok, "overrides POST should succeed").toBe(true);
     const created = (await createRes.json()) as { id: string };
 
-    const resolveRes = await fetch(
-      `http://localhost:3000/api/needs-attention/${event!.id}`,
-      {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ resolvedByOverrideId: created.id }),
-      },
-    );
+    const resolveRes = await fetch(`http://localhost:3000/api/needs-attention/${event!.id}`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ resolvedByOverrideId: created.id }),
+    });
     expect(resolveRes.ok, "resolve POST should succeed").toBe(true);
 
     // The adapter's in-process document cache is stale after the
@@ -104,10 +101,7 @@ describe.skipIf(!hasApiKey())("closed-loop — full ask-fix-reask cycle", () => 
     // the new override id.
     const reasked = await askViaRoute(question);
     await expectHighConfidence(reasked, "reask");
-    expect(
-      reasked.cited_entries,
-      "reask should cite the new override",
-    ).toContain(created.id);
+    expect(reasked.cited_entries, "reask should cite the new override").toContain(created.id);
   });
 
   it("closes the loop via POST /api/needs-attention/[id]/resolve-with-entry", async () => {
@@ -189,9 +183,7 @@ describe.skipIf(!hasApiKey())("closed-loop — full ask-fix-reask cycle", () => 
 
     // The invariant: even with a direct override answer, the
     // sensitive override forces escalate=true.
-    expect(result.escalate, "sensitive override must force escalate").toBe(
-      true,
-    );
+    expect(result.escalate, "sensitive override must force escalate").toBe(true);
     expect(result.confidence).toBe("low");
   });
 });

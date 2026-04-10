@@ -48,10 +48,7 @@ export async function POST(
   try {
     rawBody = await req.json();
   } catch {
-    return Response.json(
-      { error: "Request body must be valid JSON." },
-      { status: 400 },
-    );
+    return Response.json({ error: "Request body must be valid JSON." }, { status: 400 });
   }
 
   const parsed = FixRequestSchema.safeParse(rawBody);
@@ -75,14 +72,8 @@ export async function POST(
         { status: 409 },
       );
     }
-    console.error(
-      `[/api/needs-attention/${eventId}/resolve-with-entry] create failed:`,
-      err,
-    );
-    return Response.json(
-      { error: "Could not create override." },
-      { status: 500 },
-    );
+    console.error(`[/api/needs-attention/${eventId}/resolve-with-entry] create failed:`, err);
+    return Response.json({ error: "Could not create override." }, { status: 500 });
   }
 
   // Step 2: resolve the event. If this fails, the override exists

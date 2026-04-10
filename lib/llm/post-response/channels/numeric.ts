@@ -64,7 +64,10 @@ export const numericChannel: Channel = ({ draft, allSources }) => {
   // citing the staff directory). The hallucination channel already
   // catches citation-level fabrication; this channel's job is to
   // catch fabricated numbers, not to audit citation discipline.
-  const corpus = allSources.map((s) => s.body).join("\n").toLowerCase();
+  const corpus = allSources
+    .map((s) => s.body)
+    .join("\n")
+    .toLowerCase();
   if (corpus.length === 0) {
     return {
       verdict: "hold",

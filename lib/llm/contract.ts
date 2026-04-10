@@ -49,8 +49,7 @@ export type AnswerContract = z.infer<typeof AnswerContractSchema>;
 // the question is escalated to a human — the same path as a legitimate
 // low-confidence answer. Never throw a 500 on a malformed model output.
 export const PARSE_FAILURE_RESULT: AnswerContract = {
-  answer:
-    "I want to make sure I get this right. Let me get a human to help.",
+  answer: "I want to make sure I get this right. Let me get a human to help.",
   confidence: "low",
   cited_entries: [],
   escalate: true,

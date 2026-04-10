@@ -28,15 +28,9 @@ export async function GET(): Promise<Response> {
     return Response.json({ document: { metadata, entries, overrides } });
   } catch (err) {
     if (err instanceof StorageError && err.code === "not_found") {
-      return Response.json(
-        { error: "Active document has not been seeded." },
-        { status: 404 },
-      );
+      return Response.json({ error: "Active document has not been seeded." }, { status: 404 });
     }
     console.error("[/api/handbook GET] failed:", err);
-    return Response.json(
-      { error: "Could not load handbook." },
-      { status: 500 },
-    );
+    return Response.json({ error: "Could not load handbook." }, { status: 500 });
   }
 }

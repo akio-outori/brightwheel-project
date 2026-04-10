@@ -11,9 +11,6 @@ export async function GET(): Promise<Response> {
     return Response.json({ events });
   } catch (err) {
     console.error("[/api/needs-attention GET] failed:", err);
-    return Response.json(
-      { error: "Could not load needs-attention feed." },
-      { status: 500 },
-    );
+    return Response.json({ error: "Could not load needs-attention feed." }, { status: 500 });
   }
 }

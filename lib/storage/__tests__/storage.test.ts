@@ -20,12 +20,7 @@ process.env.STORAGE_ENDPOINT ??= "http://localhost:9000";
 process.env.STORAGE_ACCESS_KEY ??= "minioadmin";
 process.env.STORAGE_SECRET_KEY ??= "minioadmin";
 
-import {
-  EVENTS_BUCKET,
-  HANDBOOK_BUCKET,
-  __resetClientForTests,
-  getClient,
-} from "../client";
+import { EVENTS_BUCKET, HANDBOOK_BUCKET, __resetClientForTests, getClient } from "../client";
 import {
   createOperatorOverride,
   deleteOperatorOverride,
@@ -203,18 +198,13 @@ describe("operator overrides adapter", () => {
     expect(listed).toHaveLength(1);
     expect(listed[0]!.id).toBe("pet-policy-clarification");
 
-    const fetched = await getOperatorOverride(
-      TEST_DOC_ID,
-      "pet-policy-clarification",
-    );
+    const fetched = await getOperatorOverride(TEST_DOC_ID, "pet-policy-clarification");
     expect(fetched).not.toBeNull();
     expect(fetched!.title).toBe("Pet Policy Clarification");
 
-    const updated = await updateOperatorOverride(
-      TEST_DOC_ID,
-      "pet-policy-clarification",
-      { body: "Updated: classroom pets welcome; talk to your teacher." },
-    );
+    const updated = await updateOperatorOverride(TEST_DOC_ID, "pet-policy-clarification", {
+      body: "Updated: classroom pets welcome; talk to your teacher.",
+    });
     expect(updated.body).toContain("Updated:");
     expect(updated.title).toBe("Pet Policy Clarification");
     expect(updated.createdAt).toBe(created.createdAt);
@@ -266,9 +256,7 @@ describe("operator overrides adapter", () => {
 
   it("deleteOperatorOverride on a missing id is a no-op", async () => {
     // Idempotent delete — test teardown hits this path.
-    await expect(
-      deleteOperatorOverride(TEST_DOC_ID, "never-existed"),
-    ).resolves.toBeUndefined();
+    await expect(deleteOperatorOverride(TEST_DOC_ID, "never-existed")).resolves.toBeUndefined();
   });
 
   it("createOperatorOverride rejects invalid input at the schema boundary", async () => {
@@ -305,9 +293,7 @@ describe("needs-attention adapter", () => {
         escalation_reason: "no matching handbook entry",
       },
     });
-    expect(logged.id).toMatch(
-      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/,
-    );
+    expect(logged.id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/);
     expect(logged.docId).toBe(TEST_DOC_ID);
     expect(logged.resolvedAt).toBeUndefined();
 
@@ -317,10 +303,7 @@ describe("needs-attention adapter", () => {
     expect(open[0]!.question).toBe("How can I schedule a tour?");
     expect(open[0]!.docId).toBe(TEST_DOC_ID);
 
-    const resolved = await resolveNeedsAttention(
-      logged.id,
-      "scheduling-a-tour-override",
-    );
+    const resolved = await resolveNeedsAttention(logged.id, "scheduling-a-tour-override");
     expect(resolved.resolvedAt).toMatch(/^\d{4}-\d{2}-\d{2}T/);
     expect(resolved.resolvedByOverrideId).toBe("scheduling-a-tour-override");
 
@@ -362,10 +345,7 @@ describe("needs-attention adapter", () => {
 
   it("resolveNeedsAttention on an unknown id throws not_found", async () => {
     await expect(
-      resolveNeedsAttention(
-        "00000000-0000-0000-0000-000000000000",
-        "some-override",
-      ),
+      resolveNeedsAttention("00000000-0000-0000-0000-000000000000", "some-override"),
     ).rejects.toMatchObject({
       name: "StorageError",
       code: "not_found",

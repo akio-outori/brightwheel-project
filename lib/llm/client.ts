@@ -95,10 +95,7 @@ export async function askLLM(
   // and why a response escalated or fell through to PARSE_FAILURE_RESULT.
   // This is not dev-only — it's part of the honest demo story ("show me
   // what you asked and what it said").
-  console.log(
-    "[askLLM] model response:",
-    JSON.stringify({ text: unfenced.slice(0, 4000) }),
-  );
+  console.log("[askLLM] model response:", JSON.stringify({ text: unfenced.slice(0, 4000) }));
 
   let parsed: unknown;
   try {

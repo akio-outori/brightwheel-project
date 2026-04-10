@@ -7,10 +7,7 @@
 // owns conversation history and the pending state.
 
 import { ParentChat } from "@/components/parent/ParentChat";
-import type {
-  CitationSource,
-  DocumentInfo,
-} from "@/components/parent/types";
+import type { CitationSource, DocumentInfo } from "@/components/parent/types";
 import {
   getActiveDocumentId,
   getDocumentMetadata,
@@ -66,10 +63,9 @@ export default async function HomePage() {
           {metadata.title}
         </h1>
         <p className="mt-2 text-sm text-slate-600 sm:text-base">
-          Ask a question about the program. Answers are grounded in the
-          official family handbook plus any clarifications staff have
-          added. When I&rsquo;m not sure, I pass the question to a real
-          person.
+          Ask a question about the program. Answers are grounded in the official family handbook
+          plus any clarifications staff have added. When I&rsquo;m not sure, I pass the question to
+          a real person.
         </p>
       </header>
 

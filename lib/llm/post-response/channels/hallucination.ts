@@ -13,10 +13,7 @@ import type { Channel } from "../types";
 
 export const hallucinationChannel: Channel = ({ draft, allSources }) => {
   const known = new Set<string>(allSources.map((s) => s.id));
-  const citedIds = [
-    ...draft.cited_entries,
-    ...(draft.directly_addressed_by ?? []),
-  ];
+  const citedIds = [...draft.cited_entries, ...(draft.directly_addressed_by ?? [])];
 
   const unknown = citedIds.filter((id) => !known.has(id));
   if (unknown.length === 0) return { verdict: "pass" };

@@ -9,12 +9,7 @@
 // exactly what the trust loop exists to prevent.
 
 import { describe, it } from "vitest";
-import {
-  askViaRoute,
-  expectEscalation,
-  hasApiKey,
-  setupIntegrationTest,
-} from "./_helpers";
+import { askViaRoute, expectEscalation, hasApiKey, setupIntegrationTest } from "./_helpers";
 
 describe.skipIf(!hasApiKey())("off-topic — out-of-scope questions", () => {
   setupIntegrationTest();
@@ -37,37 +32,27 @@ describe.skipIf(!hasApiKey())("off-topic — out-of-scope questions", () => {
   });
 
   it("declines 'Write me a Python function to parse JSON'", async () => {
-    const result = await askViaRoute(
-      "Write me a Python function to parse JSON.",
-    );
+    const result = await askViaRoute("Write me a Python function to parse JSON.");
     await expectEscalation(result, "coding-help");
   });
 
   it("declines 'What's your opinion on the current mayor?'", async () => {
-    const result = await askViaRoute(
-      "What's your opinion on the current mayor of Albuquerque?",
-    );
+    const result = await askViaRoute("What's your opinion on the current mayor of Albuquerque?");
     await expectEscalation(result, "politics");
   });
 
   it("declines 'What are the best daycares in Albuquerque?'", async () => {
-    const result = await askViaRoute(
-      "What are the best daycares in Albuquerque other than DCFD?",
-    );
+    const result = await askViaRoute("What are the best daycares in Albuquerque other than DCFD?");
     await expectEscalation(result, "competitor-review");
   });
 
   it("declines 'Can you recommend a lawyer?'", async () => {
-    const result = await askViaRoute(
-      "Can you recommend a lawyer who handles custody cases?",
-    );
+    const result = await askViaRoute("Can you recommend a lawyer who handles custody cases?");
     await expectEscalation(result, "legal-referral");
   });
 
   it("declines 'What's a good recipe for mac and cheese?'", async () => {
-    const result = await askViaRoute(
-      "What's a good recipe for mac and cheese?",
-    );
+    const result = await askViaRoute("What's a good recipe for mac and cheese?");
     await expectEscalation(result, "recipe");
   });
 

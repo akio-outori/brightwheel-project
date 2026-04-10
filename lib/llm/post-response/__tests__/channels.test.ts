@@ -40,11 +40,7 @@ const CONTACT_ENTRY: GroundingSource = {
   body: "DCFD Main Office: 1820 Randolph Rd SE, Albuquerque, NM 87106. Main phone: 505-767-6500. Office hours Monday - Friday 8:00 am to 4:30 pm.",
 };
 
-const TWO_LAYER_SOURCES: GroundingSource[] = [
-  ILLNESS_POLICY,
-  HOURS_ENTRY,
-  CONTACT_ENTRY,
-];
+const TWO_LAYER_SOURCES: GroundingSource[] = [ILLNESS_POLICY, HOURS_ENTRY, CONTACT_ENTRY];
 
 function draft(partial: Partial<AnswerContract> = {}): AnswerContract {
   return {
@@ -64,10 +60,7 @@ function input(
   question = "What time do you open?",
 ): ChannelInput {
   const d = draft(partial);
-  const citedIdSet = new Set([
-    ...d.cited_entries,
-    ...(d.directly_addressed_by ?? []),
-  ]);
+  const citedIdSet = new Set([...d.cited_entries, ...(d.directly_addressed_by ?? [])]);
   const cited = allSources.filter((s) => citedIdSet.has(s.id));
   return { question, draft: d, cited, allSources };
 }
@@ -157,9 +150,7 @@ describe("coverageChannel", () => {
   });
 
   it("holds when BOTH cited_entries and directly_addressed_by are empty", () => {
-    const v = coverageChannel(
-      input({ cited_entries: [], directly_addressed_by: [] }),
-    );
+    const v = coverageChannel(input({ cited_entries: [], directly_addressed_by: [] }));
     expect(v.verdict).toBe("hold");
     if (v.verdict === "hold") {
       expect(v.reason).toBe("no_direct_coverage");
@@ -173,9 +164,7 @@ describe("coverageChannel", () => {
 
 describe("contentTokenSet (lexical tokenizer)", () => {
   it("lowercases, strips punctuation, filters stopwords, light-stems", () => {
-    const tokens = contentTokenSet(
-      "The program runs Monday through Friday from 7am to 6pm!",
-    );
+    const tokens = contentTokenSet("The program runs Monday through Friday from 7am to 6pm!");
     expect(tokens.has("program")).toBe(true);
     // "runs" stems to "run"
     expect(tokens.has("run")).toBe(true);
@@ -264,8 +253,7 @@ describe("numericChannel", () => {
   it("holds when the draft contains a phone number absent from sources", () => {
     const v = numericChannel(
       input({
-        answer:
-          "You can reach the main office at 505-123-4567 during business hours.",
+        answer: "You can reach the main office at 505-123-4567 during business hours.",
         cited_entries: ["dcfd-main-office"],
         directly_addressed_by: ["dcfd-main-office"],
       }),
@@ -280,8 +268,7 @@ describe("numericChannel", () => {
   it("holds when the draft invents a temperature threshold", () => {
     const v = numericChannel(
       input({
-        answer:
-          "Keep children home if they have a fever of 102.5 or higher.",
+        answer: "Keep children home if they have a fever of 102.5 or higher.",
         cited_entries: ["illness-policy"],
         directly_addressed_by: ["illness-policy"],
       }),
@@ -329,9 +316,7 @@ describe("numericChannel", () => {
 
 describe("extractEntities", () => {
   it("finds multi-word capitalized phrases", () => {
-    const found = extractEntities(
-      "Contact Director Maria at the DCFD Main Office.",
-    );
+    const found = extractEntities("Contact Director Maria at the DCFD Main Office.");
     expect(found).toContain("Director Maria");
     expect(found).toContain("DCFD Main Office");
   });
@@ -343,9 +328,7 @@ describe("extractEntities", () => {
   });
 
   it("keeps single capitalized words at least 5 chars that aren't sentence-initial", () => {
-    const found = extractEntities(
-      "We work with our partner Canteen for all meal service.",
-    );
+    const found = extractEntities("We work with our partner Canteen for all meal service.");
     expect(found).toContain("Canteen");
   });
 });
@@ -366,8 +349,7 @@ describe("entitiesChannel", () => {
   it("holds when the draft names a person not in any source", () => {
     const v = entitiesChannel(
       input({
-        answer:
-          "Please contact Director Maria Gonzalez for scheduling questions.",
+        answer: "Please contact Director Maria Gonzalez for scheduling questions.",
         cited_entries: ["dcfd-main-office"],
         directly_addressed_by: ["dcfd-main-office"],
       }),
@@ -418,8 +400,7 @@ describe("medicalShapeChannel", () => {
   it("holds when the draft directs the parent to keep a specific child home for N hours", () => {
     const v = medicalShapeChannel(
       input({
-        answer:
-          "Keep your child home for 24 hours after the last episode of vomiting.",
+        answer: "Keep your child home for 24 hours after the last episode of vomiting.",
       }),
     );
     expect(v.verdict).toBe("hold");

@@ -13,10 +13,7 @@ import { getClient } from "./client";
  * exist; non-404 errors propagate unchanged. Callers are responsible
  * for schema validation of the returned value.
  */
-export async function readJson(
-  bucket: string,
-  key: string,
-): Promise<unknown | null> {
+export async function readJson(bucket: string, key: string): Promise<unknown | null> {
   const client = getClient();
   try {
     const stream = await client.getObject(bucket, key);
@@ -37,11 +34,7 @@ export async function readJson(
  * The value is serialized with two-space indentation so objects are
  * human-readable when inspected through the MinIO console.
  */
-export async function writeJson(
-  bucket: string,
-  key: string,
-  value: unknown,
-): Promise<void> {
+export async function writeJson(bucket: string, key: string, value: unknown): Promise<void> {
   const client = getClient();
   const body = Buffer.from(JSON.stringify(value, null, 2), "utf-8");
   await client.putObject(bucket, key, body, body.length, {
@@ -68,10 +61,7 @@ export async function removeJson(bucket: string, key: string): Promise<void> {
  * into nested "directories". Returns keys in whatever order the SDK
  * emits them — callers should not rely on sort order.
  */
-export async function listObjectKeys(
-  bucket: string,
-  prefix: string,
-): Promise<string[]> {
+export async function listObjectKeys(bucket: string, prefix: string): Promise<string[]> {
   const client = getClient();
   const keys: string[] = [];
   const stream = client.listObjectsV2(bucket, prefix, true);
