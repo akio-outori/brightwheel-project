@@ -49,6 +49,7 @@ const HEALTH_WORDS =
   "|under\\s+the\\s+weather|threw\\s+up|throwing\\s+up|thrown\\s+up" +
   "|symptom|contagious|infection|lice|pink\\s*eye|conjunctivitis" +
   "|strep|eczema|scraped?|scratch(?:ed)?|swollen|swelling" +
+  "|runny\\s+nose|sore\\s+throat|earache|ear\\s+infection|wheezing" +
   "|caught\\s+something|came\\s+down\\s+with" +
   "|custody|restraining|unauthorized|not\\s+allowed" +
   "|abuse|neglect)";
@@ -228,6 +229,20 @@ const POLICY_QUESTION_PATTERNS: ReadonlyArray<RegExp> = [
   /\bwhen\s+should\s+I\b/i,
   // "when do I need to..." — general procedural question
   /\bwhen\s+(?:do|should|can|would)\s+(?:I|we)\b/i,
+  // "at what [noun]..." — threshold/policy questions
+  /\bat\s+what\s+\w+\s+(?:should|do|does|can|would)\b/i,
+  // "how long does/should/must my child..." — duration policy
+  /\bhow\s+long\s+(?:does|should|must|do)\b/i,
+  // "when can my child return/come back/go back"
+  /\bwhen\s+can\s+(?:my|our)\s+(?:child|son|daughter|kid)\s+(?:return|come\s+back|go\s+back|attend)\b/i,
+  // "how many hours/days" — quantitative policy
+  /\bhow\s+many\s+(?:hours|days|weeks)\b/i,
+  // Note: "is it OK to..." was considered as a policy pattern but
+  // rejected. When it co-occurs with "my child" + a health word
+  // ("Is it OK to send my child with a runny nose?"), the parent is
+  // always describing their specific child's situation, not asking
+  // about general policy. The other policy patterns (what/how/when
+  // + abstract phrasing) are sufficient to catch real policy queries.
 ];
 
 function isPolicyQuestion(question: string): boolean {
@@ -245,19 +260,37 @@ export function classifySpecificChild(question: string): PreflightVerdict {
   // policy?" never triggers the health-word patterns below.
   const hasHealthWord = HEALTH_RE.test(question);
 
-  // Group 1: possessive + family noun
+  // Group 1a: possessive + family noun + health vocabulary
   for (const pat of POSSESSIVE_CHILD_PATTERNS) {
     if (pat.test(question) && hasHealthWord) {
-      // But check: is this actually a policy question that happens
-      // to mention "my child" in a general way?
-      // "What do I need to enroll my child?" → policy, not health
-      if (isPolicyQuestion(question) && !hasDirectHealthClaim(question)) {
-        continue;
-      }
+      if (isPolicyQuestion(question)) continue;
       return {
         verdict: "hold",
         reason: "specific_child_question",
         detail: `possessive + family noun with health context`,
+      };
+    }
+  }
+
+  // Group 1b: possessive + family noun + attendance-decision verb.
+  // "Is it OK to send my child with a runny nose?" doesn't need
+  // "runny nose" in the health vocabulary — "send my child" is
+  // already specific-child. The parent is asking about THIS child's
+  // attendance, not about policy in the abstract.
+  if (!isPolicyQuestion(question)) {
+    const attendanceDecision = new RegExp(
+      `\\b(?:send|bring|take|keep)\\s+(?:my|our)\\s+${FAMILY_NOUNS}\\b`,
+      "i",
+    );
+    const childAttendance = new RegExp(
+      `\\b(?:my|our)\\s+${FAMILY_NOUNS}\\s+(?:still\\s+)?(?:come|attend|return|go|stay)\\b`,
+      "i",
+    );
+    if (attendanceDecision.test(question) || childAttendance.test(question)) {
+      return {
+        verdict: "hold",
+        reason: "specific_child_question",
+        detail: `possessive + family noun with attendance-decision verb`,
       };
     }
   }

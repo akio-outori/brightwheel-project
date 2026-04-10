@@ -313,6 +313,14 @@ describe("PASS: general policy questions", () => {
     "What about toilet training?",
     "Do you provide diapers?",
     "What should my child wear?",
+    // Threshold/duration policy questions — "my child" as generic
+    // subject, asking about rules, not reporting a condition
+    "At what temperature should I keep my child home?",
+    "How long does my child need to be fever-free before returning?",
+    "When can my child return after having a fever?",
+    "How many hours per day are children expected to attend?",
+    "At what point should I not bring my child in?",
+    "How long should my child stay home after vomiting?",
   ])("passes: %s", (q) => expectPass(q));
 });
 
@@ -429,6 +437,8 @@ describe("HOLD: edge cases", () => {
     "My kid got sick at your center yesterday",
     "I think my child caught something from another kid",
     "My son's allergy is acting up again",
+    "Is it OK to send my child with a runny nose?",
+    "Is it safe to bring my daughter in if she still has a cough?",
   ])("holds: %s", (q) => expectHold(q));
 });
 
