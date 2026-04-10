@@ -77,23 +77,11 @@ Routes:
 - `PUT /api/overrides/[id]` — update
 - `DELETE /api/overrides/[id]` — delete
 
-## Notification bell
-
-`NotificationBell` in the admin header uses SWR to poll
-`/api/needs-attention` every 10 seconds and displays:
-- An unread count badge (rose when new events arrived)
-- Browser Notifications API push when the count increases
-- Permission request on first admin page load
-
-Scoped per document today; the hook filters by `docId` when
-multi-document routing is added.
-
 ## Key files
 
 - `components/operator/OperatorDashboard.tsx` — operator landing
 - `components/operator/QuestionLogPanel.tsx` — needs-attention feed
 - `components/operator/KnowledgePanel.tsx` — handbook + overrides
-- `components/operator/NotificationBell.tsx` — badge + browser push
 - `app/api/needs-attention/` — event list + resolve routes
 - `app/api/needs-attention/[id]/resolve-with-entry/route.ts` — atomic fix
 - `app/api/overrides/` — override CRUD routes

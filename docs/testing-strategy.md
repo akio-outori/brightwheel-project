@@ -14,9 +14,9 @@ need:
 
 ### Coverage
 
-89% statement coverage, 82% branches, 99% functions. An 80%
-threshold is enforced in `vitest.config.ts` — tests fail if
-coverage drops.
+80% threshold enforced in `vitest.config.ts` for statements,
+branches, functions, and lines. Tests fail if coverage drops
+below the threshold.
 
 ### What's tested
 
@@ -107,7 +107,8 @@ ANTHROPIC_API_KEY=sk-ant-... npm run test:integration
 
 ## CI pipeline
 
-13 checks run on every PR to main:
+12 checks run on every PR to main (plus Claude Code review in a
+separate workflow):
 
 | Check | What it catches |
 |-------|----------------|

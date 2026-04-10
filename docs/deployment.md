@@ -122,8 +122,9 @@ The stack is designed for straightforward migration to cloud:
   reviewed" must re-ask to see the operator's override. Production
   would add SSE/WebSocket for real-time delivery.
 
-- **Operator notifications:** Browser Notifications API today.
-  Production adds email/SMS/webhook channels scoped by document.
+- **Operator notifications:** Polling-based feed today.
+  Production adds email/SMS/webhook notification channels scoped
+  by document.
 
 ## Key files
 

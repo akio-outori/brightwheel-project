@@ -83,7 +83,7 @@ Detailed engineering docs for each subsystem:
 | [Preflight classifier](docs/preflight-classifier.md) | Specific-child detection, pattern groups, policy-question negatives, calibration |
 | [Post-response pipeline](docs/post-response-pipeline.md) | Six deterministic channels, short-circuit architecture, stock responses, hold reasons |
 | [Document model & storage](docs/document-model.md) | Two-layer architecture (seed entries + operator overrides), MinIO layout, storage adapters |
-| [Operator loop](docs/operator-loop.md) | Needs-attention feed, fix dialog, override CRUD, notification bell |
+| [Operator loop](docs/operator-loop.md) | Needs-attention feed, fix dialog, override CRUD, hold-reason badges |
 | [Testing strategy](docs/testing-strategy.md) | Unit tests, integration tests, coverage thresholds, CI pipeline |
 | [Deployment & infrastructure](docs/deployment.md) | Docker stack, distroless runner, MinIO init, CI workflows, security scanning |
 | [Design pitch](docs/writeup.md) | The product thesis for reviewers who won't read source code |

@@ -93,20 +93,9 @@ The negative set is as important as the positive set:
 
 ## Unit tests
 
-164 targeted tests in
+192 targeted tests in
 `lib/llm/preflight/__tests__/specific-child.test.ts`. Each test
 exercises a distinct decision path — no combinatorial padding.
-Categories:
-
-- Possessive + family noun (12 hold, 6 pass)
-- Proper name + health (10 hold, 4 pass)
-- Pronoun + health (10 hold, 6 pass)
-- Action requests (6 hold health, 2 hold custody, 3 pass)
-- Complex/informal phrasing (38 hold)
-- General policy questions (52 pass)
-- Health-adjacent in general context (17 pass)
-- Off-topic (10 pass)
-- Possessive without health (15 pass)
 
 ## Key files
 
