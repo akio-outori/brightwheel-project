@@ -10,7 +10,7 @@ import {
   TrendingUp,
   Clock,
   ArrowLeft,
-  Sparkles,
+  AlertTriangle,
   Bell,
 } from "lucide-react";
 import { CENTER } from "@/data/centerData";
@@ -99,21 +99,21 @@ export default function OperatorDashboard() {
           <div className="grid grid-cols-3 gap-3">
             {[
               {
-                label: "Open events",
+                label: "Waiting",
                 value: totalQuestions.toString(),
-                sublabel: "needs attention",
+                sublabel: "parent questions",
                 icon: TrendingUp,
               },
               {
-                label: "Escalated",
+                label: "Need staff",
                 value: escalatedCount.toString(),
-                sublabel: "awaiting staff",
-                icon: Sparkles,
+                sublabel: "awaiting your answer",
+                icon: AlertTriangle,
               },
               {
-                label: "Overrides",
+                label: "Answered",
                 value: overrideCount.toString(),
-                sublabel: "staff answers",
+                sublabel: "by staff",
                 icon: Clock,
               },
             ].map((s) => (
