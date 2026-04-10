@@ -159,7 +159,7 @@ export default function KnowledgePanel() {
     setSaving(true);
     try {
       await fetch(`/api/overrides/${item.id}`, {
-        method: "PATCH",
+        method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ body: editText }),
       });
