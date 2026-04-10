@@ -9,6 +9,10 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # ---------------------------------------------------------------
+  # Correctness
+  # ---------------------------------------------------------------
+
   typecheck:
     name: TypeScript strict
     runs-on: ubuntu-latest
@@ -33,8 +37,24 @@ jobs:
       - run: npm ci
       - run: npm run lint
 
+  format:
+    name: Prettier format check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npx prettier --check "**/*.{ts,tsx,js,json,md,css}"
+
+  # ---------------------------------------------------------------
+  # Tests
+  # ---------------------------------------------------------------
+
   unit-tests:
-    name: Unit tests
+    name: Unit tests (1325+)
     runs-on: ubuntu-latest
     services:
       minio:
@@ -62,10 +82,10 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm ci
-      - run: npm test
+      - run: npm test -- --reporter=verbose
 
   build:
-    name: Next.js build
+    name: Next.js production build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -76,8 +96,12 @@ jobs:
       - run: npm ci
       - run: npm run build
 
-  audit:
-    name: Dependency audit
+  # ---------------------------------------------------------------
+  # Security — vulnerabilities
+  # ---------------------------------------------------------------
+
+  npm-audit:
+    name: npm audit (critical + high)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -86,5 +110,108 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm ci
-      - run: npm audit --production --audit-level=high
+      # Fail the build on critical or high severity vulnerabilities
+      # in production dependencies. Dev-only vulns are informational.
+      - name: Audit production deps
+        run: npm audit --omit=dev --audit-level=high
+      - name: Audit all deps (informational)
+        run: npm audit --audit-level=critical
         continue-on-error: true
+
+  # ---------------------------------------------------------------
+  # Security — static analysis
+  # ---------------------------------------------------------------
+
+  secrets-scan:
+    name: Secrets / credential scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      # Trufflehog scans the full diff for leaked API keys, tokens,
+      # passwords, and other secrets. Runs against the PR diff only
+      # (not the full repo history) for speed.
+      - name: TruffleHog secrets scan
+        uses: trufflesecurity/trufflehog@main
+        with:
+          extra_args: --only-verified --diff
+
+  codeql:
+    name: CodeQL static analysis
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: javascript-typescript
+          # Security-and-quality catches: XSS, injection, prototype
+          # pollution, regex DoS, path traversal, information exposure
+          queries: security-and-quality
+      - name: Run CodeQL analysis
+        uses: github/codeql-action/analyze@v3
+
+  semgrep:
+    name: Semgrep SAST
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Semgrep scan
+        uses: semgrep/semgrep-action@v1
+        with:
+          # p/typescript covers TS-specific patterns
+          # p/react covers JSX/TSX patterns (XSS, dangerouslySetInnerHTML)
+          # p/owasp-top-ten covers the OWASP categories
+          # p/nodejs covers Node.js server patterns
+          config: >-
+            p/typescript
+            p/react
+            p/owasp-top-ten
+            p/nodejs
+
+  # ---------------------------------------------------------------
+  # Security — dependency license compliance
+  # ---------------------------------------------------------------
+
+  license-check:
+    name: License compliance
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      # license-checker exits non-zero if any production dependency
+      # uses a copyleft license (GPL, AGPL, SSPL) that would be
+      # incompatible with commercial distribution.
+      - name: Check licenses
+        run: |
+          npx license-checker --production --failOn \
+            "GPL-2.0-only;GPL-2.0-or-later;GPL-3.0-only;GPL-3.0-or-later;AGPL-1.0-only;AGPL-3.0-only;SSPL-1.0" \
+            --summary
+
+  # ---------------------------------------------------------------
+  # Security — container image (if Dockerfile changed)
+  # ---------------------------------------------------------------
+
+  container-scan:
+    name: Container image scan
+    runs-on: ubuntu-latest
+    if: contains(github.event.pull_request.changed_files_names || '', 'Dockerfile') || contains(github.event.pull_request.changed_files_names || '', 'docker')
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build image
+        run: docker build -t brightwheel-app:scan .
+      - name: Trivy vulnerability scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: brightwheel-app:scan
+          format: table
+          exit-code: 1
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true

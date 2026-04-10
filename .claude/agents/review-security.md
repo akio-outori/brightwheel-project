@@ -136,6 +136,22 @@ for the demo but must be documented. Check that:
 - If auth is added later, the patterns are sound (bcrypt not plain
   text, httpOnly cookies, CSRF tokens)
 
+## Automated CI Counterparts
+
+The following CI jobs in `.github/workflows/pr-checks.yml` run the
+automated half of security checking. This agent's job is to catch
+what automation misses — logic-level vulnerabilities, context-dependent
+patterns, and design issues that static tools can't reason about.
+
+| CI Job | What it catches | What this agent adds |
+|--------|----------------|---------------------|
+| `npm-audit` | Known CVEs in dependencies | Whether a vuln is actually reachable in our code |
+| `codeql` | XSS, injection, path traversal, info exposure | Context about whether a flagged pattern is a real risk vs. a false positive |
+| `semgrep` | OWASP top 10, React XSS, Node.js patterns | Architectural patterns (SSRF via indirect fetch, auth bypass by design) |
+| `secrets-scan` | Leaked API keys, tokens, passwords | Whether a value that looks like a secret is actually sensitive |
+| `license-check` | Copyleft license compliance | Whether a dual-licensed dep is used under the permissive license |
+| `container-scan` | OS-level CVEs in the Docker image | Whether base image choice is appropriate |
+
 ## Grep Patterns
 
 ```bash
@@ -154,6 +170,14 @@ rg "err\.message" app/api/ --type ts  # OK in console.error, BAD in Response.jso
 # SSRF patterns
 rg "fetch\(" app/ --type ts --type tsx
 rg "http\.get\(" --type ts
+
+# Prototype pollution
+rg "Object\.assign\(" --type ts
+rg "\[.*\]\s*=" app/api/ --type ts  # dynamic property assignment
+
+# Regex DoS (ReDoS) — patterns with nested quantifiers
+rg "\(\.\*\)\+" lib/llm/ --type ts
+rg "\(\[^\\]\]\*\)\+" lib/llm/ --type ts
 
 # Dependency check
 npm audit --production
