@@ -36,11 +36,15 @@ function contractToMessage(
   lookup: Map<string, { title: string; body: string }>,
 ): ChatMessageData {
   // Low confidence and escalated both render as escalation —
-  // the parent should never see a hedged model answer.
+  // the parent should never see a hedged model answer. Use the
+  // stock response text if available, otherwise a safe fallback.
   if (contract.escalate || contract.confidence === "low") {
+    const isStockResponse = contract.answer.includes("staff member is taking a look");
     return {
       role: "assistant",
-      text: contract.answer,
+      text: isStockResponse
+        ? contract.answer
+        : `I want to make sure you get the right answer here. A staff member is taking a look at your question and will follow up. You can also call us at ${CENTER.phone}.`,
       type: "escalated",
       source: null,
     };

@@ -113,7 +113,7 @@ export async function POST(req: Request): Promise<Response> {
           escalation_reason: `held_for_review:${preflight.reason}`,
         },
       });
-      console.log(
+      console.warn(
         `[/api/ask] preflight hold (${preflight.reason}): ${preflight.detail ?? "(no detail)"}`,
       );
       return Response.json(stockResponse);
@@ -194,7 +194,7 @@ export async function POST(req: Request): Promise<Response> {
         },
       });
 
-      console.log(
+      console.warn(
         `[/api/ask] held by ${pipeline.channel} (${pipeline.reason}): ${pipeline.detail ?? "(no detail)"}`,
       );
       return Response.json(stockResponse);
