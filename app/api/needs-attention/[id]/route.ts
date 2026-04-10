@@ -1,5 +1,11 @@
-// POST /api/needs-attention/[id] — resolve an open event, linking it
-// to the handbook entry that answered the question.
+// POST /api/needs-attention/[id] — resolve an open event, linking
+// it to the operator override that answered the question.
+//
+// This is the non-atomic resolution path (create override first,
+// then resolve). The atomic path is
+// /api/needs-attention/[id]/resolve-with-entry — prefer that from
+// the UI. This endpoint exists for tests and for flows where an
+// override already exists.
 
 import { z } from "zod";
 import { resolveNeedsAttention, StorageError } from "@/lib/storage";
@@ -8,7 +14,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const ResolveRequestSchema = z.object({
-  resolvedByEntryId: z
+  resolvedByOverrideId: z
     .string()
     .min(1)
     .max(120)
@@ -34,7 +40,7 @@ export async function POST(
   const parsed = ResolveRequestSchema.safeParse(body);
   if (!parsed.success) {
     return Response.json(
-      { error: "resolvedByEntryId is required." },
+      { error: "resolvedByOverrideId is required." },
       { status: 400 },
     );
   }
@@ -42,7 +48,7 @@ export async function POST(
   try {
     const event = await resolveNeedsAttention(
       id,
-      parsed.data.resolvedByEntryId,
+      parsed.data.resolvedByOverrideId,
     );
     return Response.json(event);
   } catch (err) {

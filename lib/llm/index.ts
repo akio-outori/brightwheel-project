@@ -1,6 +1,6 @@
 // Barrel export. API routes import from "@/lib/llm" and see only the
 // typed surface — branded constructors, the AnswerContract, the
-// sensitive-topic check, and askLLM. They never import from the SDK.
+// post-response pipeline, and askLLM. They never import from the SDK.
 //
 // The branded types and their constructors share a name (the TS
 // "const + type" pattern). `export { SystemPrompt }` carries both
@@ -19,7 +19,5 @@ export type { AnswerContract } from "./contract";
 
 export { buildPrompt } from "./prompt-builder";
 export type { BuiltPrompt } from "./prompt-builder";
-
-export { isSensitiveTopic } from "./sensitive";
 
 export { askLLM } from "./client";

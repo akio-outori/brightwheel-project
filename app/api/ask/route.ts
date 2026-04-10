@@ -5,14 +5,21 @@
 //
 // The flow, in order:
 //   1. Parse + validate the incoming question (Zod)
-//   2. Static sensitive-topic check on the raw text (defense in depth)
-//   3. Load the handbook index (single read from MinIO)
-//   4. Call askLLM with branded inputs
-//   5. Apply the sensitive-topic override — if the static check fired,
-//      the response escalates regardless of what the model said
-//   6. If the final result escalates (low confidence or escalate flag),
-//      log a needs-attention event BEFORE responding
-//   7. Return the AnswerContract JSON
+//   2. Resolve the active document and load both layers
+//      (seed entries + operator overrides)
+//   3. Call askLLM with branded inputs carrying mcpData.document
+//   4. Run the deterministic post-response classifier pipeline
+//      over the draft (hallucination, self-escalation, coverage,
+//      lexical grounding, numeric absence, entity absence, medical
+//      instruction shape)
+//   5. If any channel holds, return a stock "being reviewed"
+//      response to the parent and log the MODEL'S DRAFT to
+//      needs-attention for operator review (the operator sees what
+//      the model would have said, the parent doesn't)
+//   6. Otherwise return the model's draft as-is; if the model's
+//      draft happened to self-escalate, log it to needs-attention
+//      but still return it (the self-escalation channel already
+//      caught it above so this path is dead — kept defensively)
 //
 // Errors are translated at the boundary. Internal details never leak
 // to the parent — a caught exception becomes a generic 500.
@@ -24,12 +31,19 @@ import {
   SystemPrompt,
   UserInput,
   askLLM,
-  isSensitiveTopic,
   type AnswerContract,
 } from "@/lib/llm";
 import { getActiveAgentConfig } from "@/lib/llm/config";
 import {
+  buildStockResponse,
+  runPostResponsePipeline,
+  type GroundingSource,
+} from "@/lib/llm/post-response";
+import {
+  getActiveDocumentId,
+  getDocumentMetadata,
   listHandbookEntries,
+  listOperatorOverrides,
   logNeedsAttention,
 } from "@/lib/storage";
 
@@ -42,10 +56,12 @@ const AskRequestSchema = z.object({
 // Intent is static. It's the app's instruction to the model about
 // what *kind* of task this is. Never includes user data.
 const INTENT = AppIntent(
-  "Answer the parent's question using only the provided handbook entries. " +
-    "Return JSON matching the AnswerContract. Cite the entry IDs you used. " +
-    "If no entry covers the question, set confidence to 'low' and escalate. " +
-    "Sensitive topics (medical, safety, custody, allergies) always escalate.",
+  "Answer the parent's question using only the provided handbook " +
+    "entries and operator overrides for the active document. Return JSON " +
+    "matching the AnswerContract. Cite the ids you used. Prefer an " +
+    "override when it directly addresses the question. If nothing in " +
+    "either layer covers the question, set confidence to 'low' and " +
+    "escalate. Sensitive topics always escalate.",
 );
 
 export async function POST(req: Request): Promise<Response> {
@@ -70,59 +86,109 @@ export async function POST(req: Request): Promise<Response> {
   const { question } = parsed.data;
 
   try {
-    // 2. Sensitive-topic check (defense in depth).
-    const sensitive = isSensitiveTopic(question);
+    // 2. Resolve the active document and load both layers.
+    const docId = getActiveDocumentId();
+    const [metadata, entries, overrides] = await Promise.all([
+      getDocumentMetadata(docId),
+      listHandbookEntries(docId),
+      listOperatorOverrides(docId),
+    ]);
 
-    // 3. Load handbook entries for grounding.
-    const handbook = await listHandbookEntries();
-
-    // 4. Build MCPData and call the LLM. The active agent config
-    // gives us the system prompt (loaded from a markdown file) plus
-    // model/temperature/maxTokens — the client wrapper consumes the
-    // same config for its own settings.
+    // 3. Build MCPData and call the LLM.
     const cfg = await getActiveAgentConfig();
     const systemPromptText = cfg.systemPrompt;
     const mcpData = MCPData({
       center_name: "Albuquerque DCFD Family Front Desk",
-      handbook_entries: handbook.map((e) => ({
-        id: e.id,
-        title: e.title,
-        category: e.category,
-        body: e.body,
-        source_pages: e.sourcePages,
-      })),
+      document: {
+        id: metadata.id,
+        title: metadata.title,
+        version: metadata.version,
+        entries: entries.map((e) => ({
+          id: e.id,
+          title: e.title,
+          category: e.category,
+          body: e.body,
+          source_pages: e.sourcePages,
+        })),
+        overrides: overrides.map((o) => ({
+          id: o.id,
+          title: o.title,
+          category: o.category,
+          body: o.body,
+          source_pages: o.sourcePages,
+          replaces_entry_id: o.replacesEntryId,
+        })),
+      },
     });
 
-    const modelResult: AnswerContract = await askLLM(
+    const draft: AnswerContract = await askLLM(
       SystemPrompt(systemPromptText),
       INTENT,
       mcpData,
       UserInput(question),
     );
 
-    // 5. Sensitive-topic override. If the static check fired, force
-    // escalation regardless of model confidence. Also preserve the
-    // model's own escalation reason if it already escalated.
-    const finalResult: AnswerContract = sensitive
-      ? {
-          ...modelResult,
-          confidence: "low",
-          escalate: true,
-          escalation_reason:
-            modelResult.escalation_reason ?? "sensitive_topic",
-        }
-      : modelResult;
+    // 4. Run the deterministic post-response classifier pipeline.
+    // The pipeline flattens entries + overrides into a single list
+    // of GroundingSource objects so channels don't care which layer
+    // a source came from.
+    const allSources: GroundingSource[] = [
+      ...entries.map<GroundingSource>((e) => ({
+        id: e.id,
+        title: e.title,
+        body: e.body,
+      })),
+      ...overrides.map<GroundingSource>((o) => ({
+        id: o.id,
+        title: o.title,
+        body: o.body,
+      })),
+    ];
 
-    // 6. Log to needs-attention if this is an escalation.
-    if (finalResult.escalate || finalResult.confidence === "low") {
+    const pipeline = runPostResponsePipeline({
+      question,
+      draft,
+      allSources,
+    });
+
+    // 5. On hold: the parent sees a stock response; the operator
+    // sees the model's ORIGINAL draft in the needs-attention event.
+    if (pipeline.verdict === "hold") {
+      const stockResponse = buildStockResponse(pipeline.reason);
+
+      // Log the MODEL'S DRAFT (not the stock) so the operator has
+      // full context about what the model wanted to say.
       await logNeedsAttention({
+        docId,
         question,
-        result: finalResult,
+        result: {
+          ...draft,
+          // Mirror the hold reason into escalation_reason so the
+          // operator UI can render the badge off a single field.
+          escalation_reason: `held_for_review:${pipeline.reason}`,
+        },
+      });
+
+      console.log(
+        `[/api/ask] held by ${pipeline.channel} (${pipeline.reason}): ${pipeline.detail ?? "(no detail)"}`,
+      );
+      return Response.json(stockResponse);
+    }
+
+    // 6. Passing path. If the model's draft happened to be low
+    // confidence without escalating, log it anyway so the operator
+    // can see the pattern. (The self-escalation channel already
+    // holds escalate=true drafts above, so that branch is dead —
+    // this catches the rare confidence=low + escalate=false case.)
+    if (draft.confidence === "low") {
+      await logNeedsAttention({
+        docId,
+        question,
+        result: draft,
       });
     }
 
-    // 7. Return the contract.
-    return Response.json(finalResult);
+    return Response.json(draft);
   } catch (err) {
     // Generic failure — log server-side, return a safe error to the parent.
     console.error("[/api/ask] request failed:", err);

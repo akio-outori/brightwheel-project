@@ -6,12 +6,18 @@
 //   events/needs-attention/{YYYY-MM-DD}/{HH-mm-ss}-{uuid}.json
 //
 // "Open" means resolvedAt is absent. Resolution doesn't delete the
-// object — it rewrites it with resolvedAt + resolvedByEntryId set.
+// object — it rewrites it with resolvedAt + resolvedByOverrideId set.
 // The operator console filters for open events by scanning recent
 // date partitions (the last 14 days is plenty for a prototype).
+//
+// Events carry a `docId` so the resolution flow can create an
+// override in the correct document. Older events written before the
+// refactor may be missing the field — the reader migrates-on-read by
+// defaulting to the currently active document.
 
 import { randomUUID } from "node:crypto";
-import { EVENTS_BUCKET, getClient } from "./client";
+import { EVENTS_BUCKET } from "./client";
+import { getActiveDocumentId } from "./handbook";
 import {
   NeedsAttentionDraft,
   NeedsAttentionDraftSchema,
@@ -19,6 +25,7 @@ import {
   NeedsAttentionEventSchema,
   StorageError,
 } from "./types";
+import { listObjectKeys, readJson, writeJson } from "./minio-json";
 
 const ROOT_PREFIX = "needs-attention/";
 
@@ -50,53 +57,17 @@ function eventKey(id: string, createdAt: Date): string {
 }
 
 // ---------------------------------------------------------------------------
-// Low-level JSON helpers (mirror handbook.ts — kept local, not exported,
-// because the storage package is the only layer that talks to MinIO)
+// Migration-on-read
 // ---------------------------------------------------------------------------
 
-async function readJson(bucket: string, key: string): Promise<unknown | null> {
-  const client = getClient();
-  try {
-    const stream = await client.getObject(bucket, key);
-    const chunks: Buffer[] = [];
-    for await (const chunk of stream) chunks.push(chunk as Buffer);
-    return JSON.parse(Buffer.concat(chunks).toString("utf-8"));
-  } catch (err: unknown) {
-    if (isNotFound(err)) return null;
-    throw err;
-  }
-}
-
-async function writeJson(
-  bucket: string,
-  key: string,
-  value: unknown,
-): Promise<void> {
-  const client = getClient();
-  const body = Buffer.from(JSON.stringify(value, null, 2), "utf-8");
-  await client.putObject(bucket, key, body, body.length, {
-    "Content-Type": "application/json; charset=utf-8",
-  });
-}
-
-function isNotFound(err: unknown): boolean {
-  if (!err || typeof err !== "object") return false;
-  const code = (err as { code?: string }).code;
-  return code === "NoSuchKey" || code === "NotFound";
-}
-
-// ---------------------------------------------------------------------------
-// Key index (scan objects under a prefix)
-// ---------------------------------------------------------------------------
-
-async function listObjectKeys(prefix: string): Promise<string[]> {
-  const client = getClient();
-  const keys: string[] = [];
-  const stream = client.listObjectsV2(EVENTS_BUCKET(), prefix, true);
-  for await (const obj of stream) {
-    if (obj.name) keys.push(obj.name);
-  }
-  return keys;
+// Events written before the per-document refactor are missing the
+// `docId` field. When we read them, we default to the currently
+// active document. This is non-destructive: the on-disk object is
+// not rewritten; only the in-memory representation returned to
+// callers gains the field. A future sweep could backfill.
+function migrateEvent(parsed: NeedsAttentionEvent): NeedsAttentionEvent {
+  if (parsed.docId) return parsed;
+  return { ...parsed, docId: getActiveDocumentId() };
 }
 
 // ---------------------------------------------------------------------------
@@ -119,7 +90,9 @@ export async function logNeedsAttention(
   return event;
 }
 
-export async function listOpenNeedsAttention(): Promise<NeedsAttentionEvent[]> {
+export async function listOpenNeedsAttention(options?: {
+  docId?: string;
+}): Promise<NeedsAttentionEvent[]> {
   // Scan the last OPEN_WINDOW_DAYS partitions. This is a bounded-cost
   // list operation — a long-lived deployment would want an index.
   const now = new Date();
@@ -130,7 +103,9 @@ export async function listOpenNeedsAttention(): Promise<NeedsAttentionEvent[]> {
     prefixes.push(`${ROOT_PREFIX}${datePartition(d)}/`);
   }
 
-  const allKeys = (await Promise.all(prefixes.map(listObjectKeys))).flat();
+  const allKeys = (
+    await Promise.all(prefixes.map((p) => listObjectKeys(EVENTS_BUCKET(), p)))
+  ).flat();
   const events: NeedsAttentionEvent[] = [];
 
   for (const key of allKeys) {
@@ -143,7 +118,10 @@ export async function listOpenNeedsAttention(): Promise<NeedsAttentionEvent[]> {
         "corrupt_object",
       );
     }
-    if (!parsed.data.resolvedAt) events.push(parsed.data);
+    const migrated = migrateEvent(parsed.data);
+    if (migrated.resolvedAt) continue;
+    if (options?.docId && migrated.docId !== options.docId) continue;
+    events.push(migrated);
   }
 
   // Newest first.
@@ -153,7 +131,7 @@ export async function listOpenNeedsAttention(): Promise<NeedsAttentionEvent[]> {
 
 export async function resolveNeedsAttention(
   id: string,
-  resolvedByEntryId: string,
+  resolvedByOverrideId: string,
 ): Promise<NeedsAttentionEvent> {
   // We don't store a by-id index, so finding the event means scanning
   // recent partitions for an object whose name contains the id. Same
@@ -164,7 +142,7 @@ export async function resolveNeedsAttention(
     const d = new Date(now);
     d.setUTCDate(d.getUTCDate() - i);
     const prefix = `${ROOT_PREFIX}${datePartition(d)}/`;
-    const keys = await listObjectKeys(prefix);
+    const keys = await listObjectKeys(EVENTS_BUCKET(), prefix);
     const match = keys.find((k) => k.endsWith(`-${id}.json`));
     if (!match) continue;
 
@@ -178,10 +156,11 @@ export async function resolveNeedsAttention(
       );
     }
 
+    const migrated = migrateEvent(parsed.data);
     const resolved: NeedsAttentionEvent = NeedsAttentionEventSchema.parse({
-      ...parsed.data,
+      ...migrated,
       resolvedAt: new Date().toISOString(),
-      resolvedByEntryId,
+      resolvedByOverrideId,
     });
     await writeJson(EVENTS_BUCKET(), match, resolved);
     return resolved;

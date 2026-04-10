@@ -7,10 +7,10 @@
 
 import { useCallback, useState } from "react";
 import type { AnswerContract } from "@/lib/llm";
-import type { HandbookEntry } from "@/lib/storage";
 import { ChatInput } from "./ChatInput";
 import { HandbookEntryModal } from "./HandbookEntryModal";
 import { ParentAnswer } from "./ParentAnswer";
+import type { CitationSource, DocumentInfo } from "./types";
 
 interface ChatTurn {
   id: string;
@@ -22,13 +22,15 @@ interface ChatTurn {
 }
 
 export function ParentChat({
-  handbookEntries,
+  document,
+  sources,
 }: {
-  handbookEntries: HandbookEntry[];
+  document: DocumentInfo;
+  sources: CitationSource[];
 }) {
   const [turns, setTurns] = useState<ChatTurn[]>([]);
   const [pending, setPending] = useState(false);
-  const [openEntry, setOpenEntry] = useState<HandbookEntry | null>(null);
+  const [openSource, setOpenSource] = useState<CitationSource | null>(null);
 
   const handleSubmit = useCallback(
     async (question: string) => {
@@ -122,8 +124,8 @@ export function ParentChat({
                 <div className="self-start max-w-full">
                   <ParentAnswer
                     result={turn.result}
-                    allEntries={handbookEntries}
-                    onOpenEntry={setOpenEntry}
+                    allSources={sources}
+                    onOpenSource={setOpenSource}
                   />
                 </div>
               )}
@@ -135,8 +137,9 @@ export function ParentChat({
       <ChatInput onSubmit={handleSubmit} disabled={pending} />
 
       <HandbookEntryModal
-        entry={openEntry}
-        onClose={() => setOpenEntry(null)}
+        source={openSource}
+        document={document}
+        onClose={() => setOpenSource(null)}
       />
     </div>
   );

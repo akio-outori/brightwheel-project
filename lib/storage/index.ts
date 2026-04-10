@@ -2,33 +2,43 @@
 // and sees only the adapter surface — no SDK clients, no bucket names.
 
 export {
+  DocumentMetadataSchema,
   HandbookCategorySchema,
   HandbookEntrySchema,
-  HandbookIndexSchema,
-  HandbookEntryDraftSchema,
-  HandbookEntryPatchSchema,
+  OperatorOverrideSchema,
+  OperatorOverrideDraftSchema,
+  OperatorOverridePatchSchema,
   AnswerContractSchema,
   NeedsAttentionEventSchema,
   NeedsAttentionDraftSchema,
   StorageError,
 } from "./types";
 export type {
+  DocumentMetadata,
   HandbookCategory,
   HandbookEntry,
-  HandbookIndex,
-  HandbookEntryDraft,
-  HandbookEntryPatch,
+  OperatorOverride,
+  OperatorOverrideDraft,
+  OperatorOverridePatch,
   AnswerContract,
   NeedsAttentionEvent,
   NeedsAttentionDraft,
 } from "./types";
 
 export {
+  getActiveDocumentId,
+  getDocumentMetadata,
   listHandbookEntries,
   getHandbookEntry,
-  createHandbookEntry,
-  updateHandbookEntry,
 } from "./handbook";
+
+export {
+  listOperatorOverrides,
+  getOperatorOverride,
+  createOperatorOverride,
+  updateOperatorOverride,
+  deleteOperatorOverride,
+} from "./overrides";
 
 export {
   logNeedsAttention,

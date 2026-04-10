@@ -16,10 +16,26 @@ import { z } from "zod";
 // cleanly. We transform away null/empty-string at parse time so
 // downstream code only sees `string | undefined` — callers don't
 // have to care which model was on the other end.
+// `directly_addressed_by` is the model's structured judgment about
+// which handbook entries *directly* answer the question, as opposed
+// to merely being topically related. It's how we close the bridging
+// hole: stuffing the whole handbook in context invites the model to
+// reach for adjacent entries on gap questions ("can I volunteer?",
+// "where do I park?"). Forcing it to declare a coverage list moves
+// the bridging decision out of free-text reasoning and into a field
+// the route handler can validate. If this list is empty, the route
+// promotes the response to escalate=true regardless of what the
+// model said about confidence.
+//
+// Optional for backwards compatibility with older fixture data and
+// any synthetic results we construct in code (PARSE_FAILURE_RESULT
+// below) — undefined means "the model didn't tell us", which the
+// route layer treats as a no-op rather than a forced escalation.
 export const AnswerContractSchema = z.object({
   answer: z.string().min(1).max(2000),
   confidence: z.enum(["high", "low"]),
   cited_entries: z.array(z.string()).default([]),
+  directly_addressed_by: z.array(z.string()).optional(),
   escalate: z.boolean(),
   escalation_reason: z
     .union([z.string(), z.null(), z.undefined()])

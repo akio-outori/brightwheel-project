@@ -1,10 +1,10 @@
 // The one-tap fix dialog. Hits a single atomic endpoint
-// (/api/needs-attention/[id]/resolve-with-entry) that creates the
-// handbook entry and resolves the event on the server side — so
+// (/api/needs-attention/[id]/resolve-with-entry) that creates an
+// operator override and resolves the event on the server side — so
 // network failures between the two writes can no longer leave a
-// dangling entry with an open event. On success, SWR revalidates
-// both feeds so the event disappears and the entry appears in the
-// same render tick.
+// dangling override with an open event. On success, SWR revalidates
+// both feeds so the event disappears and the override appears in
+// the same render tick.
 
 "use client";
 
@@ -63,11 +63,11 @@ export function FixDialog({
     setSubmitting(true);
 
     try {
-      // Single atomic server-side call: create the entry and resolve
-      // the event in one handler. Partial-success responses (entry
-      // created but event not resolved) come back with an error
-      // message and `partialSuccess: true` so the operator can see
-      // what happened.
+      // Single atomic server-side call: create the override and
+      // resolve the event in one handler. Partial-success responses
+      // (override created but event not resolved) come back with an
+      // error message and `partialSuccess: true` so the operator can
+      // see what happened.
       const res = await fetch(
         `/api/needs-attention/${event.id}/resolve-with-entry`,
         {
@@ -78,6 +78,7 @@ export function FixDialog({
             category,
             body,
             sourcePages: [],
+            replacesEntryId: null,
           }),
         },
       );
@@ -120,6 +121,11 @@ export function FixDialog({
         </div>
 
         <div className="flex flex-col gap-3 px-5 py-4">
+          <p className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+            This saves as an <strong>operator override</strong>. The
+            seeded handbook stays untouched; the override layers on
+            top at query time.
+          </p>
           <label className="flex flex-col gap-1 text-xs font-medium text-slate-700">
             Title
             <input

@@ -3,20 +3,20 @@
 
 "use client";
 
-import type { HandbookEntry } from "@/lib/storage";
 import { CitationPills } from "./CitationPills";
 import { ConfidenceBadge } from "./ConfidenceBadge";
+import type { CitationSource } from "./types";
 
 export function AnswerCard({
   answer,
-  citedEntryIds,
-  allEntries,
-  onOpenEntry,
+  citedIds,
+  allSources,
+  onOpenSource,
 }: {
   answer: string;
-  citedEntryIds: string[];
-  allEntries: HandbookEntry[];
-  onOpenEntry: (entry: HandbookEntry) => void;
+  citedIds: string[];
+  allSources: CitationSource[];
+  onOpenSource: (source: CitationSource) => void;
 }) {
   return (
     <article className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
@@ -31,9 +31,9 @@ export function AnswerCard({
         ))}
       </div>
       <CitationPills
-        citedEntryIds={citedEntryIds}
-        allEntries={allEntries}
-        onOpen={onOpenEntry}
+        citedIds={citedIds}
+        allSources={allSources}
+        onOpen={onOpenSource}
       />
     </article>
   );

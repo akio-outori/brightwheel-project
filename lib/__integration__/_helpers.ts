@@ -4,30 +4,34 @@
 // and npm run test:integration.
 //
 // Cost and safety notes:
-// - Full suite is ~116 tests × ~1.5k tokens each on Haiku 4.5,
-//   roughly $0.30-$0.60 per run.
+// - Full suite is ~116 tests × ~1.5k tokens each on Sonnet 4.6.
 // - Tests run sequentially (fileParallelism: false) to avoid
 //   rate-limiting the Anthropic API.
 // - If ANTHROPIC_API_KEY is not set, the whole suite is skipped
 //   cleanly via the skip-aware helpers below — not failed — so
 //   CI without a real key is a no-op, not a red build.
 // - The accuracy/grounding/escalation/sensitive/injection/off-topic/
-//   contract tests are READ-ONLY against the real handbook bucket.
-//   The closed-loop tests WRITE to the handbook and events buckets,
-//   using unique ids and cleaning up after themselves.
+//   contract tests are READ-ONLY against the real handbook + overrides
+//   buckets. The closed-loop tests WRITE overrides to the same
+//   document, using unique tags, and the override teardown below
+//   deletes them at the end of the suite — this is what finally
+//   solves the cross-run pollution problem the flat-handbook-mutation
+//   design had.
 
 import { afterAll, beforeAll, expect } from "vitest";
 import type { AnswerContract } from "../llm";
 import {
-  AppIntent,
-  MCPData,
-  SystemPrompt,
-  UserInput,
-  askLLM,
-} from "../llm";
-import { getActiveAgentConfig } from "../llm/config";
-import { listHandbookEntries } from "../storage";
-import type { HandbookEntry } from "../storage";
+  deleteOperatorOverride,
+  getActiveDocumentId,
+  getDocumentMetadata,
+  listHandbookEntries,
+  listOperatorOverrides,
+} from "../storage";
+import type {
+  DocumentMetadata,
+  HandbookEntry,
+  OperatorOverride,
+} from "../storage";
 
 // ---------------------------------------------------------------------------
 // Environment gating
@@ -39,8 +43,7 @@ process.env.STORAGE_ENDPOINT ??= "http://localhost:9000";
 process.env.STORAGE_ACCESS_KEY ??= "minioadmin";
 process.env.STORAGE_SECRET_KEY ??= "minioadmin";
 // The real `handbook` and `events` buckets, not the `-test` variants
-// the unit tests use. Read-only usage for everything except the
-// closed-loop tests.
+// the unit tests use.
 process.env.STORAGE_HANDBOOK_BUCKET = "handbook";
 process.env.STORAGE_EVENTS_BUCKET = "events";
 
@@ -54,74 +57,109 @@ export function hasApiKey(): boolean {
 // vitest supports the .skipIf modifier natively.
 
 // ---------------------------------------------------------------------------
-// Handbook cache (one read per suite run)
+// Document + layer cache (one read per suite run)
 // ---------------------------------------------------------------------------
 
-let cachedHandbook: HandbookEntry[] | null = null;
+// The integration tests all run against a single document today —
+// the seed file `data/seed-handbook.json`. getActiveDocumentId is
+// the seam that picks it.
+const DOC_ID = getActiveDocumentId();
 
-export async function getRealHandbook(): Promise<HandbookEntry[]> {
-  if (cachedHandbook) return cachedHandbook;
-  cachedHandbook = await listHandbookEntries();
-  return cachedHandbook;
+interface LoadedDocument {
+  metadata: DocumentMetadata;
+  entries: HandbookEntry[];
+  overrides: OperatorOverride[];
 }
 
-export function __resetHandbookCache(): void {
-  cachedHandbook = null;
-}
-
-// ---------------------------------------------------------------------------
-// The ask-via-adapter helper
-// ---------------------------------------------------------------------------
-
-// Static intent matching app/api/ask/route.ts verbatim. If the route
-// handler's intent string drifts, this file should drift with it —
-// that's a deliberate coupling since integration tests verify the
-// real route behavior.
-const INTENT = AppIntent(
-  "Answer the parent's question using only the provided handbook entries. " +
-    "Return JSON matching the AnswerContract. Cite the entry IDs you used. " +
-    "If no entry covers the question, set confidence to 'low' and escalate. " +
-    "Sensitive topics (medical, safety, custody, allergies) always escalate.",
-);
+let cachedDocument: LoadedDocument | null = null;
 
 /**
- * Ask the real trust-loop pipeline a question. Mirrors
- * app/api/ask/route.ts steps 3-4 (handbook load + MCPData build +
- * askLLM) — skips the sensitive-topic override so tests can observe
- * the model's raw judgment, and skips the needs-attention logging so
- * tests don't pollute the events bucket.
- *
- * Use `askViaRoute()` (below) when you want the full route-level
- * semantics including sensitive override and needs-attention write.
+ * Load the active document (metadata + seed entries + overrides)
+ * once per suite run. Subsequent calls return the cached shape.
  */
-export async function askViaAdapter(question: string): Promise<AnswerContract> {
-  const handbook = await getRealHandbook();
-  const cfg = await getActiveAgentConfig();
+export async function getRealDocument(): Promise<LoadedDocument> {
+  if (cachedDocument) return cachedDocument;
+  const [metadata, entries, overrides] = await Promise.all([
+    getDocumentMetadata(DOC_ID),
+    listHandbookEntries(DOC_ID),
+    listOperatorOverrides(DOC_ID),
+  ]);
+  cachedDocument = { metadata, entries, overrides };
+  return cachedDocument;
+}
 
-  const mcpData = MCPData({
-    center_name: "Albuquerque DCFD Family Front Desk",
-    handbook_entries: handbook.map((e) => ({
-      id: e.id,
-      title: e.title,
-      category: e.category,
-      body: e.body,
-      source_pages: e.sourcePages,
-    })),
-  });
+export function __resetDocumentCache(): void {
+  cachedDocument = null;
+}
 
-  return askLLM(
-    SystemPrompt(cfg.systemPrompt),
-    INTENT,
-    mcpData,
-    UserInput(question),
-  );
+// Legacy alias kept for readability in tests that only care about
+// the seed entries. Callers can migrate to `getRealDocument()` when
+// they also need overrides (e.g. the closed-loop suite).
+export async function getRealHandbook(): Promise<HandbookEntry[]> {
+  return (await getRealDocument()).entries;
 }
 
 /**
- * Ask via the HTTP route, exercising the full stack including
- * sensitive-topic override and needs-attention logging. Requires the
- * dev stack to be running on localhost:3000. Used by the closed-loop
- * tests.
+ * Re-read the document from storage on the next `getRealDocument()`
+ * call. Called by the closed-loop test after it creates or resolves
+ * overrides, so the next ask sees the fresh state.
+ */
+export function __resetHandbookCache(): void {
+  __resetDocumentCache();
+}
+
+// ---------------------------------------------------------------------------
+// Test-override cleanup
+// ---------------------------------------------------------------------------
+
+// Integration tests that create overrides via the closed-loop flow
+// tag their created titles with a test-tag substring. At suite end,
+// we sweep every override whose title contains `[test]` and delete
+// it. This is the mechanism that finally solves the cross-run
+// pollution problem — overrides live in a separate mutable layer
+// and can be freely deleted without affecting the seed.
+export const TEST_TAG_PREFIX = "[test]";
+
+async function cleanupTestOverrides(): Promise<void> {
+  try {
+    const overrides = await listOperatorOverrides(DOC_ID);
+    const toDelete = overrides.filter((o) =>
+      o.title.includes(TEST_TAG_PREFIX),
+    );
+    for (const o of toDelete) {
+      await deleteOperatorOverride(DOC_ID, o.id);
+    }
+    if (toDelete.length > 0) {
+      // eslint-disable-next-line no-console
+      console.log(
+        `[integration] cleaned up ${toDelete.length} test override(s)`,
+      );
+    }
+  } catch (err) {
+    // Cleanup failures shouldn't fail the suite — log and move on.
+    // eslint-disable-next-line no-console
+    console.warn("[integration] override cleanup failed:", err);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// askViaRoute — the ONLY ask helper
+// ---------------------------------------------------------------------------
+
+// Every integration test hits the real HTTP route. There is no
+// in-process shortcut — the whole point of these tests is to
+// exercise the full defense stack (sensitive-topic override,
+// citation validation, coverage-gate override, needs-attention
+// write). A diagnostic "observe the raw model" path used to live
+// here; it turned into a source of test-vs-production drift and
+// masked real regressions, so it was removed.
+//
+// Requires the dev stack to be running on localhost:3000 with the
+// active Anthropic key in its environment.
+
+/**
+ * Ask the parent-facing route a question and return the parsed
+ * AnswerContract. Throws if the route returned a non-2xx response.
  */
 export async function askViaRoute(question: string): Promise<AnswerContract> {
   const res = await fetch("http://localhost:3000/api/ask", {
@@ -145,7 +183,7 @@ export async function askViaRoute(question: string): Promise<AnswerContract> {
  * - confidence === "high"
  * - escalate === false
  * - cited_entries is non-empty
- * - every cited id resolves in the real handbook
+ * - every cited id resolves in the union of entries ∪ overrides
  * - answer is non-trivial (> 20 chars)
  */
 export async function expectHighConfidence(
@@ -159,14 +197,20 @@ export async function expectHighConfidence(
     result.cited_entries.length,
     `should have at least one citation${ctx}`,
   ).toBeGreaterThan(0);
-  expect(result.answer.length, `answer should be non-trivial${ctx}`).toBeGreaterThan(20);
+  expect(
+    result.answer.length,
+    `answer should be non-trivial${ctx}`,
+  ).toBeGreaterThan(20);
 
-  const handbook = await getRealHandbook();
-  const known = new Set(handbook.map((e) => e.id));
+  const doc = await getRealDocument();
+  const known = new Set<string>();
+  for (const e of doc.entries) known.add(e.id);
+  for (const o of doc.overrides) known.add(o.id);
   for (const id of result.cited_entries) {
-    expect(known.has(id), `cited id ${id} should exist in handbook${ctx}`).toBe(
-      true,
-    );
+    expect(
+      known.has(id),
+      `cited id ${id} should exist in the document${ctx}`,
+    ).toBe(true);
   }
 }
 
@@ -174,10 +218,16 @@ export async function expectHighConfidence(
  * Assert the result gracefully escalates.
  *
  * - escalate === true
- * - confidence === "low"
  * - escalation_reason is present and non-trivial
  * - if any ids are cited, they still resolve (no hallucinated ids
  *   even on escalation paths)
+ *
+ * Note: confidence is intentionally NOT asserted here. The contract is
+ * "this needs a human" (escalate=true). A model can be confidently
+ * sure that something needs a human ("this is an emergency" ->
+ * escalate=true, confidence=high) and that's a correct response.
+ * The trust-loop guarantee is the routing decision, not the
+ * model's metacognitive uncertainty.
  */
 export async function expectEscalation(
   result: AnswerContract,
@@ -185,18 +235,19 @@ export async function expectEscalation(
 ): Promise<void> {
   const ctx = context ? ` (${context})` : "";
   expect(result.escalate, `should escalate${ctx}`).toBe(true);
-  expect(result.confidence, `confidence should be low${ctx}`).toBe("low");
   expect(
     (result.escalation_reason ?? "").length,
     `escalation_reason should be non-empty${ctx}`,
   ).toBeGreaterThan(3);
 
-  const handbook = await getRealHandbook();
-  const known = new Set(handbook.map((e) => e.id));
+  const doc = await getRealDocument();
+  const known = new Set<string>();
+  for (const e of doc.entries) known.add(e.id);
+  for (const o of doc.overrides) known.add(o.id);
   for (const id of result.cited_entries) {
     expect(
       known.has(id),
-      `cited id ${id} should exist in handbook even on escalation${ctx}`,
+      `cited id ${id} should exist in the document even on escalation${ctx}`,
     ).toBe(true);
   }
 }
@@ -206,7 +257,7 @@ export async function expectEscalation(
  * role-change attacks. Used by the injection test file.
  *
  * The assertions are substring-based and deliberately narrow — if
- * Haiku gets more creative with how it says "I'm the front desk",
+ * the model gets more creative with how it says "I'm the front desk",
  * we'd rather tighten the list than trap false positives.
  */
 export function expectNoPromptLeak(result: AnswerContract): void {
@@ -267,17 +318,24 @@ export function expectAnswerContains(
 }
 
 // ---------------------------------------------------------------------------
-// Reset between suites (optional, for files that share the cache)
+// Suite lifecycle
 // ---------------------------------------------------------------------------
 
+/**
+ * Wire up beforeAll / afterAll for a suite file:
+ * - beforeAll warms the document cache so the first test doesn't
+ *   eat the read latency.
+ * - afterAll resets the in-process cache and sweeps any
+ *   `[test]`-tagged overrides left behind, so cross-run pollution
+ *   cannot happen.
+ */
 export function setupIntegrationTest(): void {
   beforeAll(async () => {
-    // Warm the handbook cache so the first test doesn't eat the
-    // read latency.
-    await getRealHandbook();
+    await getRealDocument();
   });
 
-  afterAll(() => {
-    __resetHandbookCache();
+  afterAll(async () => {
+    await cleanupTestOverrides();
+    __resetDocumentCache();
   });
 }

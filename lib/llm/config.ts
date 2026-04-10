@@ -60,7 +60,7 @@ export interface LoadedAgentConfig {
 // Hardcoded for now. When a second config becomes user-selectable
 // (env var, query param, whatever), this constant is the single
 // seam that needs to change.
-const ACTIVE_CONFIG_PATH = "config/agents/parent-front-desk-haiku.json";
+const ACTIVE_CONFIG_PATH = "config/agents/parent-front-desk-sonnet.json";
 
 // ---------------------------------------------------------------------------
 // Cache

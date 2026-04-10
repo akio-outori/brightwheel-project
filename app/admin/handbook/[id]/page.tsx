@@ -1,13 +1,13 @@
-// Single-entry view. Server component fetches the entry directly
-// from storage (no round-trip through the API) for a fast first
-// paint, then lets the client-side editor take over on "Edit".
+// Single seed-entry view. Server component fetches the entry
+// directly from storage (no round-trip through the API) for a fast
+// first paint. Read-only — seed entries are immutable. Corrections
+// are made through the operator overrides layer.
 
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { AdminShell } from "@/components/operator/AdminShell";
 import { HandbookEntryBody } from "@/components/operator/HandbookEntryBody";
-import { HandbookEntryEditor } from "@/components/operator/HandbookEntryEditor";
-import { getHandbookEntry } from "@/lib/storage";
+import { getActiveDocumentId, getHandbookEntry } from "@/lib/storage";
 
 export const dynamic = "force-dynamic";
 
@@ -17,7 +17,8 @@ export default async function HandbookEntryPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const entry = await getHandbookEntry(id);
+  const docId = getActiveDocumentId();
+  const entry = await getHandbookEntry(docId, id);
   if (!entry) notFound();
 
   return (
@@ -27,7 +28,7 @@ export default async function HandbookEntryPage({
           href="/admin/handbook"
           className="text-xs font-medium text-sky-600 hover:text-sky-700"
         >
-          ← All entries
+          ← Back to document
         </Link>
       </div>
 
@@ -46,6 +47,7 @@ export default async function HandbookEntryPage({
                 {" · "}Source pages: {entry.sourcePages.join(", ")}
               </>
             )}
+            {" · "}read-only
           </p>
         </header>
 
@@ -53,7 +55,18 @@ export default async function HandbookEntryPage({
           <HandbookEntryBody body={entry.body} />
         </div>
 
-        <HandbookEntryEditor entry={entry} />
+        <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+          This entry is part of the immutable seeded handbook. To add
+          a clarification or correct this content, create an operator
+          override from the{" "}
+          <Link
+            href="/admin/overrides/new"
+            className="font-semibold underline decoration-amber-500 underline-offset-2 hover:text-amber-950"
+          >
+            new-override
+          </Link>{" "}
+          page.
+        </div>
       </article>
     </AdminShell>
   );

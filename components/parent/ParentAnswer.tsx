@@ -6,18 +6,18 @@
 "use client";
 
 import type { AnswerContract } from "@/lib/llm";
-import type { HandbookEntry } from "@/lib/storage";
 import { AnswerCard } from "./AnswerCard";
 import { EscalationCard } from "./EscalationCard";
+import type { CitationSource } from "./types";
 
 export function ParentAnswer({
   result,
-  allEntries,
-  onOpenEntry,
+  allSources,
+  onOpenSource,
 }: {
   result: AnswerContract;
-  allEntries: HandbookEntry[];
-  onOpenEntry: (entry: HandbookEntry) => void;
+  allSources: CitationSource[];
+  onOpenSource: (source: CitationSource) => void;
 }) {
   if (result.escalate || result.confidence === "low") {
     return (
@@ -29,9 +29,9 @@ export function ParentAnswer({
   return (
     <AnswerCard
       answer={result.answer}
-      citedEntryIds={result.cited_entries}
-      allEntries={allEntries}
-      onOpenEntry={onOpenEntry}
+      citedIds={result.cited_entries}
+      allSources={allSources}
+      onOpenSource={onOpenSource}
     />
   );
 }

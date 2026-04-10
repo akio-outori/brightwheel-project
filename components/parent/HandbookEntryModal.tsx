@@ -1,18 +1,23 @@
-// A simple modal that shows a handbook entry's full body. Opens when
+// A simple modal that shows a cited source's full body. Opens when
 // the parent clicks a citation pill. Uses native <dialog> so it's
 // accessible (Esc to close, backdrop click) without pulling in a
 // modal library.
+//
+// Handles both seed entries and operator overrides uniformly — the
+// only visual difference is the source label at the bottom.
 
 "use client";
 
 import { useEffect, useRef } from "react";
-import type { HandbookEntry } from "@/lib/storage";
+import type { CitationSource, DocumentInfo } from "./types";
 
 export function HandbookEntryModal({
-  entry,
+  source,
+  document,
   onClose,
 }: {
-  entry: HandbookEntry | null;
+  source: CitationSource | null;
+  document: DocumentInfo;
   onClose: () => void;
 }) {
   const dialogRef = useRef<HTMLDialogElement>(null);
@@ -20,9 +25,9 @@ export function HandbookEntryModal({
   useEffect(() => {
     const dialog = dialogRef.current;
     if (!dialog) return;
-    if (entry && !dialog.open) dialog.showModal();
-    if (!entry && dialog.open) dialog.close();
-  }, [entry]);
+    if (source && !dialog.open) dialog.showModal();
+    if (!source && dialog.open) dialog.close();
+  }, [source]);
 
   useEffect(() => {
     const dialog = dialogRef.current;
@@ -41,15 +46,15 @@ export function HandbookEntryModal({
         if (e.target === dialogRef.current) onClose();
       }}
     >
-      {entry && (
+      {source && (
         <div className="flex max-h-[80vh] flex-col">
           <div className="flex items-start justify-between gap-3 border-b border-slate-200 px-5 py-4">
             <div>
               <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
-                {entry.category.replace(/-/g, " ")}
+                {source.category.replace(/-/g, " ")}
               </p>
               <h2 className="mt-0.5 text-lg font-semibold text-slate-900">
-                {entry.title}
+                {source.title}
               </h2>
             </div>
             <button
@@ -64,19 +69,27 @@ export function HandbookEntryModal({
             </button>
           </div>
           <div className="overflow-y-auto px-5 py-4 text-sm leading-relaxed text-slate-700">
-            {entry.body.split(/\n{2,}/).map((para, i) => (
+            {source.body.split(/\n{2,}/).map((para, i) => (
               <p key={i} className="mb-3 whitespace-pre-wrap last:mb-0">
                 {para}
               </p>
             ))}
           </div>
-          {entry.sourcePages.length > 0 && (
-            <div className="border-t border-slate-200 bg-slate-50 px-5 py-3 text-xs text-slate-500">
-              Source: DCFD Family Handbook (2019), page
-              {entry.sourcePages.length > 1 ? "s" : ""}{" "}
-              {entry.sourcePages.join(", ")}
-            </div>
-          )}
+          <div className="border-t border-slate-200 bg-slate-50 px-5 py-3 text-xs text-slate-500">
+            {source.source === "override" ? (
+              <span>Added by a staff member as a clarification</span>
+            ) : source.sourcePages.length > 0 ? (
+              <span>
+                Source: {document.title} ({document.version}), page
+                {source.sourcePages.length > 1 ? "s" : ""}{" "}
+                {source.sourcePages.join(", ")}
+              </span>
+            ) : (
+              <span>
+                Source: {document.title} ({document.version})
+              </span>
+            )}
+          </div>
         </div>
       )}
     </dialog>

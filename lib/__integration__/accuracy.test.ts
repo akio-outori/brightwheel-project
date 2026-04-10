@@ -7,7 +7,7 @@
 
 import { describe, it } from "vitest";
 import {
-  askViaAdapter,
+  askViaRoute,
   expectHighConfidence,
   hasApiKey,
   setupIntegrationTest,
@@ -18,17 +18,17 @@ describe.skipIf(!hasApiKey())("accuracy — grounded high-confidence answers", (
 
   // Hours / schedule
   it("answers 'What time do you open?'", async () => {
-    const result = await askViaAdapter("What time do you open?");
+    const result = await askViaRoute("What time do you open?");
     await expectHighConfidence(result, "hours");
   });
 
   it("answers 'What are the program hours?'", async () => {
-    const result = await askViaAdapter("What are the program hours?");
+    const result = await askViaRoute("What are the program hours?");
     await expectHighConfidence(result, "hours");
   });
 
   it("answers 'When does the Early Head Start program run?'", async () => {
-    const result = await askViaAdapter(
+    const result = await askViaRoute(
       "When does the Early Head Start program run?",
     );
     await expectHighConfidence(result, "ehs-hours");
@@ -36,19 +36,19 @@ describe.skipIf(!hasApiKey())("accuracy — grounded high-confidence answers", (
 
   // Health / immunizations
   it("answers 'What immunizations are required?'", async () => {
-    const result = await askViaAdapter("What immunizations are required?");
+    const result = await askViaRoute("What immunizations are required?");
     await expectHighConfidence(result, "immunizations");
   });
 
   it("answers 'What is the sick-child exclusion policy?'", async () => {
-    const result = await askViaAdapter(
+    const result = await askViaRoute(
       "What is the sick-child exclusion policy?",
     );
     await expectHighConfidence(result, "illness-policy-specific");
   });
 
   it("answers 'When should I keep my child home if they're sick?'", async () => {
-    const result = await askViaAdapter(
+    const result = await askViaRoute(
       "When should I keep my child home if they're sick?",
     );
     await expectHighConfidence(result, "illness-exclusion");
@@ -56,12 +56,12 @@ describe.skipIf(!hasApiKey())("accuracy — grounded high-confidence answers", (
 
   // Food / nutrition / allergies
   it("answers 'Do you provide meals?'", async () => {
-    const result = await askViaAdapter("Do you provide meals?");
+    const result = await askViaRoute("Do you provide meals?");
     await expectHighConfidence(result, "meals");
   });
 
   it("answers 'How does the program handle food allergies?'", async () => {
-    const result = await askViaAdapter(
+    const result = await askViaRoute(
       "How does the program handle food allergies?",
     );
     await expectHighConfidence(result, "food-allergies");
@@ -69,19 +69,19 @@ describe.skipIf(!hasApiKey())("accuracy — grounded high-confidence answers", (
 
   // Enrollment
   it("answers 'How do I enroll my child?'", async () => {
-    const result = await askViaAdapter("How do I enroll my child?");
+    const result = await askViaRoute("How do I enroll my child?");
     await expectHighConfidence(result, "enrollment-process");
   });
 
   it("answers 'What documents do I need for enrollment?'", async () => {
-    const result = await askViaAdapter(
+    const result = await askViaRoute(
       "What documents do I need for enrollment?",
     );
     await expectHighConfidence(result, "enrollment-docs");
   });
 
   it("answers 'Can I give my child sunscreen at the center?'", async () => {
-    const result = await askViaAdapter(
+    const result = await askViaRoute(
       "Can I give my child sunscreen at the center?",
     );
     await expectHighConfidence(result, "sunscreen-policy");
@@ -89,47 +89,47 @@ describe.skipIf(!hasApiKey())("accuracy — grounded high-confidence answers", (
 
   // Fees / tuition
   it("answers 'How much does tuition cost?'", async () => {
-    const result = await askViaAdapter("How much does tuition cost?");
+    const result = await askViaRoute("How much does tuition cost?");
     await expectHighConfidence(result, "tuition");
   });
 
   it("answers 'When is tuition due?'", async () => {
-    const result = await askViaAdapter("When is tuition due?");
+    const result = await askViaRoute("When is tuition due?");
     await expectHighConfidence(result, "tuition-due");
   });
 
   // Safety / emergencies
   it("answers 'What happens in case of an emergency?'", async () => {
-    const result = await askViaAdapter(
+    const result = await askViaRoute(
       "What happens in case of an emergency?",
     );
     await expectHighConfidence(result, "emergency-procedures");
   });
 
   it("answers 'What are the late pickup fees?'", async () => {
-    const result = await askViaAdapter("What are the late pickup fees?");
+    const result = await askViaRoute("What are the late pickup fees?");
     await expectHighConfidence(result, "late-fees");
   });
 
   // Curriculum
   it("answers 'What curriculum do you use?'", async () => {
-    const result = await askViaAdapter("What curriculum do you use?");
+    const result = await askViaRoute("What curriculum do you use?");
     await expectHighConfidence(result, "curriculum");
   });
 
   it("answers 'What does a typical day look like?'", async () => {
-    const result = await askViaAdapter("What does a typical day look like?");
+    const result = await askViaRoute("What does a typical day look like?");
     await expectHighConfidence(result, "daily-schedule");
   });
 
   // Discipline / communication
   it("answers 'What is your discipline policy?'", async () => {
-    const result = await askViaAdapter("What is your discipline policy?");
+    const result = await askViaRoute("What is your discipline policy?");
     await expectHighConfidence(result, "discipline");
   });
 
   it("answers 'How do parent-teacher conferences work?'", async () => {
-    const result = await askViaAdapter(
+    const result = await askViaRoute(
       "How do parent-teacher conferences work?",
     );
     await expectHighConfidence(result, "conferences");
@@ -137,12 +137,12 @@ describe.skipIf(!hasApiKey())("accuracy — grounded high-confidence answers", (
 
   // Special needs / inclusion
   it("answers 'Do you accept children with IEPs?'", async () => {
-    const result = await askViaAdapter("Do you accept children with IEPs?");
+    const result = await askViaRoute("Do you accept children with IEPs?");
     await expectHighConfidence(result, "iep-inclusion");
   });
 
   it("answers 'What support do you offer for children with disabilities?'", async () => {
-    const result = await askViaAdapter(
+    const result = await askViaRoute(
       "What support do you offer for children with disabilities?",
     );
     await expectHighConfidence(result, "disability-support");
@@ -150,7 +150,7 @@ describe.skipIf(!hasApiKey())("accuracy — grounded high-confidence answers", (
 
   // Operations / withdrawal
   it("answers 'What happens if we don't pay tuition?'", async () => {
-    const result = await askViaAdapter(
+    const result = await askViaRoute(
       "What happens if we don't pay tuition?",
     );
     await expectHighConfidence(result, "non-payment-consequences");
@@ -158,7 +158,7 @@ describe.skipIf(!hasApiKey())("accuracy — grounded high-confidence answers", (
 
   // Communication
   it("answers 'How will the teachers communicate with me?'", async () => {
-    const result = await askViaAdapter(
+    const result = await askViaRoute(
       "How will the teachers communicate with me?",
     );
     await expectHighConfidence(result, "teacher-communication");
@@ -166,12 +166,12 @@ describe.skipIf(!hasApiKey())("accuracy — grounded high-confidence answers", (
 
   // Center info
   it("answers 'Where are your centers located?'", async () => {
-    const result = await askViaAdapter("Where are your centers located?");
+    const result = await askViaRoute("Where are your centers located?");
     await expectHighConfidence(result, "center-locations");
   });
 
   it("answers 'What's the main DCFD office phone number?'", async () => {
-    const result = await askViaAdapter(
+    const result = await askViaRoute(
       "What's the main DCFD office phone number?",
     );
     await expectHighConfidence(result, "main-office-phone");

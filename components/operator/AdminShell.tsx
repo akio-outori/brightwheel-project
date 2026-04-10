@@ -4,6 +4,7 @@
 
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { NotificationBell } from "./NotificationBell";
 
 export function AdminShell({
   active,
@@ -24,20 +25,23 @@ export function AdminShell({
               Operator Console
             </h1>
           </div>
-          <nav className="flex gap-1 text-sm">
-            <NavLink href="/admin" active={active === "home"}>
-              Home
-            </NavLink>
-            <NavLink
-              href="/admin/needs-attention"
-              active={active === "needs-attention"}
-            >
-              Needs attention
-            </NavLink>
-            <NavLink href="/admin/handbook" active={active === "handbook"}>
-              Handbook
-            </NavLink>
-          </nav>
+          <div className="flex flex-col items-start gap-2 sm:flex-row sm:items-center sm:gap-3">
+            <NotificationBell />
+            <nav className="flex gap-1 text-sm">
+              <NavLink href="/admin" active={active === "home"}>
+                Home
+              </NavLink>
+              <NavLink
+                href="/admin/needs-attention"
+                active={active === "needs-attention"}
+              >
+                Needs attention
+              </NavLink>
+              <NavLink href="/admin/handbook" active={active === "handbook"}>
+                Handbook
+              </NavLink>
+            </nav>
+          </div>
         </div>
       </header>
       <main className="mx-auto max-w-4xl px-4 py-6 sm:px-6 sm:py-8">
