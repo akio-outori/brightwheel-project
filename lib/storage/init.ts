@@ -1,0 +1,138 @@
+// App-level storage initialization. Replaces the minio-init Docker
+// container for environments (like Railway) where depends_on with
+// service_completed_successfully isn't available.
+//
+// Runs once on first request via ensureStorageReady(). Idempotent:
+// checks for the .seed-complete-v2 sentinel and skips if present.
+// Retries the MinIO connection with exponential backoff so the app
+// can start before MinIO is fully ready.
+//
+// This module does everything the shell script did:
+//   1. Create buckets (idempotent)
+//   2. Enable versioning on handbook bucket
+//   3. Check sentinel → skip if already seeded
+//   4. Seed document metadata + entries from the JSON seed file
+//   5. Write sentinel
+
+import { readFile } from "node:fs/promises";
+import path from "node:path";
+import { getClient, HANDBOOK_BUCKET, EVENTS_BUCKET } from "./client";
+import { writeJson, readJson } from "./minio-json";
+
+const SENTINEL_KEY = ".seed-complete-v2";
+const SEED_FILE_PATH = path.join(process.cwd(), "data/seed-handbook.json");
+
+let initialized = false;
+let initializing: Promise<void> | null = null;
+
+/**
+ * Ensure MinIO buckets exist and the handbook is seeded.
+ * Safe to call on every request — no-ops after first success.
+ * Retries the MinIO connection up to 30 times (1s apart).
+ */
+export async function ensureStorageReady(): Promise<void> {
+  if (initialized) return;
+  if (initializing) return initializing;
+  initializing = doInit();
+  try {
+    await initializing;
+    initialized = true;
+  } finally {
+    initializing = null;
+  }
+}
+
+async function waitForMinio(maxRetries = 30): Promise<void> {
+  const client = getClient();
+  for (let i = 0; i < maxRetries; i++) {
+    try {
+      await client.listBuckets();
+      return;
+    } catch {
+      if (i === maxRetries - 1) throw new Error("MinIO not reachable after 30 retries");
+      await new Promise((r) => setTimeout(r, 1000));
+    }
+  }
+}
+
+async function doInit(): Promise<void> {
+  console.log("[storage-init] starting");
+
+  await waitForMinio();
+
+  const client = getClient();
+  const hbBucket = HANDBOOK_BUCKET();
+  const evBucket = EVENTS_BUCKET();
+
+  // Create buckets (idempotent)
+  for (const bucket of [hbBucket, evBucket]) {
+    const exists = await client.bucketExists(bucket);
+    if (!exists) {
+      await client.makeBucket(bucket, "us-east-1");
+      console.log(`[storage-init] created bucket: ${bucket}`);
+    }
+  }
+
+  // Enable versioning on handbook bucket
+  try {
+    await client.setBucketVersioning(hbBucket, { Status: "Enabled" });
+  } catch {
+    // MinIO may not support versioning in all configs — non-fatal
+  }
+
+  // Check sentinel — skip if already seeded
+  const sentinel = await readJson(hbBucket, SENTINEL_KEY);
+  if (sentinel) {
+    console.log("[storage-init] sentinel found — already seeded");
+    return;
+  }
+
+  // Load seed file
+  let seedRaw: string;
+  try {
+    seedRaw = await readFile(SEED_FILE_PATH, "utf-8");
+  } catch {
+    console.warn("[storage-init] no seed file found — skipping seed");
+    await writeSentinel(hbBucket);
+    return;
+  }
+
+  const seed = JSON.parse(seedRaw) as {
+    document: { id: string; title: string; version: string; source: string };
+    entries: Array<Record<string, unknown>>;
+  };
+
+  const docId = seed.document.id;
+  if (!docId) throw new Error("Seed file missing document.id");
+
+  const docPrefix = `documents/${docId}`;
+  console.log(`[storage-init] seeding document ${docId} (${seed.entries.length} entries)`);
+
+  // Write document metadata
+  const metadata = {
+    ...seed.document,
+    seededAt: new Date().toISOString(),
+  };
+  await writeJson(hbBucket, `${docPrefix}/metadata.json`, metadata);
+
+  // Write each entry
+  for (const entry of seed.entries) {
+    const id = entry.id as string;
+    if (!id) throw new Error("Seed entry missing id");
+    await writeJson(hbBucket, `${docPrefix}/entries/${id}.json`, {
+      ...entry,
+      docId,
+    });
+  }
+
+  console.log(`[storage-init] seeded ${seed.entries.length} entries`);
+  await writeSentinel(hbBucket);
+}
+
+async function writeSentinel(bucket: string): Promise<void> {
+  await writeJson(bucket, SENTINEL_KEY, {
+    seeded_at: new Date().toISOString(),
+    layout: "v2",
+  });
+  console.log("[storage-init] complete");
+}

@@ -9,6 +9,10 @@
 
 import { describe, expect, it, vi, beforeEach } from "vitest";
 
+vi.mock("@/lib/storage/init", () => ({
+  ensureStorageReady: vi.fn().mockResolvedValue(undefined),
+}));
+
 // Mock the storage layer
 vi.mock("@/lib/storage", () => ({
   getActiveDocumentId: () => "test-doc",

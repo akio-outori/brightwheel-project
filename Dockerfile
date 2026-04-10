@@ -50,6 +50,10 @@ COPY --from=builder /app/public ./public
 # explicitly as a safety net.
 COPY --from=builder /app/config ./config
 
+# The seed handbook is read at runtime by lib/storage/init.ts on
+# first request (replaces the minio-init container for Railway).
+COPY --from=builder /app/data ./data
+
 EXPOSE 3000
 
 CMD ["server.js"]
