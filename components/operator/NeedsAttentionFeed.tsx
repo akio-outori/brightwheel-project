@@ -15,10 +15,7 @@ const fetcher = (url: string) =>
   });
 
 export function NeedsAttentionFeed({ limit }: { limit?: number }) {
-  const { data, error, isLoading } = useSWR(
-    "/api/needs-attention",
-    fetcher,
-  );
+  const { data, error, isLoading } = useSWR("/api/needs-attention", fetcher);
 
   if (isLoading) {
     return (
@@ -45,9 +42,7 @@ export function NeedsAttentionFeed({ limit }: { limit?: number }) {
         <p className="text-2xl" aria-hidden="true">
           ✓
         </p>
-        <p className="mt-1 text-sm font-medium text-emerald-900">
-          All caught up
-        </p>
+        <p className="mt-1 text-sm font-medium text-emerald-900">All caught up</p>
         <p className="mt-1 text-xs text-emerald-800/80">
           No family questions need your attention right now.
         </p>

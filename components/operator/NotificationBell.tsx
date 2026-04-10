@@ -57,9 +57,7 @@ export function NotificationBell() {
   // "something new arrived" without firing on initial mount.
   const prevCountRef = useRef<number | null>(null);
 
-  const [permission, setPermission] = useState<NotificationPermission | "unsupported">(
-    "default",
-  );
+  const [permission, setPermission] = useState<NotificationPermission | "unsupported">("default");
 
   // On mount, detect the Notification API and initialize permission.
   useEffect(() => {
@@ -125,23 +123,13 @@ export function NotificationBell() {
   }
 
   if (permission === "unsupported") {
-    return (
-      <BadgeOnly
-        unread={unread}
-        totalOpen={count}
-        onAcknowledge={handleAcknowledge}
-      />
-    );
+    return <BadgeOnly unread={unread} totalOpen={count} onAcknowledge={handleAcknowledge} />;
   }
 
   if (permission === "default") {
     return (
       <div className="flex items-center gap-2">
-        <BadgeOnly
-          unread={unread}
-          totalOpen={count}
-          onAcknowledge={handleAcknowledge}
-        />
+        <BadgeOnly unread={unread} totalOpen={count} onAcknowledge={handleAcknowledge} />
         <button
           type="button"
           onClick={requestPermission}
@@ -154,13 +142,7 @@ export function NotificationBell() {
     );
   }
 
-  return (
-    <BadgeOnly
-      unread={unread}
-      totalOpen={count}
-      onAcknowledge={handleAcknowledge}
-    />
-  );
+  return <BadgeOnly unread={unread} totalOpen={count} onAcknowledge={handleAcknowledge} />;
 }
 
 function BadgeOnly({

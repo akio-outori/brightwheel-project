@@ -63,9 +63,7 @@ function entryKey(docId: string, entryId: string): string {
  * Read the document metadata blob for a document. Throws
  * `not_found` if the document is unknown.
  */
-export async function getDocumentMetadata(
-  docId: string,
-): Promise<DocumentMetadata> {
+export async function getDocumentMetadata(docId: string): Promise<DocumentMetadata> {
   const raw = await readJson(HANDBOOK_BUCKET(), metadataKey(docId));
   if (raw === null) {
     throw new StorageError(`Document not found: ${docId}`, "not_found");
@@ -86,9 +84,7 @@ export async function getDocumentMetadata(
  * Order is unspecified; callers that care about ordering should sort
  * by id or title themselves.
  */
-export async function listHandbookEntries(
-  docId: string,
-): Promise<HandbookEntry[]> {
+export async function listHandbookEntries(docId: string): Promise<HandbookEntry[]> {
   const keys = await listObjectKeys(HANDBOOK_BUCKET(), entriesPrefix(docId));
   const entries: HandbookEntry[] = [];
   for (const key of keys) {
@@ -110,10 +106,7 @@ export async function listHandbookEntries(
  * Read a single seed entry by id within a document. Returns `null`
  * if the entry does not exist.
  */
-export async function getHandbookEntry(
-  docId: string,
-  id: string,
-): Promise<HandbookEntry | null> {
+export async function getHandbookEntry(docId: string, id: string): Promise<HandbookEntry | null> {
   const raw = await readJson(HANDBOOK_BUCKET(), entryKey(docId, id));
   if (raw === null) return null;
   const parsed = HandbookEntrySchema.safeParse(raw);

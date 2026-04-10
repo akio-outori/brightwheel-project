@@ -3,11 +3,7 @@
 // key required, no real model calls.
 
 import { afterEach, describe, expect, it } from "vitest";
-import {
-  __resetClientForTests,
-  __setClientForTests,
-  askLLM,
-} from "../client";
+import { __resetClientForTests, __setClientForTests, askLLM } from "../client";
 import { PARSE_FAILURE_RESULT } from "../contract";
 import { AppIntent, MCPData, SystemPrompt, UserInput } from "../types";
 
@@ -141,9 +137,7 @@ describe("askLLM", () => {
       }),
     );
 
-    await expect(askLLM(SYSTEM, INTENT, DATA, USER)).rejects.toThrow(
-      "ECONNREFUSED",
-    );
+    await expect(askLLM(SYSTEM, INTENT, DATA, USER)).rejects.toThrow("ECONNREFUSED");
   });
 
   it("passes the built prompt through to messages.create verbatim", async () => {
@@ -190,14 +184,13 @@ describe("askLLM", () => {
     expect(args.system).toBe("custom system prompt");
     expect(args.messages).toHaveLength(1);
     expect(args.messages[0]!.role).toBe("user");
-    expect(args.messages[0]!.content).toMatch(
-      /^<mcp_message>.*<\/mcp_message>$/,
-    );
+    expect(args.messages[0]!.content).toMatch(/^<mcp_message>.*<\/mcp_message>$/);
 
     // Parse the envelope and verify all four inputs made it through.
-    const body = args.messages[0]!.content
-      .replace(/^<mcp_message>/, "")
-      .replace(/<\/mcp_message>$/, "");
+    const body = args.messages[0]!.content.replace(/^<mcp_message>/, "").replace(
+      /<\/mcp_message>$/,
+      "",
+    );
     const envelope = JSON.parse(body);
     expect(envelope.intent).toBe("custom intent");
     expect(envelope.user_query).toBe("original question");

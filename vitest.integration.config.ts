@@ -8,7 +8,7 @@
 // Guardrails:
 // - fileParallelism: false (sequential files) to avoid rate-limiting
 // - testTimeout: 45s per test — real model calls are usually 1-3s
-//   on Haiku but can spike
+//   but can spike
 // - Include only lib/__integration__/**/*.test.ts
 // - helpers file (_helpers.ts) is excluded from collection via the
 //   leading underscore not matching the include glob
@@ -25,11 +25,6 @@ export default defineConfig({
     hookTimeout: 30_000,
     fileParallelism: false,
     pool: "forks",
-    poolOptions: {
-      forks: {
-        singleFork: true,
-      },
-    },
   },
   resolve: {
     alias: {

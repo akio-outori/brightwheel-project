@@ -187,11 +187,7 @@ export type NeedsAttentionDraft = z.infer<typeof NeedsAttentionDraftSchema>;
 export class StorageError extends Error {
   constructor(
     message: string,
-    public readonly code:
-      | "not_found"
-      | "already_exists"
-      | "invalid_input"
-      | "corrupt_object",
+    public readonly code: "not_found" | "already_exists" | "invalid_input" | "corrupt_object",
   ) {
     super(message);
     this.name = "StorageError";

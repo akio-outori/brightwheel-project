@@ -34,10 +34,7 @@ export async function GET(): Promise<Response> {
     return Response.json({ overrides });
   } catch (err) {
     console.error("[/api/overrides GET] failed:", err);
-    return Response.json(
-      { error: "Could not load overrides." },
-      { status: 500 },
-    );
+    return Response.json({ error: "Could not load overrides." }, { status: 500 });
   }
 }
 
@@ -46,10 +43,7 @@ export async function POST(req: Request): Promise<Response> {
   try {
     body = await req.json();
   } catch {
-    return Response.json(
-      { error: "Request body must be valid JSON." },
-      { status: 400 },
-    );
+    return Response.json({ error: "Request body must be valid JSON." }, { status: 400 });
   }
 
   const parsed = CreateRequestSchema.safeParse(body);
@@ -78,9 +72,6 @@ export async function POST(req: Request): Promise<Response> {
       );
     }
     console.error("[/api/overrides POST] failed:", err);
-    return Response.json(
-      { error: "Could not create override." },
-      { status: 500 },
-    );
+    return Response.json({ error: "Could not create override." }, { status: 500 });
   }
 }

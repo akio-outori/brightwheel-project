@@ -112,8 +112,7 @@ export function extractEntities(text: string): string[] {
   // (`DCFD`, `IEP`, `NAEYC`), or a hyphenated compound like
   // `Pre-K` or `Mother-in-Law`. Lowercase connective words like
   // "of", "and", "the" are allowed between capitalized words.
-  const capitalizedWord =
-    "(?:[A-Z][a-z]*(?:-[A-Z][a-z]*)*|[A-Z]{2,}(?:-[A-Z][a-z]*)*)";
+  const capitalizedWord = "(?:[A-Z][a-z]*(?:-[A-Z][a-z]*)*|[A-Z]{2,}(?:-[A-Z][a-z]*)*)";
   const connective = "(?:of|and|the|at|for|in|on|de|la|el)";
   const multiWord = new RegExp(
     `\\b${capitalizedWord}(?:\\s+${connective}\\s+${capitalizedWord}|\\s+${capitalizedWord})+\\b`,
@@ -219,9 +218,7 @@ export const entitiesChannel: Channel = ({ draft, allSources }) => {
     if (corpus.includes(ent.toLowerCase())) continue;
 
     const tokens = ent.split(/\s+/).filter((t) => /[A-Za-z]/.test(t));
-    const unknownTokens = tokens.filter(
-      (t) => !corpus.includes(t.toLowerCase()),
-    );
+    const unknownTokens = tokens.filter((t) => !corpus.includes(t.toLowerCase()));
     if (unknownTokens.length === 0) continue;
 
     missing.push(ent);

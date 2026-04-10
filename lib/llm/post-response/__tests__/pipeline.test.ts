@@ -82,16 +82,14 @@ describe("runPostResponsePipeline", () => {
       allSources: SOURCES,
     });
     expect(result.verdict).toBe("hold");
-    if (result.verdict === "hold")
-      expect(result.reason).toBe("no_direct_coverage");
+    if (result.verdict === "hold") expect(result.reason).toBe("no_direct_coverage");
   });
 
   it("holds on a medical instruction draft", () => {
     const result = runPostResponsePipeline({
       question: "My child has a fever — can he come in?",
       draft: draft({
-        answer:
-          "Give your child Tylenol and keep him home for 24 hours before bringing him back.",
+        answer: "Give your child Tylenol and keep him home for 24 hours before bringing him back.",
         cited_entries: ["illness-policy"],
         directly_addressed_by: ["illness-policy"],
       }),
@@ -115,9 +113,7 @@ describe("stock response helpers", () => {
     expect(stock.confidence).toBe("low");
     expect(stock.cited_entries).toEqual([]);
     expect(stock.directly_addressed_by).toEqual([]);
-    expect(stock.escalation_reason).toBe(
-      "held_for_review:hallucinated_citation",
-    );
+    expect(stock.escalation_reason).toBe("held_for_review:hallucinated_citation");
     expect(stock.answer).toContain("staff member");
   });
 
@@ -128,9 +124,7 @@ describe("stock response helpers", () => {
   });
 
   it("parses the held_for_review: prefix back out of an escalation_reason", () => {
-    expect(parseHoldReason("held_for_review:lexical_unsupported")).toBe(
-      "lexical_unsupported",
-    );
+    expect(parseHoldReason("held_for_review:lexical_unsupported")).toBe("lexical_unsupported");
     expect(parseHoldReason("sensitive_topic")).toBeNull();
     expect(parseHoldReason(undefined)).toBeNull();
   });

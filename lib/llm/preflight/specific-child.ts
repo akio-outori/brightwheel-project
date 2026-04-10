@@ -65,20 +65,13 @@ const HEALTH_RE = new RegExp(`\\b${HEALTH_WORDS}\\b`, "i");
 // "Our baby needs his inhaler"
 // -----------------------------------------------------------------------
 
-const FAMILY_NOUNS =
-  "(?:child|son|daughter|kid|baby|toddler|boy|girl|little\\s+one|kiddo|infant)";
+const FAMILY_NOUNS = "(?:child|son|daughter|kid|baby|toddler|boy|girl|little\\s+one|kiddo|infant)";
 
 const POSSESSIVE_CHILD_PATTERNS: ReadonlyArray<RegExp> = [
   // "my/our [family-noun] ..." with health words anywhere in question
-  new RegExp(
-    `\\b(?:my|our)\\s+${FAMILY_NOUNS}\\b`,
-    "i",
-  ),
+  new RegExp(`\\b(?:my|our)\\s+${FAMILY_NOUNS}\\b`, "i"),
   // "my/our [name]'s" — possessive proper name: "my Tommy's fever"
-  new RegExp(
-    `\\b(?:my|our)\\s+[A-Z][a-z]{2,}(?:'s)?\\b`,
-    "i",
-  ),
+  new RegExp(`\\b(?:my|our)\\s+[A-Z][a-z]{2,}(?:'s)?\\b`, "i"),
 ];
 
 // -----------------------------------------------------------------------
@@ -96,18 +89,72 @@ const POSSESSIVE_CHILD_PATTERNS: ReadonlyArray<RegExp> = [
 
 const NAME_ALLOWLIST: ReadonlySet<string> = new Set([
   // Sentence starters
-  "The", "This", "That", "These", "Those", "What", "When", "Where",
-  "How", "Who", "Why", "Which", "Does", "Did", "Can", "Could",
-  "Would", "Should", "Will", "Are", "Is", "Do", "Have", "Has",
-  "Please", "Thanks", "Thank", "Yes", "No", "Also", "However",
-  "But", "And", "Or", "If", "For", "Our", "Your", "Their",
+  "The",
+  "This",
+  "That",
+  "These",
+  "Those",
+  "What",
+  "When",
+  "Where",
+  "How",
+  "Who",
+  "Why",
+  "Which",
+  "Does",
+  "Did",
+  "Can",
+  "Could",
+  "Would",
+  "Should",
+  "Will",
+  "Are",
+  "Is",
+  "Do",
+  "Have",
+  "Has",
+  "Please",
+  "Thanks",
+  "Thank",
+  "Yes",
+  "No",
+  "Also",
+  "However",
+  "But",
+  "And",
+  "Or",
+  "If",
+  "For",
+  "Our",
+  "Your",
+  "Their",
   // Days / months
-  "Monday", "Tuesday", "Wednesday", "Thursday", "Friday",
-  "Saturday", "Sunday", "January", "February", "March", "April",
-  "May", "June", "July", "August", "September", "October",
-  "November", "December",
+  "Monday",
+  "Tuesday",
+  "Wednesday",
+  "Thursday",
+  "Friday",
+  "Saturday",
+  "Sunday",
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
   // Program-specific allowed words
-  "Early", "Head", "Start", "Pre", "Preschool", "DCFD",
+  "Early",
+  "Head",
+  "Start",
+  "Pre",
+  "Preschool",
+  "DCFD",
 ]);
 
 // Proper name extraction is case-SENSITIVE (must start with an actual
@@ -152,23 +199,14 @@ const PRONOUN_HEALTH_PATTERNS: ReadonlyArray<RegExp> = [
   /\b(?:he's|she's)\b/i,
   // action requests with pronouns: "give him/her", "bring him/her",
   // "pick him/her up"
-  new RegExp(
-    `\\b(?:give|bring|take|keep)\\s+(?:him|her)\\b`,
-    "i",
-  ),
+  new RegExp(`\\b(?:give|bring|take|keep)\\s+(?:him|her)\\b`, "i"),
   /\bpick\s+(?:him|her)\s+up\b/i,
   // "I need to pick him/her up" (health context required by caller)
   /\bneed\s+to\s+pick\s+(?:him|her)\s+up\b/i,
   // "should I bring him/her"
-  new RegExp(
-    `\\bshould\\s+I\\s+(?:bring|take|keep)\\s+(?:him|her)\\b`,
-    "i",
-  ),
+  new RegExp(`\\bshould\\s+I\\s+(?:bring|take|keep)\\s+(?:him|her)\\b`, "i"),
   // "can he/she (still)? (come|attend|return)"
-  new RegExp(
-    `\\bcan\\s+(?:he|she)\\s+(?:still\\s+)?(?:come|attend|return|go)\\b`,
-    "i",
-  ),
+  new RegExp(`\\bcan\\s+(?:he|she)\\s+(?:still\\s+)?(?:come|attend|return|go)\\b`, "i"),
 ];
 
 // -----------------------------------------------------------------------
@@ -182,20 +220,14 @@ const PRONOUN_HEALTH_PATTERNS: ReadonlyArray<RegExp> = [
 
 const ACTION_REQUEST_PATTERNS: ReadonlyArray<RegExp> = [
   // "can you [verb] my [family-noun]"
-  new RegExp(
-    `\\bcan\\s+you\\s+\\w+\\s+(?:my|his|her)\\s+${FAMILY_NOUNS}\\b`,
-    "i",
-  ),
+  new RegExp(`\\bcan\\s+you\\s+\\w+\\s+(?:my|his|her)\\s+${FAMILY_NOUNS}\\b`, "i"),
   // "can my [family-noun] (still)? [attend/come/return]"
   new RegExp(
     `\\bcan\\s+(?:my|our)\\s+${FAMILY_NOUNS}\\s+(?:still\\s+)?(?:come|attend|return|go)\\b`,
     "i",
   ),
   // "should I bring/take my [family-noun]"
-  new RegExp(
-    `\\bshould\\s+I\\s+(?:bring|take|keep)\\s+(?:my|our)\\s+${FAMILY_NOUNS}\\b`,
-    "i",
-  ),
+  new RegExp(`\\bshould\\s+I\\s+(?:bring|take|keep)\\s+(?:my|our)\\s+${FAMILY_NOUNS}\\b`, "i"),
   // "double-check (his|her|my child's) (pickup|authorization)"
   new RegExp(
     `\\b(?:check|double-check|verify)\\s+(?:his|her|(?:my|our)\\s+${FAMILY_NOUNS}(?:'s)?)\\s+(?:pickup|authorization|custody)\\b`,
@@ -272,12 +304,14 @@ export function classifySpecificChild(question: string): PreflightVerdict {
     }
   }
 
-  // Group 1b: possessive + family noun + attendance-decision verb.
-  // "Is it OK to send my child with a runny nose?" doesn't need
-  // "runny nose" in the health vocabulary — "send my child" is
-  // already specific-child. The parent is asking about THIS child's
-  // attendance, not about policy in the abstract.
-  if (!isPolicyQuestion(question)) {
+  // Group 1b: possessive + family noun + attendance-decision verb
+  // + health context. "Is it OK to send my child with a runny nose?"
+  // holds because "runny nose" provides health context. "Should I
+  // bring my child in today?" passes because there's no health
+  // context — it's a schedule question. The health requirement
+  // prevents false positives on "Can my daughter attend the summer
+  // session?" while catching "Can my son still come if he has a cold?"
+  if (hasHealthWord && !isPolicyQuestion(question)) {
     const attendanceDecision = new RegExp(
       `\\b(?:send|bring|take|keep)\\s+(?:my|our)\\s+${FAMILY_NOUNS}\\b`,
       "i",
@@ -307,7 +341,18 @@ export function classifySpecificChild(question: string): PreflightVerdict {
     }
   }
 
-  // Group 3: third-person pronoun in health context
+  // Group 3a: euphemisms that ARE the health signal — no health
+  // word required because the phrasing itself conveys illness.
+  // "He hasn't been himself" = "he's sick" in parent-speak.
+  if (/\bhasn't\s+been\s+(?:himself|herself)\b/i.test(question)) {
+    return {
+      verdict: "hold",
+      reason: "specific_child_question",
+      detail: `pronoun euphemism for illness`,
+    };
+  }
+
+  // Group 3b: third-person pronoun in health context
   if (hasHealthWord && !isPolicyQuestion(question)) {
     for (const pat of PRONOUN_HEALTH_PATTERNS) {
       if (pat.test(question)) {

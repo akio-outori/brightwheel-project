@@ -31,37 +31,22 @@ export async function POST(
   try {
     body = await req.json();
   } catch {
-    return Response.json(
-      { error: "Request body must be valid JSON." },
-      { status: 400 },
-    );
+    return Response.json({ error: "Request body must be valid JSON." }, { status: 400 });
   }
 
   const parsed = ResolveRequestSchema.safeParse(body);
   if (!parsed.success) {
-    return Response.json(
-      { error: "resolvedByOverrideId is required." },
-      { status: 400 },
-    );
+    return Response.json({ error: "resolvedByOverrideId is required." }, { status: 400 });
   }
 
   try {
-    const event = await resolveNeedsAttention(
-      id,
-      parsed.data.resolvedByOverrideId,
-    );
+    const event = await resolveNeedsAttention(id, parsed.data.resolvedByOverrideId);
     return Response.json(event);
   } catch (err) {
     if (err instanceof StorageError && err.code === "not_found") {
-      return Response.json(
-        { error: "Event not found or already resolved." },
-        { status: 404 },
-      );
+      return Response.json({ error: "Event not found or already resolved." }, { status: 404 });
     }
     console.error(`[/api/needs-attention/${id} POST] failed:`, err);
-    return Response.json(
-      { error: "Could not resolve event." },
-      { status: 500 },
-    );
+    return Response.json({ error: "Could not resolve event." }, { status: 500 });
   }
 }

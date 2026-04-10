@@ -14,6 +14,23 @@ export default defineConfig({
       "lib/__integration__/**",
     ],
     setupFiles: ["./vitest.setup.ts"],
+    coverage: {
+      provider: "v8",
+      include: ["lib/**/*.ts", "app/api/**/*.ts"],
+      exclude: [
+        "lib/__integration__/**",
+        "**/*.test.ts",
+        "**/*.test.tsx",
+        "**/index.ts",
+        "**/types.ts",
+      ],
+      thresholds: {
+        statements: 80,
+        branches: 75,
+        functions: 80,
+        lines: 80,
+      },
+    },
   },
   resolve: {
     alias: {

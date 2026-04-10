@@ -90,9 +90,7 @@ export async function getActiveAgentConfig(): Promise<LoadedAgentConfig> {
 // Exported for testability and for a future env-selectable path.
 // `configPath` is resolved relative to `process.cwd()` so it works
 // in both the repo root (dev) and the app working dir (container).
-export async function loadAgentConfig(
-  configPath: string,
-): Promise<LoadedAgentConfig> {
+export async function loadAgentConfig(configPath: string): Promise<LoadedAgentConfig> {
   const absoluteConfigPath = path.isAbsolute(configPath)
     ? configPath
     : path.join(process.cwd(), configPath);
@@ -123,9 +121,7 @@ export async function loadAgentConfig(
   if (!result.success) {
     throw new Error(
       `Agent config file failed schema validation: ${absoluteConfigPath}\n` +
-        result.error.issues
-          .map((i) => `  - ${i.path.join(".")}: ${i.message}`)
-          .join("\n"),
+        result.error.issues.map((i) => `  - ${i.path.join(".")}: ${i.message}`).join("\n"),
     );
   }
   const cfg = result.data;

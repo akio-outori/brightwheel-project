@@ -28,11 +28,7 @@ import {
   listOperatorOverrides,
 } from "../storage";
 import { EVENTS_BUCKET, getClient } from "../storage/client";
-import type {
-  DocumentMetadata,
-  HandbookEntry,
-  OperatorOverride,
-} from "../storage";
+import type { DocumentMetadata, HandbookEntry, OperatorOverride } from "../storage";
 
 // ---------------------------------------------------------------------------
 // Environment gating
@@ -124,17 +120,13 @@ export const TEST_TAG_PREFIX = "[test]";
 async function cleanupTestOverrides(): Promise<void> {
   try {
     const overrides = await listOperatorOverrides(DOC_ID);
-    const toDelete = overrides.filter((o) =>
-      o.title.includes(TEST_TAG_PREFIX),
-    );
+    const toDelete = overrides.filter((o) => o.title.includes(TEST_TAG_PREFIX));
     for (const o of toDelete) {
       await deleteOperatorOverride(DOC_ID, o.id);
     }
     if (toDelete.length > 0) {
       // eslint-disable-next-line no-console
-      console.log(
-        `[integration] cleaned up ${toDelete.length} test override(s)`,
-      );
+      console.log(`[integration] cleaned up ${toDelete.length} test override(s)`);
     }
   } catch (err) {
     // eslint-disable-next-line no-console
@@ -160,9 +152,7 @@ async function cleanupAllEvents(): Promise<void> {
     if (keys.length > 0) {
       await client.removeObjects(bucket, keys);
       // eslint-disable-next-line no-console
-      console.log(
-        `[integration] cleaned up ${keys.length} needs-attention event(s)`,
-      );
+      console.log(`[integration] cleaned up ${keys.length} needs-attention event(s)`);
     }
   } catch (err) {
     // eslint-disable-next-line no-console
@@ -221,24 +211,15 @@ export async function expectHighConfidence(
   const ctx = context ? ` (${context})` : "";
   expect(result.confidence, `confidence should be high${ctx}`).toBe("high");
   expect(result.escalate, `should not escalate${ctx}`).toBe(false);
-  expect(
-    result.cited_entries.length,
-    `should have at least one citation${ctx}`,
-  ).toBeGreaterThan(0);
-  expect(
-    result.answer.length,
-    `answer should be non-trivial${ctx}`,
-  ).toBeGreaterThan(20);
+  expect(result.cited_entries.length, `should have at least one citation${ctx}`).toBeGreaterThan(0);
+  expect(result.answer.length, `answer should be non-trivial${ctx}`).toBeGreaterThan(20);
 
   const doc = await getRealDocument();
   const known = new Set<string>();
   for (const e of doc.entries) known.add(e.id);
   for (const o of doc.overrides) known.add(o.id);
   for (const id of result.cited_entries) {
-    expect(
-      known.has(id),
-      `cited id ${id} should exist in the document${ctx}`,
-    ).toBe(true);
+    expect(known.has(id), `cited id ${id} should exist in the document${ctx}`).toBe(true);
   }
 }
 
@@ -257,10 +238,7 @@ export async function expectHighConfidence(
  * The trust-loop guarantee is the routing decision, not the
  * model's metacognitive uncertainty.
  */
-export async function expectEscalation(
-  result: AnswerContract,
-  context?: string,
-): Promise<void> {
+export async function expectEscalation(result: AnswerContract, context?: string): Promise<void> {
   const ctx = context ? ` (${context})` : "";
   expect(result.escalate, `should escalate${ctx}`).toBe(true);
   expect(

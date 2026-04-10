@@ -22,9 +22,6 @@ export async function GET(
     return Response.json(entry);
   } catch (err) {
     console.error(`[/api/handbook/${id} GET] failed:`, err);
-    return Response.json(
-      { error: "Could not load entry." },
-      { status: 500 },
-    );
+    return Response.json({ error: "Could not load entry." }, { status: 500 });
   }
 }

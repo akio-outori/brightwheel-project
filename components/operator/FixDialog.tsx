@@ -30,13 +30,7 @@ const CATEGORIES: HandbookCategory[] = [
   "general",
 ];
 
-export function FixDialog({
-  event,
-  onClose,
-}: {
-  event: NeedsAttentionEvent;
-  onClose: () => void;
-}) {
+export function FixDialog({ event, onClose }: { event: NeedsAttentionEvent; onClose: () => void }) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const [title, setTitle] = useState("");
   const [category, setCategory] = useState<HandbookCategory>("general");
@@ -68,32 +62,24 @@ export function FixDialog({
       // (override created but event not resolved) come back with an
       // error message and `partialSuccess: true` so the operator can
       // see what happened.
-      const res = await fetch(
-        `/api/needs-attention/${event.id}/resolve-with-entry`,
-        {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({
-            title,
-            category,
-            body,
-            sourcePages: [],
-            replacesEntryId: null,
-          }),
-        },
-      );
+      const res = await fetch(`/api/needs-attention/${event.id}/resolve-with-entry`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          title,
+          category,
+          body,
+          sourcePages: [],
+          replacesEntryId: null,
+        }),
+      });
       if (!res.ok) {
         const detail = await res.json().catch(() => ({}));
-        throw new Error(
-          detail.error ?? `Could not save (HTTP ${res.status})`,
-        );
+        throw new Error(detail.error ?? `Could not save (HTTP ${res.status})`);
       }
 
       // Revalidate both feeds so the UI catches up immediately.
-      await Promise.all([
-        mutate("/api/needs-attention"),
-        mutate("/api/handbook"),
-      ]);
+      await Promise.all([mutate("/api/needs-attention"), mutate("/api/handbook")]);
 
       dialogRef.current?.close();
     } catch (err) {
@@ -112,9 +98,7 @@ export function FixDialog({
     >
       <form onSubmit={handleSubmit} className="flex flex-col">
         <div className="border-b border-slate-200 px-5 py-4">
-          <h2 className="text-base font-semibold text-slate-900">
-            Answer this question
-          </h2>
+          <h2 className="text-base font-semibold text-slate-900">Answer this question</h2>
           <p className="mt-1 text-xs text-slate-600">
             Parent asked: <span className="italic">{event.question}</span>
           </p>
@@ -122,9 +106,8 @@ export function FixDialog({
 
         <div className="flex flex-col gap-3 px-5 py-4">
           <p className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
-            This saves as an <strong>operator override</strong>. The
-            seeded handbook stays untouched; the override layers on
-            top at query time.
+            This saves as an <strong>operator override</strong>. The seeded handbook stays
+            untouched; the override layers on top at query time.
           </p>
           <label className="flex flex-col gap-1 text-xs font-medium text-slate-700">
             Title
@@ -142,9 +125,7 @@ export function FixDialog({
             Category
             <select
               value={category}
-              onChange={(e) =>
-                setCategory(e.target.value as HandbookCategory)
-              }
+              onChange={(e) => setCategory(e.target.value as HandbookCategory)}
               className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/20"
             >
               {CATEGORIES.map((c) => (
@@ -168,10 +149,7 @@ export function FixDialog({
           </label>
 
           {error && (
-            <p
-              role="alert"
-              className="rounded-md bg-rose-50 px-3 py-2 text-xs text-rose-800"
-            >
+            <p role="alert" className="rounded-md bg-rose-50 px-3 py-2 text-xs text-rose-800">
               {error}
             </p>
           )}
@@ -188,11 +166,7 @@ export function FixDialog({
           </button>
           <button
             type="submit"
-            disabled={
-              submitting ||
-              title.trim().length === 0 ||
-              body.trim().length === 0
-            }
+            disabled={submitting || title.trim().length === 0 || body.trim().length === 0}
             className="rounded-md bg-sky-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-sky-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 disabled:bg-slate-300"
           >
             {submitting ? "Saving…" : "Save and close the loop"}

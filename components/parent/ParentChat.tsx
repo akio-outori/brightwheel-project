@@ -32,50 +32,19 @@ export function ParentChat({
   const [pending, setPending] = useState(false);
   const [openSource, setOpenSource] = useState<CitationSource | null>(null);
 
-  const handleSubmit = useCallback(
-    async (question: string) => {
-      const turnId = crypto.randomUUID();
-      setTurns((prev) => [
-        ...prev,
-        { id: turnId, question, result: null },
-      ]);
-      setPending(true);
+  const handleSubmit = useCallback(async (question: string) => {
+    const turnId = crypto.randomUUID();
+    setTurns((prev) => [...prev, { id: turnId, question, result: null }]);
+    setPending(true);
 
-      try {
-        const res = await fetch("/api/ask", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ question }),
-        });
+    try {
+      const res = await fetch("/api/ask", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ question }),
+      });
 
-        if (!res.ok) {
-          setTurns((prev) =>
-            prev.map((t) =>
-              t.id === turnId
-                ? {
-                    ...t,
-                    result: {
-                      answer: "",
-                      confidence: "low",
-                      cited_entries: [],
-                      escalate: true,
-                      escalation_reason: "request_failed",
-                    },
-                    error: `HTTP ${res.status}`,
-                  }
-                : t,
-            ),
-          );
-          return;
-        }
-
-        const contract = (await res.json()) as AnswerContract;
-        setTurns((prev) =>
-          prev.map((t) =>
-            t.id === turnId ? { ...t, result: contract } : t,
-          ),
-        );
-      } catch (err) {
+      if (!res.ok) {
         setTurns((prev) =>
           prev.map((t) =>
             t.id === turnId
@@ -88,17 +57,38 @@ export function ParentChat({
                     escalate: true,
                     escalation_reason: "request_failed",
                   },
-                  error: err instanceof Error ? err.message : String(err),
+                  error: `HTTP ${res.status}`,
                 }
               : t,
           ),
         );
-      } finally {
-        setPending(false);
+        return;
       }
-    },
-    [],
-  );
+
+      const contract = (await res.json()) as AnswerContract;
+      setTurns((prev) => prev.map((t) => (t.id === turnId ? { ...t, result: contract } : t)));
+    } catch (err) {
+      setTurns((prev) =>
+        prev.map((t) =>
+          t.id === turnId
+            ? {
+                ...t,
+                result: {
+                  answer: "",
+                  confidence: "low",
+                  cited_entries: [],
+                  escalate: true,
+                  escalation_reason: "request_failed",
+                },
+                error: err instanceof Error ? err.message : String(err),
+              }
+            : t,
+        ),
+      );
+    } finally {
+      setPending(false);
+    }
+  }, []);
 
   return (
     <div className="flex flex-col gap-6">

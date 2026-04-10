@@ -1,11 +1,17 @@
 {
   "extends": ["next/core-web-vitals", "prettier"],
+  "plugins": ["security"],
   "rules": {
-    "no-console": [
-      "error",
-      {
-        "allow": ["warn", "error", "log"]
-      }
-    ]
+    "no-console": ["error", { "allow": ["warn", "error", "log"] }],
+    "security/detect-eval-with-expression": "error",
+    "security/detect-non-literal-regexp": "warn",
+    "security/detect-non-literal-fs-filename": "warn",
+    "security/detect-no-csrf-before-method-override": "error",
+    "security/detect-possible-timing-attacks": "warn",
+    "security/detect-unsafe-regex": "error",
+    "security/detect-buffer-noassert": "error",
+    "security/detect-child-process": "warn",
+    "security/detect-new-buffer": "error",
+    "security/detect-object-injection": "off"
   }
 }

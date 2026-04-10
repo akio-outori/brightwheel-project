@@ -26,9 +26,7 @@ export function runPostResponsePipeline(args: {
     ...draft.cited_entries,
     ...(draft.directly_addressed_by ?? []),
   ]);
-  const cited: GroundingSource[] = allSources.filter((s) =>
-    citedIdSet.has(s.id),
-  );
+  const cited: GroundingSource[] = allSources.filter((s) => citedIdSet.has(s.id));
 
   const input: ChannelInput = { question, draft, cited, allSources };
 

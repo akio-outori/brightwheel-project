@@ -7,12 +7,7 @@
 // the value and the type through the barrel — no need for a separate
 // `export type`.
 
-export {
-  SystemPrompt,
-  AppIntent,
-  MCPData,
-  UserInput,
-} from "./types";
+export { SystemPrompt, AppIntent, MCPData, UserInput } from "./types";
 
 export { AnswerContractSchema, PARSE_FAILURE_RESULT } from "./contract";
 export type { AnswerContract } from "./contract";

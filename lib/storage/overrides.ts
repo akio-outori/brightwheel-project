@@ -22,12 +22,7 @@ import {
   OperatorOverrideSchema,
   StorageError,
 } from "./types";
-import {
-  listObjectKeys,
-  readJson,
-  removeJson,
-  writeJson,
-} from "./minio-json";
+import { listObjectKeys, readJson, removeJson, writeJson } from "./minio-json";
 
 // ---------------------------------------------------------------------------
 // Key layout
@@ -49,9 +44,7 @@ function overrideKey(docId: string, id: string): string {
  * List every operator override attached to a document. Reads through
  * a prefix scan; order is unspecified.
  */
-export async function listOperatorOverrides(
-  docId: string,
-): Promise<OperatorOverride[]> {
+export async function listOperatorOverrides(docId: string): Promise<OperatorOverride[]> {
   const keys = await listObjectKeys(HANDBOOK_BUCKET(), overridesPrefix(docId));
   const overrides: OperatorOverride[] = [];
   for (const key of keys) {
@@ -102,10 +95,7 @@ export async function createOperatorOverride(
 
   const existing = await getOperatorOverride(docId, id);
   if (existing) {
-    throw new StorageError(
-      `Operator override already exists in ${docId}: ${id}`,
-      "already_exists",
-    );
+    throw new StorageError(`Operator override already exists in ${docId}: ${id}`, "already_exists");
   }
 
   const override: OperatorOverride = OperatorOverrideSchema.parse({
@@ -132,10 +122,7 @@ export async function updateOperatorOverride(
 
   const current = await getOperatorOverride(docId, id);
   if (!current) {
-    throw new StorageError(
-      `Operator override not found in ${docId}: ${id}`,
-      "not_found",
-    );
+    throw new StorageError(`Operator override not found in ${docId}: ${id}`, "not_found");
   }
 
   const merged: OperatorOverride = OperatorOverrideSchema.parse({
@@ -155,10 +142,7 @@ export async function updateOperatorOverride(
  * Delete an override by id. Missing overrides are a no-op —
  * idempotent delete is friendlier to test teardown.
  */
-export async function deleteOperatorOverride(
-  docId: string,
-  id: string,
-): Promise<void> {
+export async function deleteOperatorOverride(docId: string, id: string): Promise<void> {
   await removeJson(HANDBOOK_BUCKET(), overrideKey(docId, id));
 }
 
@@ -179,10 +163,7 @@ function slugify(title: string): string {
     .replace(/^-+|-+$/g, "")
     .slice(0, 80);
   if (base.length === 0) {
-    throw new StorageError(
-      `Title produces empty slug: ${JSON.stringify(title)}`,
-      "invalid_input",
-    );
+    throw new StorageError(`Title produces empty slug: ${JSON.stringify(title)}`, "invalid_input");
   }
   return base;
 }

@@ -20,11 +20,7 @@ export function ParentAnswer({
   onOpenSource: (source: CitationSource) => void;
 }) {
   if (result.escalate || result.confidence === "low") {
-    return (
-      <EscalationCard
-        reason={result.escalation_reason ?? "low_confidence"}
-      />
-    );
+    return <EscalationCard reason={result.escalation_reason ?? "low_confidence"} />;
   }
   return (
     <AnswerCard

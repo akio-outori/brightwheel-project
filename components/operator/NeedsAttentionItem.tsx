@@ -39,11 +39,7 @@ const BADGE_CLASSES: Record<BadgeTone, string> = {
     "inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-700 ring-1 ring-inset ring-slate-200",
 };
 
-export function NeedsAttentionItem({
-  event,
-}: {
-  event: NeedsAttentionEvent;
-}) {
+export function NeedsAttentionItem({ event }: { event: NeedsAttentionEvent }) {
   const [fixing, setFixing] = useState(false);
 
   const createdAt = new Date(event.createdAt);
@@ -64,9 +60,7 @@ export function NeedsAttentionItem({
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           <p className="text-xs text-slate-500">{when}</p>
-          <p className="mt-1 text-sm font-medium text-slate-900">
-            {event.question}
-          </p>
+          <p className="mt-1 text-sm font-medium text-slate-900">{event.question}</p>
           {badge && (
             <div className="mt-1.5">
               <span className={BADGE_CLASSES[badge.tone]}>{badge.label}</span>
@@ -91,9 +85,7 @@ export function NeedsAttentionItem({
         </details>
       )}
 
-      {fixing && (
-        <FixDialog event={event} onClose={() => setFixing(false)} />
-      )}
+      {fixing && <FixDialog event={event} onClose={() => setFixing(false)} />}
     </article>
   );
 }

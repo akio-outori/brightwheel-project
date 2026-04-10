@@ -61,7 +61,5 @@ export function __resetClientForTests(): void {
   cached = null;
 }
 
-export const HANDBOOK_BUCKET = () =>
-  process.env.STORAGE_HANDBOOK_BUCKET ?? "handbook";
-export const EVENTS_BUCKET = () =>
-  process.env.STORAGE_EVENTS_BUCKET ?? "events";
+export const HANDBOOK_BUCKET = () => process.env.STORAGE_HANDBOOK_BUCKET ?? "handbook";
+export const EVENTS_BUCKET = () => process.env.STORAGE_EVENTS_BUCKET ?? "events";

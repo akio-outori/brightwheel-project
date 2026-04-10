@@ -21,9 +21,7 @@ export function AdminShell({
             <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
               DCFD Front Desk — Staff Console
             </p>
-            <h1 className="mt-0.5 text-lg font-semibold text-slate-900">
-              Operator Console
-            </h1>
+            <h1 className="mt-0.5 text-lg font-semibold text-slate-900">Operator Console</h1>
           </div>
           <div className="flex flex-col items-start gap-2 sm:flex-row sm:items-center sm:gap-3">
             <NotificationBell />
@@ -31,10 +29,7 @@ export function AdminShell({
               <NavLink href="/admin" active={active === "home"}>
                 Home
               </NavLink>
-              <NavLink
-                href="/admin/needs-attention"
-                active={active === "needs-attention"}
-              >
+              <NavLink href="/admin/needs-attention" active={active === "needs-attention"}>
                 Needs attention
               </NavLink>
               <NavLink href="/admin/handbook" active={active === "handbook"}>
@@ -44,9 +39,7 @@ export function AdminShell({
           </div>
         </div>
       </header>
-      <main className="mx-auto max-w-4xl px-4 py-6 sm:px-6 sm:py-8">
-        {children}
-      </main>
+      <main className="mx-auto max-w-4xl px-4 py-6 sm:px-6 sm:py-8">{children}</main>
     </div>
   );
 }

@@ -30,11 +30,7 @@ export function AnswerCard({
           </p>
         ))}
       </div>
-      <CitationPills
-        citedIds={citedIds}
-        allSources={allSources}
-        onOpen={onOpenSource}
-      />
+      <CitationPills citedIds={citedIds} allSources={allSources} onOpen={onOpenSource} />
     </article>
   );
 }
