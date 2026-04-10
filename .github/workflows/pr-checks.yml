@@ -54,7 +54,7 @@ jobs:
   # ---------------------------------------------------------------
 
   unit-tests:
-    name: Unit tests (304, 89% coverage)
+    name: Unit tests
     runs-on: ubuntu-latest
     env:
       STORAGE_ENDPOINT: http://localhost:9000
