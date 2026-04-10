@@ -97,6 +97,7 @@ export async function loadAgentConfig(configPath: string): Promise<LoadedAgentCo
 
   let rawJson: string;
   try {
+    // eslint-disable-next-line security/detect-non-literal-fs-filename -- path is built from a hardcoded constant or Zod-validated config
     rawJson = await readFile(absoluteConfigPath, "utf-8");
   } catch (err) {
     throw new Error(
@@ -135,6 +136,7 @@ export async function loadAgentConfig(configPath: string): Promise<LoadedAgentCo
 
   let systemPrompt: string;
   try {
+    // eslint-disable-next-line security/detect-non-literal-fs-filename -- path resolved from Zod-validated config field
     systemPrompt = await readFile(promptPath, "utf-8");
   } catch (err) {
     throw new Error(
