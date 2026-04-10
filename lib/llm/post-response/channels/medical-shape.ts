@@ -18,6 +18,8 @@
 
 import type { Channel } from "../types";
 
+/* eslint-disable security/detect-unsafe-regex -- These patterns
+   run against draft answers capped at 2000 chars; ReDoS is not a risk. */
 /** Every pattern is case-insensitive. If any pattern matches, the
  *  draft is holding an instruction the operator should review
  *  before it reaches the parent. */

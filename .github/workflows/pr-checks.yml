@@ -8,11 +8,11 @@ concurrency:
   group: pr-${{ github.head_ref }}
   cancel-in-progress: true
 
-# ---------------------------------------------------------------
-# Correctness
-# ---------------------------------------------------------------
-
 jobs:
+  # ---------------------------------------------------------------
+  # Correctness
+  # ---------------------------------------------------------------
+
   typecheck:
     name: TypeScript strict
     runs-on: ubuntu-latest
@@ -26,7 +26,7 @@ jobs:
       - run: npm run typecheck
 
   lint:
-    name: ESLint
+    name: ESLint + security plugin
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -69,8 +69,6 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm ci
-      # GH Actions services don't support custom commands, so we
-      # start MinIO as a regular docker container in the step.
       - name: Start MinIO
         run: |
           docker run -d --name minio \
@@ -79,7 +77,6 @@ jobs:
             -e MINIO_ROOT_PASSWORD=minioadmin \
             minio/minio:RELEASE.2025-07-23T15-54-02Z \
             server /data
-          # Wait for MinIO to be ready
           for i in $(seq 1 30); do
             curl -sf http://localhost:9000/minio/health/ready && break
             sleep 1
@@ -99,7 +96,7 @@ jobs:
       - run: npm run build
 
   # ---------------------------------------------------------------
-  # Security — vulnerabilities
+  # Security — dependency vulnerabilities
   # ---------------------------------------------------------------
 
   npm-audit:
@@ -118,8 +115,23 @@ jobs:
         run: npm audit --audit-level=critical
         continue-on-error: true
 
+  trivy-fs:
+    name: Trivy filesystem scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Trivy vulnerability scan (filesystem)
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: fs
+          scan-ref: .
+          format: table
+          exit-code: 1
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+
   # ---------------------------------------------------------------
-  # Security — static analysis
+  # Security — static analysis (all OSS, no Advanced Security)
   # ---------------------------------------------------------------
 
   secrets-scan:
@@ -134,29 +146,6 @@ jobs:
         with:
           extra_args: --only-verified
 
-  codeql:
-    name: CodeQL static analysis
-    runs-on: ubuntu-latest
-    # CodeQL requires GitHub Advanced Security enabled on the repo.
-    # For private repos on free/team plans this may not be available.
-    # The job is non-blocking so the PR isn't held up by a feature
-    # that needs manual enablement; once Advanced Security is turned
-    # on, remove continue-on-error to make it a hard gate.
-    continue-on-error: true
-    permissions:
-      contents: read
-      security-events: write
-      actions: read
-    steps:
-      - uses: actions/checkout@v4
-      - name: Initialize CodeQL
-        uses: github/codeql-action/init@v3
-        with:
-          languages: javascript-typescript
-          queries: security-and-quality
-      - name: Run CodeQL analysis
-        uses: github/codeql-action/analyze@v3
-
   semgrep:
     name: Semgrep SAST
     runs-on: ubuntu-latest
@@ -170,6 +159,17 @@ jobs:
             p/react
             p/owasp-top-ten
             p/nodejs
+
+  bearer:
+    name: Bearer SAST (data flow)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Bearer security scan
+        uses: bearer/bearer-action@v2
+        with:
+          severity: critical,high,warning
+          exit-code: 1
 
   # ---------------------------------------------------------------
   # Security — dependency license compliance
@@ -195,15 +195,15 @@ jobs:
   # Security — container image (if Dockerfile changed)
   # ---------------------------------------------------------------
 
-  container-scan:
-    name: Container image scan
+  trivy-image:
+    name: Trivy container image scan
     runs-on: ubuntu-latest
     if: contains(github.event.pull_request.changed_files_names || '', 'Dockerfile') || contains(github.event.pull_request.changed_files_names || '', 'docker')
     steps:
       - uses: actions/checkout@v4
       - name: Build image
         run: docker build -t brightwheel-app:scan .
-      - name: Trivy vulnerability scan
+      - name: Trivy vulnerability scan (image)
         uses: aquasecurity/trivy-action@master
         with:
           image-ref: brightwheel-app:scan

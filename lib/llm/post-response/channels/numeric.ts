@@ -14,6 +14,8 @@ import type { Channel } from "../types";
 /** Regex that finds numeric literals. Order matters: more specific
  *  patterns run first so a phone number is extracted as a single
  *  literal instead of being split into two integers. */
+/* eslint-disable security/detect-unsafe-regex -- These patterns
+   run against draft answers capped at 2000 chars; ReDoS is not a risk. */
 const NUMERIC_PATTERNS: ReadonlyArray<RegExp> = [
   // Phone numbers: 505-767-6500, (505) 767-6500, 767-6500
   /\(\d{3}\)\s*\d{3}-\d{4}/g,
