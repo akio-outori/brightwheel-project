@@ -118,25 +118,22 @@ is committed.
 These are baked into every agent's system prompt; listing them here
 for transparency.
 
-1. **Never import or reference code from `~/Documents/eadier/` or the
-   `@eadieitsolutions/*` npm scope.** Patterns are fair to learn from
-   privately, but every line in this repo is written fresh.
-2. **The four-input-type discipline is load-bearing.** Any LLM call
+1. **The four-input-type discipline is load-bearing.** Any LLM call
    assembles its prompt via `buildPrompt(systemPrompt, intent, data,
-userInput)` — no exceptions, no inline string concatenation, no
+   userInput)` — no exceptions, no inline string concatenation, no
    `as` casts to launder types.
-3. **Structured output only on the parent path.** Free-form text
+2. **Structured output only on the parent path.** Free-form text
    responses from the model are a bug. Every parent-facing call
    returns a schema-validated `AnswerContract`.
-4. **Mobile-first.** Every UI change is verified at 375px viewport
+3. **Mobile-first.** Every UI change is verified at 375px viewport
    before wide.
-5. **Update the build journal when a non-trivial decision is made.**
+4. **Update the build journal when a non-trivial decision is made.**
    Either inline, or hand it off to `scribe-journal`.
-6. **No new external dependencies without surfacing it to the main
+5. **No new external dependencies without surfacing it to the main
    thread.** The dependency list is part of the design.
-7. **Errors propagate inside trusted code, translate at boundaries.**
+6. **Errors propagate inside trusted code, translate at boundaries.**
    No swallowed errors, no defensive validation in trusted paths.
-8. **A thing is not done until `review-tests` says it is.** Local
+7. **A thing is not done until `review-tests` says it is.** Local
    checks passing isn't enough — the docker stack must come up
    clean and the closed-loop e2e smoke check must pass.
 

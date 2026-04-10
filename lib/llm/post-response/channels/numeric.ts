@@ -5,9 +5,9 @@
 // invented threshold — all of which are trust-loop-breaking on a
 // grounded front desk.
 //
-// Translated from go-mcp-sdk/sdk/grounding/numeric.go. The Go
-// version extracts bare numeric cores and does a substring check
-// against the source text; we do the same.
+// Architecture: bare numeric extraction + substring check against
+// the full document corpus. Every numeric literal the draft emits
+// must appear verbatim in at least one source body.
 
 import type { Channel } from "../types";
 

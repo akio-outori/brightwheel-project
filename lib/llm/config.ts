@@ -4,11 +4,10 @@
 // deployable artifacts that move together, instead of being scattered
 // across hardcoded constants in TypeScript and a side-channel loader.
 //
-// The shape is patterned after go-mcp-sdk's agent.json convention
-// (e.g. examples/student-aid/config/agents/teaching-agent-haiku.json).
-// The Go version uses a `map[string]string` for metadata and reparses
-// numbers at use; we use Zod with real types because the reviewer
-// precedent in this repo expects Zod at every boundary.
+// The shape follows a JSON agent-config convention: a single file
+// names the model, temperature, max tokens, and points at a markdown
+// file containing the system prompt. We use Zod with real types
+// because the project expects schema validation at every boundary.
 //
 // One active config is hardcoded below. Swapping models is a single
 // line edit in this file (or a future env-var selector). Two configs

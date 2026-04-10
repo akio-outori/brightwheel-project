@@ -3,11 +3,10 @@
 // bodies. A grounded paraphrase should hit a high recall; an
 // answer that invented facts drops below the threshold.
 //
-// Translated from go-mcp-sdk/sdk/grounding/channel.go — the Go
-// implementation uses a ContainsWithBoundary + token-recall combo
-// as two stages of a lexical channel. We collapse it to a single
-// stage here because our draft is free text against free-text
-// sources, not a structured field against a document.
+// Architecture: token-recall scoring against cited source bodies.
+// The draft's content tokens are checked against the union of
+// source tokens; a low recall score indicates the model invented
+// vocabulary not present in any cited source.
 //
 // Threshold is tunable in one place (RECALL_THRESHOLD) and very
 // short drafts are auto-passed because the recall score becomes

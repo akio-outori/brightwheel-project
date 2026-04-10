@@ -1,50 +1,17 @@
 # AI Front Desk — Albuquerque DCFD
 
 A prototype AI front desk for the City of Albuquerque Division of
-Child and Family Development (DCFD). A parent asks a question. The
-assistant answers from the real 2019 Family Handbook with a citation,
-or — when it isn't sure — hands the question to a staff member and
-lets them close the loop in one click. The whole stack runs locally
-under Docker: one API key in `.env`, then `docker compose up`.
+Child and Family Development (DCFD). Parents ask questions about the
+program. The assistant answers from the real 2019 Family Handbook with
+citations, or hands the question to a staff member who closes the loop
+in one click. Three layers of deterministic verification sit between
+the model and the parent.
 
-The point of this project isn't "wraps a handbook in a chatbot." It's
-the **trust loop**: we have to get the answer right, _and_ we have to
-be able to show that we did, _and_ when we can't, the next parent
-still gets the right answer instead of the same wrong one.
-
-## What's interesting about this
-
-- **A security boundary that's a type system, not a vibe.** User
-  questions reach the model only through four branded TypeScript
-  types (`SystemPrompt`, `AppIntent`, `MCPData`, `UserInput`) whose
-  only legitimate constructors live in one file. Prompt injection
-  prevention is enforced at compile time: a cast outside
-  `lib/llm/types.ts` is a reviewable defect, not a whistle in the
-  wind.
-- **A structured answer contract.** Every response is a
-  Zod-validated `AnswerContract` with `confidence`, `cited_entries`,
-  and `escalate` fields. Free-text answers from the model are a bug.
-  A malformed response becomes a graceful escalation, never a 500.
-- **A closed loop that actually closes.** Staff members see the gaps
-  the AI admitted to, fill them in, and the _next_ parent asking
-  the same question gets a high-confidence answer with a citation
-  pointing to the brand-new entry — in about fifteen seconds on a
-  live demo, no index rebuild, no restart.
-- **S3 primitives, not a hand-rolled KV store.** Versioning on the
-  handbook bucket, SSE-S3 on both buckets, date-partitioned event
-  log. The migration story to AWS is "swap the endpoint."
-- **Real public data, faithfully extracted.** The seed is 73 entries
-  from the actual DCFD Family Handbook (2019), a public city
-  government publication — real names, real phone numbers, real
-  center addresses. The trust loop isn't a story; it's something
-  you can demo against real source material.
-
-## Try it
+## Quick start
 
 ### Prerequisites
 
-- Docker with `docker compose` (v2.20+ for the
-  `service_completed_successfully` gate)
+- Docker with `docker compose` (v2.20+)
 - An Anthropic API key
 
 ### Run it
@@ -52,89 +19,72 @@ still gets the right answer instead of the same wrong one.
 ```bash
 git clone <repo>
 cd brightwheel-project
-cp .env.example .env
-# edit .env and set ANTHROPIC_API_KEY=sk-ant-...
+cp .env.example .env        # set ANTHROPIC_API_KEY=sk-ant-...
 docker compose up
 ```
 
-The first boot pulls images, builds the Next.js app, creates the
-MinIO buckets, enables SSE-S3 and versioning, and seeds the
-handbook. Subsequent boots short-circuit on a sentinel object and
-take under 10 seconds.
+First boot seeds the handbook into MinIO and builds the Next.js app.
+Subsequent boots take under 10 seconds.
 
-When the stack is ready:
+| Surface | URL |
+|---------|-----|
+| Parent chat | http://localhost:3000 |
+| Operator console | http://localhost:3000/admin |
 
-- **Parent surface:** http://localhost:3000
-- **Operator console:** http://localhost:3000/admin
+### Demo flow
 
-### The demo flow
+1. Ask **"What time do you open?"** — grounded answer with citations
+2. Ask **"My son has a fever, should I bring him in?"** — preflight
+   classifier holds instantly (no model call)
+3. Ask **"How can I schedule a tour?"** — model runs, self-escalates,
+   event appears in the operator feed
+4. Open `/admin`, click **Answer this**, write two sentences, save —
+   override created, event resolved
+5. Re-ask the tour question — high-confidence answer citing the
+   override you just wrote
 
-1. On `/`, ask **"What time do you open?"** → a high-confidence
-   answer with citation pills pointing at the specific hours
-   entries. Click a pill to see the underlying handbook entry.
-2. Ask **"How can I schedule a tour?"** → the assistant escalates
-   (the handbook doesn't cover prospective-family tours) and a
-   needs-attention event lands in the feed.
-3. Open `/admin`. The unanswered question is at the top of the feed,
-   with the assistant's draft preserved.
-4. Click **Answer this**. Fill in a title, pick a category, write a
-   short answer, save. The event disappears from the feed and the
-   new entry appears in the handbook list in the same render tick.
-5. Back on `/`, ask **"How can I schedule a tour?"** again. This
-   time it's a high-confidence answer, citing the entry you just
-   wrote — no restart, no index rebuild.
+### Development
 
-That last step is the whole point. A sensitive-topic question
-(anything about fever, injury, medication, custody) also always
-escalates, regardless of what the model would say on its own.
+```bash
+npm install
+npm run dev              # Next.js dev server (needs MinIO running)
+npm test                 # 304 unit tests with coverage
+npm run test:integration # 114 tests against real Anthropic + MinIO
+npm run typecheck        # TypeScript strict
+npm run lint             # ESLint + security plugin
+```
 
-## How it's built
+## Architecture
 
-Five layers, each a single commit on `main`:
+```
+Parent question
+  │
+  ├─ Preflight classifier (lib/llm/preflight/)
+  │   Catches specific-child health/safety questions before the LLM
+  │
+  ├─ LLM call (lib/llm/client.ts → Anthropic SDK)
+  │   Branded types enforce the MCP security boundary
+  │
+  └─ Post-response pipeline (lib/llm/post-response/)
+      6 deterministic channels verify the draft before the parent sees it
+      │
+      ├─ PASS → parent sees the grounded answer
+      └─ HOLD → parent sees "a staff member is reviewing this"
+                operator sees the draft + hold reason
+```
 
-1. **Stack** (`docker-compose.yml`, `Dockerfile`,
-   `docker/minio-init/`) — Next.js 15 standalone build on
-   `node:20-slim`, MinIO with built-in KMS for SSE-S3, an
-   idempotent init container with date-partitioned event keys.
-2. **Storage adapter** (`lib/storage/`) — the only code in the
-   project that talks to MinIO. Zod schemas, typed `StorageError`,
-   lazy-memoized client, full round-trip tests against a live
-   bucket.
-3. **Trust mechanic** (`lib/llm/`) — branded input types, the
-   `buildPrompt()` envelope assembler (the only emitter of
-   `<mcp_message>` tags), the Anthropic client wrapper, the
-   `AnswerContract` schema, static sensitive-topic detection, and
-   the `lib/llm/system-prompts/parent.md` system prompt loaded as
-   application code.
-4. **Parent UX** (`app/page.tsx`, `app/api/ask/route.ts`,
-   `components/parent/`) — a two-branch render (AnswerCard or
-   EscalationCard, no third path), clickable citation pills, a
-   modal that opens the cited handbook entry.
-5. **Operator console** (`app/admin/`, `app/api/handbook/`,
-   `app/api/needs-attention/`, `components/operator/`) — the
-   needs-attention feed as the headline, the one-tap fix dialog
-   that closes the loop in two API calls and a single `mutate()`
-   round.
+## Documentation
 
-Tests run in two layers, matched to what they're verifying: the
-storage adapter hits a live MinIO in a dedicated test bucket to
-catch SDK-shape drift, and the LLM boundary uses an injected fake
-Anthropic client to assert the prompt envelope, JSON parsing, and
-failure modes without burning real tokens. The closed-loop
-end-to-end test (ask → escalate → fix → re-ask → cite) runs
-against a real Anthropic key and is documented in the build
-journal as a reproducible script.
+Detailed engineering docs for each subsystem:
 
-## Where to read more
-
-- [`docs/build-journal.md`](docs/build-journal.md) — the
-  chronological development record. Every layer, every decision,
-  every reversal (including the two mid-build reversals: bind
-  mount → custom image for the init container, and scrubbing →
-  real data for the seed).
-- [`WRITEUP.md`](WRITEUP.md) — the one-page design pitch.
-- [`.claude/agents/`](.claude/agents/) — the 12 subagent specs
-  that structured the build. Implementation agents own files,
-  review agents enforce invariants, a scribe owns the journal.
-  The agent infrastructure is part of the deliverable — it's the
-  thing that made the build disciplined.
+| Document | Covers |
+|----------|--------|
+| [Trust mechanic & MCP boundary](docs/trust-mechanic.md) | Four branded input types, prompt assembly, the `AnswerContract`, prompt injection prevention |
+| [Preflight classifier](docs/preflight-classifier.md) | Specific-child detection, pattern groups, policy-question negatives, calibration |
+| [Post-response pipeline](docs/post-response-pipeline.md) | Six deterministic channels, short-circuit architecture, stock responses, hold reasons |
+| [Document model & storage](docs/document-model.md) | Two-layer architecture (seed entries + operator overrides), MinIO layout, storage adapters |
+| [Operator loop](docs/operator-loop.md) | Needs-attention feed, fix dialog, override CRUD, hold-reason badges |
+| [Testing strategy](docs/testing-strategy.md) | Unit tests, integration tests, coverage thresholds, CI pipeline |
+| [Deployment & infrastructure](docs/deployment.md) | Docker stack, distroless runner, MinIO init, CI workflows, security scanning |
+| [Design pitch](docs/writeup.md) | The product thesis for reviewers who won't read source code |
+| [Build journal](docs/build-journal.md) | Chronological development record — every decision, every reversal |
