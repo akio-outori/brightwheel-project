@@ -109,11 +109,8 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm ci
-      - name: Audit production deps (fail on any severity)
-        run: npm audit --omit=dev
-      - name: Audit dev deps (informational)
+      - name: Audit all deps (fail on any severity)
         run: npm audit
-        continue-on-error: true
 
   trivy-fs:
     name: Trivy filesystem scan

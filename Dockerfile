@@ -10,13 +10,13 @@
 # runner stage. Getting this wrong serves blank pages with 404s on every asset.
 
 # ---- Stage 1: deps ----
-FROM node:20.18.0-bookworm-slim AS deps
+FROM node:20-bookworm-slim AS deps
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci --no-audit --no-fund
 
 # ---- Stage 2: builder ----
-FROM node:20.18.0-bookworm-slim AS builder
+FROM node:20-bookworm-slim AS builder
 WORKDIR /app
 ENV NEXT_TELEMETRY_DISABLED=1
 COPY --from=deps /app/node_modules ./node_modules
@@ -24,7 +24,7 @@ COPY . .
 RUN npm run build
 
 # ---- Stage 3: runner ----
-FROM node:20.18.0-bookworm-slim AS runner
+FROM node:20-bookworm-slim AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production \
