@@ -330,9 +330,7 @@ function AddOverrideForm() {
       });
       if (!res.ok) {
         const detail = await res.json().catch(() => ({}));
-        throw new Error(
-          (detail as { error?: string }).error ?? `Failed (HTTP ${res.status})`,
-        );
+        throw new Error((detail as { error?: string }).error ?? `Failed (HTTP ${res.status})`);
       }
       await mutate("/api/handbook");
       setTitle("");

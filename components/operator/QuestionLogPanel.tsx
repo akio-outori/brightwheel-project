@@ -253,9 +253,7 @@ function ReplyForm({ eventId }: { eventId: string; question?: string }) {
       });
       if (!res.ok) {
         const detail = await res.json().catch(() => ({}));
-        throw new Error(
-          (detail as { error?: string }).error ?? `Failed (HTTP ${res.status})`,
-        );
+        throw new Error((detail as { error?: string }).error ?? `Failed (HTTP ${res.status})`);
       }
       await Promise.all([mutate("/api/needs-attention"), mutate("/api/handbook")]);
       setOpen(false);
@@ -306,7 +304,11 @@ function ReplyForm({ eventId }: { eventId: string; question?: string }) {
         disabled={saving || !title.trim() || !body.trim()}
         className="w-full py-2 bg-[#5B4FCF] hover:bg-[#4A3FB8] text-white text-xs font-semibold rounded-xl transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
       >
-        {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
+        {saving ? (
+          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+        ) : (
+          <Send className="w-3.5 h-3.5" />
+        )}
         {saving ? "Saving..." : "Save & close the loop"}
       </button>
     </div>
