@@ -113,7 +113,7 @@ export async function POST(req: Request): Promise<Response> {
           escalation_reason: `held_for_review:${preflight.reason}`,
         },
       });
-      console.log(
+      console.warn(
         `[/api/ask] preflight hold (${preflight.reason}): ${preflight.detail ?? "(no detail)"}`,
       );
       return Response.json(stockResponse);
@@ -123,7 +123,7 @@ export async function POST(req: Request): Promise<Response> {
     const cfg = await getActiveAgentConfig();
     const systemPromptText = cfg.systemPrompt;
     const mcpData = MCPData({
-      center_name: "Albuquerque DCFD Family Front Desk",
+      center_name: `${metadata.title} Front Desk`,
       document: {
         id: metadata.id,
         title: metadata.title,
@@ -194,7 +194,7 @@ export async function POST(req: Request): Promise<Response> {
         },
       });
 
-      console.log(
+      console.warn(
         `[/api/ask] held by ${pipeline.channel} (${pipeline.reason}): ${pipeline.detail ?? "(no detail)"}`,
       );
       return Response.json(stockResponse);

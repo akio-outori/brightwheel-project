@@ -1,8 +1,17 @@
 "use client";
 
 import { useState } from "react";
-import useSWR from "swr";
-import { AlertTriangle, Clock, ChevronDown, ChevronUp, MessageSquare, Loader2 } from "lucide-react";
+import useSWR, { mutate } from "swr";
+import {
+  AlertTriangle,
+  Clock,
+  ChevronDown,
+  ChevronUp,
+  MessageSquare,
+  Loader2,
+  Send,
+  X,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 
@@ -26,21 +35,16 @@ interface NeedsAttentionEvent {
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
-function ConfidenceBar({ value }: { value: number }) {
-  const pct = Math.round(value * 100);
-  const color = value >= 0.8 ? "bg-emerald-400" : value >= 0.5 ? "bg-amber-400" : "bg-red-400";
-  return (
-    <div className="flex items-center gap-2">
-      <div className="flex-1 bg-gray-100 rounded-full h-2 overflow-hidden">
-        <div className={cn("h-full rounded-full", color)} style={{ width: `${pct}%` }} />
-      </div>
-      <span className="text-xs font-semibold text-gray-500 w-8 text-right">{pct}%</span>
-    </div>
+function ConfidenceBadge({ confidence }: { confidence: "high" | "low" }) {
+  return confidence === "high" ? (
+    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 text-[10px] font-semibold text-emerald-700 ring-1 ring-inset ring-emerald-200">
+      High confidence
+    </span>
+  ) : (
+    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-50 text-[10px] font-semibold text-amber-700 ring-1 ring-inset ring-amber-200">
+      Low confidence
+    </span>
   );
-}
-
-function confidenceToNumber(c: "high" | "low"): number {
-  return c === "high" ? 0.9 : 0.3;
 }
 
 /** Format a raw escalation_reason from the backend for display.
@@ -101,7 +105,7 @@ export default function QuestionLogPanel() {
       {/* Question cards */}
       <div className="space-y-2.5">
         {events.map((item) => {
-          const confidenceNum = confidenceToNumber(item.result.confidence);
+          const confidence = item.result.confidence;
           const holdReason = formatHoldReason(item.result.escalation_reason);
 
           return (
@@ -170,7 +174,7 @@ export default function QuestionLogPanel() {
                     <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5">
                       AI Confidence
                     </p>
-                    <ConfidenceBar value={confidenceNum} />
+                    <ConfidenceBadge confidence={confidence} />
                   </div>
                   {item.result.cited_entries.length > 0 && (
                     <div>
@@ -208,10 +212,7 @@ export default function QuestionLogPanel() {
                     </div>
                   )}
                   {item.result.escalate && !item.resolvedAt && (
-                    <button className="w-full py-2 bg-[#5B4FCF] hover:bg-[#4A3FB8] text-white text-xs font-semibold rounded-xl transition-colors flex items-center justify-center gap-2">
-                      <MessageSquare className="w-3.5 h-3.5" />
-                      Reply to parent
-                    </button>
+                    <ReplyForm eventId={item.id} question={item.question} />
                   )}
                 </div>
               )}
@@ -219,6 +220,97 @@ export default function QuestionLogPanel() {
           );
         })}
       </div>
+    </div>
+  );
+}
+
+// -----------------------------------------------------------------------
+// Inline reply form — creates an override + resolves the event
+// -----------------------------------------------------------------------
+
+function ReplyForm({ eventId }: { eventId: string; question?: string }) {
+  const [open, setOpen] = useState(false);
+  const [title, setTitle] = useState("");
+  const [body, setBody] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleSubmit() {
+    if (saving || !title.trim() || !body.trim()) return;
+    setSaving(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/needs-attention/${eventId}/resolve-with-entry`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          title: title.trim(),
+          category: "general",
+          body: body.trim(),
+          sourcePages: [],
+          replacesEntryId: null,
+        }),
+      });
+      if (!res.ok) {
+        const detail = await res.json().catch(() => ({}));
+        throw new Error((detail as { error?: string }).error ?? `Failed (HTTP ${res.status})`);
+      }
+      await Promise.all([mutate("/api/needs-attention"), mutate("/api/handbook")]);
+      setOpen(false);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  if (!open) {
+    return (
+      <button
+        onClick={() => setOpen(true)}
+        className="w-full py-2 bg-[#5B4FCF] hover:bg-[#4A3FB8] text-white text-xs font-semibold rounded-xl transition-colors flex items-center justify-center gap-2"
+      >
+        <MessageSquare className="w-3.5 h-3.5" />
+        Answer this
+      </button>
+    );
+  }
+
+  return (
+    <div className="space-y-2 border border-[#5B4FCF]/20 rounded-xl p-3 bg-[#5B4FCF]/5">
+      <div className="flex items-center justify-between">
+        <p className="text-xs font-semibold text-[#5B4FCF]">Create an override</p>
+        <button onClick={() => setOpen(false)} className="text-gray-400 hover:text-gray-600">
+          <X className="w-3.5 h-3.5" />
+        </button>
+      </div>
+      <input
+        type="text"
+        value={title}
+        onChange={(e) => setTitle(e.target.value)}
+        placeholder="Title (e.g. Scheduling a tour)"
+        className="w-full px-3 py-1.5 text-xs border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5B4FCF]/30"
+      />
+      <textarea
+        value={body}
+        onChange={(e) => setBody(e.target.value)}
+        placeholder="Write the answer the parent should have gotten..."
+        rows={3}
+        className="w-full px-3 py-1.5 text-xs border border-gray-200 rounded-lg resize-y focus:outline-none focus:ring-2 focus:ring-[#5B4FCF]/30"
+      />
+      {error && <p className="text-xs text-red-600">{error}</p>}
+      <button
+        onClick={handleSubmit}
+        disabled={saving || !title.trim() || !body.trim()}
+        className="w-full py-2 bg-[#5B4FCF] hover:bg-[#4A3FB8] text-white text-xs font-semibold rounded-xl transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+      >
+        {saving ? (
+          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+        ) : (
+          <Send className="w-3.5 h-3.5" />
+        )}
+        {saving ? "Saving..." : "Save & close the loop"}
+      </button>
     </div>
   );
 }

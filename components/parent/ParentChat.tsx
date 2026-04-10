@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Send, Sun, Phone, ChevronRight, Sparkles } from "lucide-react";
 import Link from "next/link";
-import ChatMessage, { type ChatMessageData } from "@/components/chat/ChatMessage";
+import ChatMessage, { type ChatMessageData, type CitedEntry } from "@/components/chat/ChatMessage";
 import TypingIndicator from "@/components/chat/TypingIndicator";
 import SuggestedQuestions from "@/components/chat/SuggestedQuestions";
 import { SUGGESTED_QUESTIONS } from "@/data/aiResponses";
@@ -13,26 +13,40 @@ import { AnswerContractSchema, type AnswerContract } from "@/lib/llm/contract";
 
 const GREETING: ChatMessageData = {
   role: "assistant",
-  text: `Hi there! \ud83d\udc4b I'm the Sunshine Academy front desk assistant.\n\nI can answer questions about our hours, tuition, health policies, meals, enrollment, and more \u2014 instantly, any time of day.\n\nWhat can I help you with?`,
+  text: `Hi there! \ud83d\udc4b I'm the ${CENTER.name} front desk assistant.\n\nI can answer questions about our hours, tuition, health policies, meals, enrollment, and more \u2014 instantly, any time of day.\n\nWhat can I help you with?`,
   type: "answer",
 };
 
-function contractToMessage(contract: AnswerContract): ChatMessageData {
-  if (contract.escalate) {
+/** Resolve cited entry IDs to full objects for clickable pills. */
+function resolveCitations(
+  ids: string[],
+  lookup: Map<string, { title: string; body: string }>,
+): CitedEntry[] {
+  return ids
+    .map((id) => {
+      const entry = lookup.get(id);
+      if (!entry) return null;
+      return { id, title: entry.title, body: entry.body };
+    })
+    .filter((e): e is CitedEntry => e !== null);
+}
+
+function contractToMessage(
+  contract: AnswerContract,
+  lookup: Map<string, { title: string; body: string }>,
+): ChatMessageData {
+  // Low confidence and escalated both render as escalation —
+  // the parent should never see a hedged model answer. Use the
+  // stock response text if available, otherwise a safe fallback.
+  if (contract.escalate || contract.confidence === "low") {
+    const isStockResponse = contract.answer.includes("staff member is taking a look");
     return {
       role: "assistant",
-      text: contract.answer,
+      text: isStockResponse
+        ? contract.answer
+        : `I want to make sure you get the right answer here. A staff member is taking a look at your question and will follow up. You can also call us at ${CENTER.phone}.`,
       type: "escalated",
       source: null,
-    };
-  }
-
-  if (contract.confidence === "low") {
-    return {
-      role: "assistant",
-      text: contract.answer,
-      type: "uncertain",
-      source: contract.cited_entries.length > 0 ? "Family Handbook" : null,
     };
   }
 
@@ -41,6 +55,7 @@ function contractToMessage(contract: AnswerContract): ChatMessageData {
     text: contract.answer,
     type: "answer",
     source: contract.cited_entries.length > 0 ? "Family Handbook" : null,
+    citedEntries: resolveCitations(contract.cited_entries, lookup),
   };
 }
 
@@ -49,8 +64,33 @@ export function ParentChat() {
   const [input, setInput] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(true);
+  const [entryLookup, setEntryLookup] = useState<Map<string, { title: string; body: string }>>(
+    new Map(),
+  );
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+
+  // Fetch handbook once on mount for citation resolution
+  useEffect(() => {
+    fetch("/api/handbook")
+      .then((r) => r.json())
+      .then(
+        (data: {
+          document?: {
+            entries?: Array<{ id: string; title: string; body: string }>;
+            overrides?: Array<{ id: string; title: string; body: string }>;
+          };
+        }) => {
+          const map = new Map<string, { title: string; body: string }>();
+          for (const e of data.document?.entries ?? [])
+            map.set(e.id, { title: e.title, body: e.body });
+          for (const o of data.document?.overrides ?? [])
+            map.set(o.id, { title: o.title, body: o.body });
+          setEntryLookup(map);
+        },
+      )
+      .catch(() => {}); // Non-critical — citations just won't resolve
+  }, []);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -77,7 +117,7 @@ export function ParentChat() {
           ...prev,
           {
             role: "assistant",
-            text: "I'm having trouble connecting right now. Please try again in a moment, or call us directly at (505) 867-5309.",
+            text: `I'm having trouble connecting right now. Please try again in a moment, or call us directly at ${CENTER.phone}.`,
             type: "escalated",
           },
         ]);
@@ -92,20 +132,20 @@ export function ParentChat() {
           ...prev,
           {
             role: "assistant",
-            text: "I'm having trouble processing that response. Please try again, or call us directly at (505) 867-5309.",
+            text: `I'm having trouble processing that response. Please try again, or call us directly at ${CENTER.phone}.`,
             type: "escalated",
           },
         ]);
         return;
       }
-      setMessages((prev) => [...prev, contractToMessage(parsed.data)]);
+      setMessages((prev) => [...prev, contractToMessage(parsed.data, entryLookup)]);
     } catch {
       setIsTyping(false);
       setMessages((prev) => [
         ...prev,
         {
           role: "assistant",
-          text: "I'm having trouble connecting right now. Please try again in a moment, or call us directly at (505) 867-5309.",
+          text: `I'm having trouble connecting right now. Please try again in a moment, or call us directly at ${CENTER.phone}.`,
           type: "escalated",
         },
       ]);

@@ -19,6 +19,7 @@ import {
   BookOpen,
   FileEdit,
 } from "lucide-react";
+import { mutate } from "swr";
 import { cn } from "@/lib/utils";
 
 interface HandbookEntry {
@@ -298,9 +299,92 @@ export default function KnowledgePanel() {
       </div>
 
       {/* Add new override */}
-      <button className="w-full mt-3 border-2 border-dashed border-gray-200 hover:border-[#5B4FCF] rounded-2xl py-4 flex items-center justify-center gap-2 text-gray-400 hover:text-[#5B4FCF] transition-all text-sm font-semibold group">
+      <AddOverrideForm />
+    </div>
+  );
+}
+
+function AddOverrideForm() {
+  const [open, setOpen] = useState(false);
+  const [title, setTitle] = useState("");
+  const [body, setBody] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleSubmit() {
+    if (saving || !title.trim() || !body.trim()) return;
+    setSaving(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/overrides", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          title: title.trim(),
+          category: "general",
+          body: body.trim(),
+          sourcePages: [],
+          replacesEntryId: null,
+          createdBy: null,
+        }),
+      });
+      if (!res.ok) {
+        const detail = await res.json().catch(() => ({}));
+        throw new Error((detail as { error?: string }).error ?? `Failed (HTTP ${res.status})`);
+      }
+      await mutate("/api/handbook");
+      setTitle("");
+      setBody("");
+      setOpen(false);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  if (!open) {
+    return (
+      <button
+        onClick={() => setOpen(true)}
+        className="w-full mt-3 border-2 border-dashed border-gray-200 hover:border-[#5B4FCF] rounded-2xl py-4 flex items-center justify-center gap-2 text-gray-400 hover:text-[#5B4FCF] transition-all text-sm font-semibold group"
+      >
         <Plus className="w-4 h-4 group-hover:scale-110 transition-transform" />
         Add override
+      </button>
+    );
+  }
+
+  return (
+    <div className="mt-3 space-y-2 border-2 border-[#5B4FCF]/20 rounded-2xl p-4 bg-[#5B4FCF]/5">
+      <div className="flex items-center justify-between">
+        <p className="text-sm font-semibold text-[#5B4FCF]">New override</p>
+        <button onClick={() => setOpen(false)} className="text-gray-400 hover:text-gray-600">
+          <X className="w-4 h-4" />
+        </button>
+      </div>
+      <input
+        type="text"
+        value={title}
+        onChange={(e) => setTitle(e.target.value)}
+        placeholder="Title"
+        className="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#5B4FCF]/30"
+      />
+      <textarea
+        value={body}
+        onChange={(e) => setBody(e.target.value)}
+        placeholder="The answer parents should see..."
+        rows={3}
+        className="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl resize-y focus:outline-none focus:ring-2 focus:ring-[#5B4FCF]/30"
+      />
+      {error && <p className="text-xs text-red-600">{error}</p>}
+      <button
+        onClick={handleSubmit}
+        disabled={saving || !title.trim() || !body.trim()}
+        className="w-full py-2.5 bg-[#5B4FCF] hover:bg-[#4A3FB8] text-white text-sm font-semibold rounded-xl transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+      >
+        {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+        {saving ? "Saving..." : "Create override"}
       </button>
     </div>
   );
