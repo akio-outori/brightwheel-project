@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { KNOWLEDGE_BASE, type KnowledgeItem } from "@/data/centerData";
+import useSWR from "swr";
 import {
   Clock,
   DollarSign,
@@ -15,53 +15,162 @@ import {
   Pencil,
   Check,
   X,
+  Loader2,
+  BookOpen,
+  FileEdit,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
-  Clock,
-  DollarSign,
-  Heart,
-  UtensilsCrossed,
-  MapPin,
-  Users,
-  Shield,
-  Calendar,
+interface HandbookEntry {
+  id: string;
+  docId: string;
+  title: string;
+  category: string;
+  body: string;
+  sourcePages: number[];
+  lastUpdated: string;
+}
+
+interface OperatorOverride {
+  id: string;
+  docId: string;
+  title: string;
+  category: string;
+  body: string;
+  sourcePages: number[];
+  createdAt: string;
+  updatedAt?: string;
+  createdBy: string | null;
+  replacesEntryId: string | null;
+}
+
+interface HandbookResponse {
+  document: {
+    metadata: {
+      id: string;
+      title: string;
+      version: string;
+      source: string;
+      seededAt: string;
+    };
+    entries: HandbookEntry[];
+    overrides: OperatorOverride[];
+  };
+}
+
+type DisplayItem = {
+  id: string;
+  title: string;
+  category: string;
+  body: string;
+  sourcePages: number[];
+  layer: "entry" | "override";
 };
 
-const CATEGORIES = [...new Set(KNOWLEDGE_BASE.map((k) => k.category))];
+const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
+  enrollment: Users,
+  hours: Clock,
+  health: Heart,
+  safety: Shield,
+  food: UtensilsCrossed,
+  fees: DollarSign,
+  transportation: MapPin,
+  curriculum: BookOpen,
+  general: Calendar,
+};
 
 const CATEGORY_COLORS: Record<string, string> = {
-  "Hours & Schedule": "bg-blue-50 text-blue-600 border-blue-100",
-  "Tuition & Fees": "bg-emerald-50 text-emerald-600 border-emerald-100",
-  "Health & Safety": "bg-red-50 text-red-500 border-red-100",
-  "Meals & Nutrition": "bg-orange-50 text-orange-500 border-orange-100",
-  Enrollment: "bg-violet-50 text-violet-600 border-violet-100",
+  hours: "bg-blue-50 text-blue-600 border-blue-100",
+  fees: "bg-emerald-50 text-emerald-600 border-emerald-100",
+  health: "bg-red-50 text-red-500 border-red-100",
+  safety: "bg-red-50 text-red-500 border-red-100",
+  food: "bg-orange-50 text-orange-500 border-orange-100",
+  enrollment: "bg-violet-50 text-violet-600 border-violet-100",
+  curriculum: "bg-indigo-50 text-indigo-600 border-indigo-100",
+  communication: "bg-sky-50 text-sky-600 border-sky-100",
+  staff: "bg-teal-50 text-teal-600 border-teal-100",
+  policies: "bg-slate-50 text-slate-600 border-slate-100",
+  transportation: "bg-amber-50 text-amber-600 border-amber-100",
 };
 
+const fetcher = (url: string) => fetch(url).then((r) => r.json());
+
 export default function KnowledgePanel() {
-  const [items, setItems] = useState<KnowledgeItem[]>(KNOWLEDGE_BASE);
+  const { data, error, isLoading, mutate } = useSWR<HandbookResponse>(
+    "/api/handbook",
+    fetcher,
+  );
   const [editing, setEditing] = useState<string | null>(null);
   const [editText, setEditText] = useState("");
   const [activeCategory, setActiveCategory] = useState("all");
+  const [saving, setSaving] = useState(false);
 
-  const startEdit = (item: KnowledgeItem) => {
-    setEditing(item.id);
-    setEditText(item.answer);
-  };
-  const saveEdit = (id: string) => {
-    setItems((prev) =>
-      prev.map((item) =>
-        item.id === id ? { ...item, answer: editText } : item,
-      ),
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
+      </div>
     );
-    setEditing(null);
-  };
+  }
 
+  if (error || !data) {
+    return (
+      <div className="bg-red-50 border border-red-200 rounded-2xl p-4 text-sm text-red-700">
+        Failed to load knowledge base. Make sure the backend is running.
+      </div>
+    );
+  }
+
+  const { entries, overrides } = data.document;
+
+  // Merge entries and overrides into a single list
+  const items: DisplayItem[] = [
+    ...overrides.map<DisplayItem>((o) => ({
+      id: o.id,
+      title: o.title,
+      category: o.category,
+      body: o.body,
+      sourcePages: o.sourcePages,
+      layer: "override",
+    })),
+    ...entries.map<DisplayItem>((e) => ({
+      id: e.id,
+      title: e.title,
+      category: e.category,
+      body: e.body,
+      sourcePages: e.sourcePages,
+      layer: "entry",
+    })),
+  ];
+
+  const categories = [...new Set(items.map((i) => i.category))].sort();
   const filtered =
     activeCategory === "all"
       ? items
       : items.filter((i) => i.category === activeCategory);
+
+  const startEdit = (item: DisplayItem) => {
+    setEditing(item.id);
+    setEditText(item.body);
+  };
+
+  const saveEdit = async (item: DisplayItem) => {
+    if (item.layer !== "override") return;
+    setSaving(true);
+    try {
+      await fetch(`/api/overrides/${item.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ body: editText }),
+      });
+      await mutate();
+    } catch (err) {
+      console.error("Failed to save override:", err);
+    } finally {
+      setSaving(false);
+      setEditing(null);
+    }
+  };
 
   return (
     <div>
@@ -70,14 +179,15 @@ export default function KnowledgePanel() {
           Knowledge Base
         </p>
         <p className="text-xs text-gray-500 leading-relaxed">
-          These are the policies the AI uses to answer parent questions. Keep
-          them accurate and up to date for best results.
+          {data.document.metadata.title} (v{data.document.metadata.version}) —{" "}
+          {entries.length} handbook entries, {overrides.length} operator
+          overrides.
         </p>
       </div>
 
       {/* Category tabs */}
       <div className="flex gap-2 mb-4 overflow-x-auto pb-1 -mx-1 px-1">
-        {["all", ...CATEGORIES].map((cat) => (
+        {["all", ...categories].map((cat) => (
           <button
             key={cat}
             onClick={() => setActiveCategory(cat)}
@@ -96,7 +206,7 @@ export default function KnowledgePanel() {
       {/* Cards */}
       <div className="space-y-2.5">
         {filtered.map((item) => {
-          const Icon = ICON_MAP[item.icon] || Clock;
+          const Icon = ICON_MAP[item.category] || Clock;
           const isEditing = editing === item.id;
           const colorClass =
             CATEGORY_COLORS[item.category] ||
@@ -109,33 +219,33 @@ export default function KnowledgePanel() {
             >
               <div className="px-4 pt-4 pb-3">
                 <div className="flex items-start gap-3">
-                  <div
-                    className={cn(
-                      "w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 border",
-                      colorClass
-                        .replace(/text-\S+/, "")
-                        .replace(/border-\S+/, "") +
-                        " bg-violet-50 border-violet-100",
-                    )}
-                  >
+                  <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 border bg-violet-50 border-violet-100">
                     <Icon className="w-4 h-4 text-[#5B4FCF]" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between gap-2">
                       <div>
-                        <span
-                          className={cn(
-                            "text-[10px] font-semibold px-2 py-0.5 rounded-full border inline-block mb-1",
-                            colorClass,
+                        <div className="flex items-center gap-1.5 mb-1">
+                          <span
+                            className={cn(
+                              "text-[10px] font-semibold px-2 py-0.5 rounded-full border inline-block",
+                              colorClass,
+                            )}
+                          >
+                            {item.category}
+                          </span>
+                          {item.layer === "override" && (
+                            <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full border bg-amber-50 text-amber-600 border-amber-100 inline-flex items-center gap-0.5">
+                              <FileEdit className="w-2.5 h-2.5" />
+                              override
+                            </span>
                           )}
-                        >
-                          {item.category}
-                        </span>
+                        </div>
                         <p className="text-sm font-bold text-gray-800 leading-snug">
-                          {item.question}
+                          {item.title}
                         </p>
                       </div>
-                      {!isEditing && (
+                      {!isEditing && item.layer === "override" && (
                         <button
                           onClick={() => startEdit(item)}
                           className="w-7 h-7 rounded-lg bg-gray-50 hover:bg-violet-50 hover:text-[#5B4FCF] text-gray-400 flex items-center justify-center flex-shrink-0 transition-colors border border-gray-100"
@@ -157,10 +267,12 @@ export default function KnowledgePanel() {
                           />
                           <div className="flex gap-2 mt-2">
                             <button
-                              onClick={() => saveEdit(item.id)}
-                              className="flex items-center gap-1.5 px-3 py-1.5 bg-[#5B4FCF] text-white text-xs font-semibold rounded-lg hover:bg-[#4A3FB8] transition-colors"
+                              onClick={() => saveEdit(item)}
+                              disabled={saving}
+                              className="flex items-center gap-1.5 px-3 py-1.5 bg-[#5B4FCF] text-white text-xs font-semibold rounded-lg hover:bg-[#4A3FB8] transition-colors disabled:opacity-50"
                             >
-                              <Check className="w-3 h-3" /> Save changes
+                              <Check className="w-3 h-3" />{" "}
+                              {saving ? "Saving..." : "Save changes"}
                             </button>
                             <button
                               onClick={() => setEditing(null)}
@@ -171,20 +283,20 @@ export default function KnowledgePanel() {
                           </div>
                         </div>
                       ) : (
-                        <p className="text-sm text-gray-500 leading-relaxed">
-                          {item.answer}
+                        <p className="text-sm text-gray-500 leading-relaxed line-clamp-3">
+                          {item.body}
                         </p>
                       )}
                     </div>
 
-                    {!isEditing && (
+                    {!isEditing && item.sourcePages.length > 0 && (
                       <div className="flex flex-wrap gap-1 mt-2.5">
-                        {item.tags.slice(0, 4).map((tag) => (
+                        {item.sourcePages.map((p) => (
                           <span
-                            key={tag}
+                            key={p}
                             className="text-[10px] bg-gray-50 border border-gray-100 text-gray-400 rounded-full px-2 py-0.5"
                           >
-                            {tag}
+                            p. {p}
                           </span>
                         ))}
                       </div>
@@ -197,10 +309,10 @@ export default function KnowledgePanel() {
         })}
       </div>
 
-      {/* Add new */}
+      {/* Add new override */}
       <button className="w-full mt-3 border-2 border-dashed border-gray-200 hover:border-[#5B4FCF] rounded-2xl py-4 flex items-center justify-center gap-2 text-gray-400 hover:text-[#5B4FCF] transition-all text-sm font-semibold group">
         <Plus className="w-4 h-4 group-hover:scale-110 transition-transform" />
-        Add knowledge entry
+        Add override
       </button>
     </div>
   );

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import useSWR from "swr";
 import {
   Sun,
   MessageSquare,
@@ -12,7 +13,7 @@ import {
   Sparkles,
   Bell,
 } from "lucide-react";
-import { CENTER, QUESTION_LOG } from "@/data/centerData";
+import { CENTER } from "@/data/centerData";
 import QuestionLogPanel from "@/components/operator/QuestionLogPanel";
 import KnowledgePanel from "@/components/operator/KnowledgePanel";
 import { cn } from "@/lib/utils";
@@ -22,15 +23,35 @@ const TABS = [
   { id: "knowledge", label: "Knowledge Base", icon: BookOpen },
 ] as const;
 
+interface AnswerContract {
+  answer: string;
+  confidence: "high" | "low";
+  cited_entries: string[];
+  escalate: boolean;
+  escalation_reason?: string;
+}
+
+interface NeedsAttentionEvent {
+  id: string;
+  question: string;
+  result: AnswerContract;
+  createdAt: string;
+  resolvedAt?: string;
+}
+
+const fetcher = (url: string) => fetch(url).then((r) => r.json());
+
 export default function OperatorDashboard() {
   const [tab, setTab] = useState<string>("questions");
+  const { data: naData } = useSWR<{ events: NeedsAttentionEvent[] }>(
+    "/api/needs-attention",
+    fetcher,
+    { refreshInterval: 10000 },
+  );
 
-  const avgConfidence =
-    QUESTION_LOG.reduce((sum, q) => sum + (q.confidence ?? 0), 0) /
-    QUESTION_LOG.length;
-  const resolvedRate =
-    QUESTION_LOG.filter((q) => q.resolved).length / QUESTION_LOG.length;
-  const escalatedCount = QUESTION_LOG.filter((q) => q.escalated).length;
+  const events = naData?.events ?? [];
+  const escalatedCount = events.filter((e) => e.result.escalate).length;
+  const totalQuestions = events.length;
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -74,21 +95,21 @@ export default function OperatorDashboard() {
           <div className="grid grid-cols-3 gap-3">
             {[
               {
-                label: "AI resolved",
-                value: `${Math.round(resolvedRate * 100)}%`,
-                sublabel: "of today's questions",
+                label: "Open events",
+                value: totalQuestions.toString(),
+                sublabel: "needs attention",
                 icon: TrendingUp,
               },
               {
-                label: "Avg confidence",
-                value: `${Math.round(avgConfidence * 100)}%`,
-                sublabel: "across all answers",
+                label: "Escalated",
+                value: escalatedCount.toString(),
+                sublabel: "awaiting staff",
                 icon: Sparkles,
               },
               {
                 label: "Response time",
                 value: "< 2s",
-                sublabel: "vs 4hr manual avg",
+                sublabel: "AI avg response",
                 icon: Clock,
               },
             ].map((s) => (

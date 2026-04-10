@@ -6,14 +6,13 @@ import {
   CheckCircle,
   BookOpen,
   Sparkles,
-  Stethoscope,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export interface ChatMessageData {
   role: "user" | "assistant";
   text: string;
-  type?: "answer" | "uncertain" | "escalated" | "direct_provider";
+  type?: "answer" | "uncertain" | "escalated";
   source?: string | null;
   initials?: string;
 }
@@ -43,21 +42,13 @@ export default function ChatMessage({ message }: { message: ChatMessageData }) {
             "rounded-2xl px-4 py-3 text-sm leading-relaxed shadow-sm",
             isUser
               ? "bg-[#5B4FCF] text-white rounded-br-sm"
-              : message.type === "direct_provider"
-                ? "bg-rose-50 border border-rose-200 text-rose-900 rounded-bl-sm"
-                : message.type === "escalated"
-                  ? "bg-amber-50 border border-amber-200 text-amber-900 rounded-bl-sm"
-                  : message.type === "uncertain"
-                    ? "bg-blue-50 border border-blue-100 text-blue-900 rounded-bl-sm"
-                    : "bg-white border border-gray-100 text-gray-800 rounded-bl-sm shadow-sm",
+              : message.type === "escalated"
+                ? "bg-amber-50 border border-amber-200 text-amber-900 rounded-bl-sm"
+                : message.type === "uncertain"
+                  ? "bg-blue-50 border border-blue-100 text-blue-900 rounded-bl-sm"
+                  : "bg-white border border-gray-100 text-gray-800 rounded-bl-sm shadow-sm",
           )}
         >
-          {message.type === "direct_provider" && (
-            <div className="flex items-center gap-1.5 mb-2 text-rose-700 font-semibold text-xs">
-              <Stethoscope className="w-3.5 h-3.5" />
-              Sent directly to your care team
-            </div>
-          )}
           {message.type === "escalated" && (
             <div className="flex items-center gap-1.5 mb-2 text-amber-700 font-semibold text-xs">
               <AlertCircle className="w-3.5 h-3.5" />

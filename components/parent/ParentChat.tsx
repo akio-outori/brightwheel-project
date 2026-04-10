@@ -27,15 +27,10 @@ interface AnswerContract {
 
 function contractToMessage(contract: AnswerContract): ChatMessageData {
   if (contract.escalate) {
-    const isMedical =
-      contract.escalation_reason === "sensitive_topic" ||
-      contract.escalation_reason === "medical_shape";
     return {
       role: "assistant",
-      text:
-        contract.answer ||
-        "I don't have a clear answer to that question in my knowledge base. I've flagged this for our staff, and someone will follow up with you shortly \u2014 usually within 2 hours during business hours. You can also reach us directly at (505) 867-5309.",
-      type: isMedical ? "direct_provider" : "escalated",
+      text: contract.answer,
+      type: "escalated",
       source: null,
     };
   }
