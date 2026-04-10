@@ -7,7 +7,7 @@ import Link from "next/link";
 import ChatMessage, { type ChatMessageData, type CitedEntry } from "@/components/chat/ChatMessage";
 import TypingIndicator from "@/components/chat/TypingIndicator";
 import SuggestedQuestions from "@/components/chat/SuggestedQuestions";
-import { SUGGESTED_QUESTIONS } from "@/data/aiResponses";
+import { SUGGESTED_QUESTIONS, FOLLOWUP_SUGGESTIONS } from "@/data/aiResponses";
 import { CENTER } from "@/data/centerData";
 import { AnswerContractSchema, type AnswerContract } from "@/lib/llm/contract";
 
@@ -214,7 +214,7 @@ export function ParentChat() {
           <div ref={bottomRef} />
         </div>
 
-        {/* Suggested questions */}
+        {/* Suggested questions — initial set or follow-up after escalation */}
         <AnimatePresence>
           {showSuggestions && messages.length <= 1 && (
             <motion.div
@@ -226,6 +226,22 @@ export function ParentChat() {
               <SuggestedQuestions questions={SUGGESTED_QUESTIONS} onSelect={sendMessage} />
             </motion.div>
           )}
+          {!showSuggestions &&
+            !isTyping &&
+            messages.length > 1 &&
+            messages[messages.length - 1]?.type === "escalated" && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                className="flex-shrink-0 px-4 pb-3"
+              >
+                <p className="text-xs text-gray-500 mb-2 ml-1">
+                  While you wait, I can help with these:
+                </p>
+                <SuggestedQuestions questions={FOLLOWUP_SUGGESTIONS} onSelect={sendMessage} />
+              </motion.div>
+            )}
         </AnimatePresence>
 
         {/* Input */}

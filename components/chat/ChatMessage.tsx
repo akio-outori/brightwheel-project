@@ -1,9 +1,72 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { AlertCircle, CheckCircle, BookOpen, Sparkles, X } from "lucide-react";
 import { cn } from "@/lib/utils";
+
+const PHONE_RE = /\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}/g;
+const ADDRESS_RE =
+  /\d+\s+[\w\s.]+(?:Rd|St|Ave|Blvd|Dr|Ln|Ct|Way|Pl)\.?\s+[\w\s.]+,\s*[A-Z]{2}\s+\d{5}/g;
+
+/** Turn phone numbers into tel: links and addresses into Google Maps links. */
+function linkifyText(text: string): ReactNode[] {
+  const parts: ReactNode[] = [];
+  let lastIndex = 0;
+  const linkClass = "text-[#5B4FCF] underline underline-offset-2";
+
+  // Collect all matches with their positions
+  const matches: Array<{ start: number; end: number; node: ReactNode }> = [];
+
+  for (const m of text.matchAll(PHONE_RE)) {
+    const digits = m[0].replace(/\D/g, "");
+    matches.push({
+      start: m.index,
+      end: m.index + m[0].length,
+      node: (
+        <a key={`phone-${m.index}`} href={`tel:${digits}`} className={linkClass}>
+          {m[0]}
+        </a>
+      ),
+    });
+  }
+
+  for (const m of text.matchAll(ADDRESS_RE)) {
+    matches.push({
+      start: m.index,
+      end: m.index + m[0].length,
+      node: (
+        <a
+          key={`addr-${m.index}`}
+          href={`https://maps.google.com/?q=${encodeURIComponent(m[0])}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className={linkClass}
+        >
+          {m[0]}
+        </a>
+      ),
+    });
+  }
+
+  // Sort by position and deduplicate overlaps
+  matches.sort((a, b) => a.start - b.start);
+
+  for (const match of matches) {
+    if (match.start < lastIndex) continue; // skip overlap
+    if (match.start > lastIndex) {
+      parts.push(text.slice(lastIndex, match.start));
+    }
+    parts.push(match.node);
+    lastIndex = match.end;
+  }
+
+  if (lastIndex < text.length) {
+    parts.push(text.slice(lastIndex));
+  }
+
+  return parts.length > 0 ? parts : [text];
+}
 
 export interface CitedEntry {
   id: string;
@@ -55,7 +118,15 @@ export default function ChatMessage({ message }: { message: ChatMessageData }) {
                 Forwarded to staff
               </div>
             )}
-            <p className="whitespace-pre-line">{message.text}</p>
+            <p className="whitespace-pre-line">
+              {!isUser && message.type === "answer" ? linkifyText(message.text) : message.text}
+            </p>
+            {message.type === "escalated" && (
+              <p className="text-[11px] text-amber-600/70 mt-1.5">
+                We&rsquo;ll follow up by phone, or you can ask again later and your answer may be
+                ready.
+              </p>
+            )}
           </div>
 
           {!isUser && message.citedEntries && message.citedEntries.length > 0 && (
