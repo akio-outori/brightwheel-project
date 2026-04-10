@@ -1,0 +1,37 @@
+name: Claude Code Review
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  review:
+    name: Claude review agents
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run Claude Code review
+        uses: anthropics/claude-code-action@beta
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          review_agents: |
+            review-typescript
+            review-mcp-boundary
+            review-trust-loop
+            review-security
+            review-classifier
+            review-product-fit
+          direct_prompt: |
+            Review this PR against all six review agents defined in
+            .claude/agents/. For each agent, run its grep patterns
+            and checklist against the changed files only. Report
+            findings grouped by agent, with critical items first.
+            If an agent finds nothing, say "Verified clean" for
+            that agent — do not skip it silently.

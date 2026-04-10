@@ -36,13 +36,15 @@ most.
 | [`impl-operator-ux.md`](impl-operator-ux.md) | `/admin`, handbook editor, needs-attention feed, one-tap fix, `/api/handbook`, `/api/needs-attention` |
 | [`impl-docs.md`](impl-docs.md) | `README.md`, `WRITEUP.md`, anything under `docs/` other than the build journal |
 
-### Review (5)
+### Review (7)
 
 | File | Enforces |
 |------|----------|
 | [`review-mcp-boundary.md`](review-mcp-boundary.md) | The four-input-type security pattern. Only `SystemPrompt` is rendered raw; all other content is wrapped in `<mcp_message>` tags. Prevents prompt injection at the type-system level. |
 | [`review-trust-loop.md`](review-trust-loop.md) | The thesis. Every parent answer cites + has confidence; low-confidence escalates; sensitive topics never assert; the operator console actually closes the loop. |
 | [`review-typescript.md`](review-typescript.md) | TypeScript idioms — no `any`, schema-validated boundaries, error handling at boundaries only, exhaustive switches, no dead code. |
+| [`review-security.md`](review-security.md) | OWASP web security — XSS, input validation, error information leakage, SSRF, dependency vulnerabilities, content security headers. Covers the general web attack surface beyond the LLM-specific boundary. |
+| [`review-classifier.md`](review-classifier.md) | Deterministic classifier correctness — preflight specific-child patterns, post-response pipeline channels, regex precision, false positive/negative analysis, threshold sanity, health vocabulary completeness. |
 | [`review-tests.md`](review-tests.md) | The verification chain — typecheck, lint, unit tests, `docker compose up`, and the closed-loop end-to-end smoke check. The gate before any "done." |
 | [`review-product-fit.md`](review-product-fit.md) | The Brightwheel lens. Would this excite a team to fund and build for real? Voice, warmth, taste, demo emotional resonance. Audits all user-visible copy and the writeup. |
 
@@ -59,14 +61,16 @@ When the main thread is about to delegate work, this table answers
 
 | Path / change | Primary | Required reviewers |
 |---------------|---------|---------------------|
-| `lib/storage/**`, `data/**`, `docker/minio-init/**` | `impl-storage` | `review-typescript`, `review-tests` |
+| `lib/storage/**`, `data/**`, `docker/minio-init/**` | `impl-storage` | `review-typescript`, `review-security`, `review-tests` |
 | `docker-compose.yml` (storage services), `docker/**` | `impl-storage` | `review-tests` |
-| `lib/llm/**`, `lib/llm/system-prompts/**` | `impl-trust-mechanic` | `review-mcp-boundary`, `review-typescript`, `review-tests` |
-| `app/page.tsx`, `app/(parent)/**`, `components/parent/**` | `impl-parent-ux` | `review-trust-loop`, `review-typescript`, `review-product-fit`, `review-tests` |
-| `app/api/ask/**` | `impl-parent-ux` | `review-mcp-boundary`, `review-trust-loop`, `review-typescript`, `review-tests` |
-| `app/admin/**`, `components/operator/**` | `impl-operator-ux` | `review-trust-loop`, `review-typescript`, `review-product-fit`, `review-tests` |
-| `app/api/handbook/**`, `app/api/needs-attention/**` | `impl-operator-ux` | `review-trust-loop`, `review-typescript`, `review-tests` |
+| `lib/llm/**` (excluding `post-response/`, `preflight/`) | `impl-trust-mechanic` | `review-mcp-boundary`, `review-typescript`, `review-tests` |
+| `lib/llm/post-response/**`, `lib/llm/preflight/**` | `impl-trust-mechanic` | `review-classifier`, `review-typescript`, `review-tests` |
+| `app/page.tsx`, `app/(parent)/**`, `components/parent/**` | `impl-parent-ux` | `review-trust-loop`, `review-security`, `review-typescript`, `review-product-fit`, `review-tests` |
+| `app/api/ask/**` | `impl-parent-ux` | `review-mcp-boundary`, `review-classifier`, `review-trust-loop`, `review-security`, `review-typescript`, `review-tests` |
+| `app/admin/**`, `components/operator/**` | `impl-operator-ux` | `review-trust-loop`, `review-security`, `review-typescript`, `review-product-fit`, `review-tests` |
+| `app/api/handbook/**`, `app/api/needs-attention/**`, `app/api/overrides/**` | `impl-operator-ux` | `review-trust-loop`, `review-security`, `review-typescript`, `review-tests` |
 | `README.md`, `WRITEUP.md`, `docs/**` (except journal) | `impl-docs` | `review-product-fit`, `review-tests` (verifies setup steps) |
+| `package.json`, `package-lock.json` | — | `review-security` (dependency audit) |
 | Any non-trivial decision in conversation | — | `scribe-journal` |
 | A component shipping (impl agent reports done) | — | `scribe-journal`, `review-tests` |
 | Final pre-demo gate | — | `review-tests`, `review-product-fit` |
