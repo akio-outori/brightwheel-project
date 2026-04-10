@@ -78,6 +78,6 @@ export async function listObjectKeys(bucket: string, prefix: string): Promise<st
  */
 export function isNotFound(err: unknown): boolean {
   if (!err || typeof err !== "object") return false;
-  const code = (err as { code?: string }).code;
+  const code = "code" in err ? (err as Record<string, unknown>).code : undefined;
   return code === "NoSuchKey" || code === "NotFound";
 }

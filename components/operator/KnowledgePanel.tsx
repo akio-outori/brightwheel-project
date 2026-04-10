@@ -154,17 +154,19 @@ export default function KnowledgePanel() {
     if (item.layer !== "override") return;
     setSaving(true);
     try {
-      await fetch(`/api/overrides/${item.id}`, {
+      const res = await fetch(`/api/overrides/${item.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ body: editText }),
       });
+      if (!res.ok) throw new Error(`Save failed (HTTP ${res.status})`);
       await mutate();
+      setEditing(null);
     } catch (err) {
       console.error("Failed to save override:", err);
+      alert(err instanceof Error ? err.message : "Failed to save. Please try again.");
     } finally {
       setSaving(false);
-      setEditing(null);
     }
   };
 

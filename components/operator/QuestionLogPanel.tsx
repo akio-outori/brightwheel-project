@@ -92,7 +92,8 @@ export default function QuestionLogPanel() {
               {escalatedCount} question{escalatedCount !== 1 ? "s" : ""} need your attention
             </p>
             <p className="text-xs text-amber-600 mt-0.5">
-              The AI wasn&apos;t confident enough to answer these — a staff response is needed.
+              A parent asked something we don&apos;t have an answer for yet. Your response closes
+              the loop.
             </p>
           </div>
         </div>

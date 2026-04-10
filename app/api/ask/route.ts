@@ -202,15 +202,17 @@ export async function POST(req: Request): Promise<Response> {
 
     // 6. Passing path. If the model's draft happened to be low
     // confidence without escalating, log it anyway so the operator
-    // can see the pattern. (The self-escalation channel already
-    // holds escalate=true drafts above, so that branch is dead —
-    // this catches the rare confidence=low + escalate=false case.)
+    // Enforce the trust-loop invariant at the API boundary: a
+    // low-confidence response must always escalate. The client
+    // guards this too, but the API is the authoritative boundary.
     if (draft.confidence === "low") {
-      await logNeedsAttention({
-        docId,
-        question,
-        result: draft,
-      });
+      const enforced: AnswerContract = {
+        ...draft,
+        escalate: true,
+        escalation_reason: draft.escalation_reason ?? "low_confidence",
+      };
+      await logNeedsAttention({ docId, question, result: enforced });
+      return Response.json(enforced);
     }
 
     return Response.json(draft);
