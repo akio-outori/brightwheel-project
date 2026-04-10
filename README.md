@@ -1,56 +1,17 @@
 # AI Front Desk — Albuquerque DCFD
 
 A prototype AI front desk for the City of Albuquerque Division of
-Child and Family Development (DCFD). A parent asks a question. The
-assistant answers from the real 2019 Family Handbook with a citation,
-or — when it isn't sure — hands the question to a staff member and
-lets them close the loop in one click. Three layers of deterministic
-verification sit between the model and the parent, catching
-hallucinations, medical instructions, and fabricated data before anyone
-sees them. The whole stack runs locally under Docker: one API key in
-`.env`, then `docker compose up`.
+Child and Family Development (DCFD). Parents ask questions about the
+program. The assistant answers from the real 2019 Family Handbook with
+citations, or hands the question to a staff member who closes the loop
+in one click. Three layers of deterministic verification sit between
+the model and the parent.
 
-## What's interesting about this
-
-- **A preflight classifier that saves the LLM call.** Before the
-  model runs, a deterministic regex classifier detects questions about
-  a specific child's health, injuries, medication, or custody. The
-  parent gets an immediate "a staff member is reviewing this" — no
-  model call, no latency, no chance of a confident-but-wrong answer
-  about a child's medical situation.
-- **A 6-channel post-response verification pipeline.** After the
-  model drafts an answer, six deterministic channels inspect it:
-  hallucinated citation IDs, fabricated phone numbers, invented staff
-  names, medical-instruction shapes, empty coverage, and model
-  self-escalation. Any channel hold replaces the draft with a stock
-  response. The model's original draft is preserved for the operator
-  with a labeled hold reason.
-- **A security boundary that's a type system, not a vibe.** User
-  questions reach the model only through four branded TypeScript
-  types (`SystemPrompt`, `AppIntent`, `MCPData`, `UserInput`) whose
-  only legitimate constructors live in one file. Prompt injection
-  prevention is enforced at compile time.
-- **A two-layer document model.** The seed handbook is immutable
-  after load. Operator answers live in a separate overrides layer
-  scoped per document. The model is told to prefer overrides. The
-  seed never drifts; operator knowledge accumulates in an auditable,
-  deletable layer.
-- **A closed loop that actually closes.** Staff members see the gaps
-  the AI admitted to, fill them in, and the _next_ parent asking
-  the same question gets a high-confidence answer with a citation
-  pointing to the override — in about fifteen seconds on a
-  live demo, no index rebuild, no restart.
-- **Real public data, faithfully extracted.** The seed is 73 entries
-  from the actual DCFD Family Handbook (2019), a public city
-  government publication — real names, real phone numbers, real
-  center addresses.
-
-## Try it
+## Quick start
 
 ### Prerequisites
 
-- Docker with `docker compose` (v2.20+ for the
-  `service_completed_successfully` gate)
+- Docker with `docker compose` (v2.20+)
 - An Anthropic API key
 
 ### Run it
@@ -58,71 +19,72 @@ sees them. The whole stack runs locally under Docker: one API key in
 ```bash
 git clone <repo>
 cd brightwheel-project
-cp .env.example .env
-# edit .env and set ANTHROPIC_API_KEY=sk-ant-...
+cp .env.example .env        # set ANTHROPIC_API_KEY=sk-ant-...
 docker compose up
 ```
 
-The first boot pulls images, builds the Next.js app, creates the
-MinIO buckets, enables SSE-S3 and versioning, and seeds the
-handbook into the `documents/{docId}/entries/` layout. Subsequent
-boots short-circuit on a sentinel object and take under 10 seconds.
+First boot seeds the handbook into MinIO and builds the Next.js app.
+Subsequent boots take under 10 seconds.
 
-When the stack is ready:
+| Surface | URL |
+|---------|-----|
+| Parent chat | http://localhost:3000 |
+| Operator console | http://localhost:3000/admin |
 
-- **Parent surface:** http://localhost:3000
-- **Operator console:** http://localhost:3000/admin
+### Demo flow
 
-### The demo flow
+1. Ask **"What time do you open?"** — grounded answer with citations
+2. Ask **"My son has a fever, should I bring him in?"** — preflight
+   classifier holds instantly (no model call)
+3. Ask **"How can I schedule a tour?"** — model runs, self-escalates,
+   event appears in the operator feed
+4. Open `/admin`, click **Answer this**, write two sentences, save —
+   override created, event resolved
+5. Re-ask the tour question — high-confidence answer citing the
+   override you just wrote
 
-1. On `/`, ask **"What time do you open?"** — a high-confidence
-   answer grounded in the hours-of-operation entry.
-2. Ask **"My son has a fever, should I bring him in?"** — the
-   preflight classifier catches this before the model runs. The
-   parent sees "a staff member is reviewing this" instantly.
-3. Ask **"How can I schedule a tour?"** — the model runs, can't
-   find coverage, self-escalates. A needs-attention event lands
-   in the operator feed with the hold reason.
-4. Open `/admin`. The events are labeled with hold reasons
-   (specific child, model self-escalated, etc.). Click
-   **Answer this**, write a short answer, save. The override
-   appears and the event resolves in the same tick.
-5. Back on `/`, ask **"How can I schedule a tour?"** again —
-   high-confidence answer citing the override you just wrote.
+### Development
 
-## How it's built
+```bash
+npm install
+npm run dev              # Next.js dev server (needs MinIO running)
+npm test                 # 304 unit tests with coverage
+npm run test:integration # 114 tests against real Anthropic + MinIO
+npm run typecheck        # TypeScript strict
+npm run lint             # ESLint + security plugin
+```
 
-- **Stack:** Next.js 15 on a distroless nonroot container, MinIO
-  with SSE-S3 and versioning, idempotent init script with
-  per-document layout.
-- **Storage:** `lib/storage/` — typed adapters for handbook entries
-  (read-only), operator overrides (CRUD), and needs-attention
-  events. Zod schemas at every boundary. `getActiveDocumentId()`
-  is the seam for future per-user document routing.
-- **Trust mechanic:** `lib/llm/` — branded input types,
-  `buildPrompt()` envelope assembler, Anthropic client wrapper,
-  `AnswerContract` schema.
-- **Preflight:** `lib/llm/preflight/` — specific-child classifier
-  with four pattern groups and a policy-question negative set.
-- **Post-response pipeline:** `lib/llm/post-response/` — six
-  deterministic channels in short-circuit order.
-- **Parent UX:** `app/page.tsx`, `components/parent/` — chat
-  interface with citation display and escalation cards.
-- **Operator console:** `app/admin/`, `components/operator/` —
-  needs-attention feed with hold-reason badges, one-tap fix
-  dialog, notification bell.
-- **Tests:** 304 unit tests (89% coverage, 80% threshold enforced),
-  114 integration tests against the real Anthropic API and MinIO.
-- **CI:** 13 automated checks per PR — typecheck, ESLint +
-  security plugin, Prettier, unit tests, build, npm audit, Trivy
-  (filesystem + container), TruffleHog, Semgrep, Bearer, license
-  compliance, Claude Code review with 7 agents.
+## Architecture
 
-## Where to read more
+```
+Parent question
+  │
+  ├─ Preflight classifier (lib/llm/preflight/)
+  │   Catches specific-child health/safety questions before the LLM
+  │
+  ├─ LLM call (lib/llm/client.ts → Anthropic SDK)
+  │   Branded types enforce the MCP security boundary
+  │
+  └─ Post-response pipeline (lib/llm/post-response/)
+      6 deterministic channels verify the draft before the parent sees it
+      │
+      ├─ PASS → parent sees the grounded answer
+      └─ HOLD → parent sees "a staff member is reviewing this"
+                operator sees the draft + hold reason
+```
 
-- [`docs/build-journal.md`](docs/build-journal.md) — the
-  chronological development record.
-- [`WRITEUP.md`](WRITEUP.md) — the design pitch.
-- [`.claude/agents/`](.claude/agents/) — the 13 subagent specs
-  that structured the build. Implementation agents own files,
-  review agents enforce invariants, a scribe owns the journal.
+## Documentation
+
+Detailed engineering docs for each subsystem:
+
+| Document | Covers |
+|----------|--------|
+| [Trust mechanic & MCP boundary](docs/trust-mechanic.md) | Four branded input types, prompt assembly, the `AnswerContract`, prompt injection prevention |
+| [Preflight classifier](docs/preflight-classifier.md) | Specific-child detection, pattern groups, policy-question negatives, calibration |
+| [Post-response pipeline](docs/post-response-pipeline.md) | Six deterministic channels, short-circuit architecture, stock responses, hold reasons |
+| [Document model & storage](docs/document-model.md) | Two-layer architecture (seed entries + operator overrides), MinIO layout, storage adapters |
+| [Operator loop](docs/operator-loop.md) | Needs-attention feed, fix dialog, override CRUD, notification bell |
+| [Testing strategy](docs/testing-strategy.md) | Unit tests, integration tests, coverage thresholds, CI pipeline |
+| [Deployment & infrastructure](docs/deployment.md) | Docker stack, distroless runner, MinIO init, CI workflows, security scanning |
+| [Design pitch (WRITEUP)](WRITEUP.md) | The one-page thesis for reviewers who won't read source code |
+| [Build journal](docs/build-journal.md) | Chronological development record — every decision, every reversal |
