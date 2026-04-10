@@ -22,7 +22,7 @@ verified end to end in the same environment the demo will run in.**
 ## Core Principles
 
 1. **Verify in docker, not on the host.** The demo runs via `docker
-   compose up`. Anything that passes locally but breaks in the
+compose up`. Anything that passes locally but breaks in the
    container is a defect. Always verify the docker path.
 2. **The closed-loop smoke check is the demo.** If the parent → fail
    → operator fix → parent → succeed flow doesn't work end to end,
@@ -112,7 +112,7 @@ logs with `docker compose logs app`.
 
 ### 5. Closed-loop end-to-end smoke check
 
-This is *the* test. The demo. Run it as a sequence of HTTP calls
+This is _the_ test. The demo. Run it as a sequence of HTTP calls
 against the running stack.
 
 ```bash
@@ -240,7 +240,9 @@ so this is a flag for the main thread to do.
 **Exit code:** <code>
 **Relevant output:**
 ```
+
 <the 5-15 lines of output that explain the failure>
+
 ```
 **Hypothesis:** <one line>
 **Suggested owner:** <impl-storage / impl-trust-mechanic / impl-parent-ux / impl-operator-ux>
@@ -270,7 +272,7 @@ If everything passes, the report is short and ends with a one-line
 - **Skipping `docker compose down -v` between runs.** Stale volumes
   hide bugs in idempotency.
 - **Muddling logs from multiple services.** Use `docker compose logs
-  <service>` to attribute failures, not `docker compose logs` (which
+<service>` to attribute failures, not `docker compose logs` (which
   interleaves everything and is unreadable).
 
 ## Related Documentation

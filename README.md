@@ -8,8 +8,8 @@ lets them close the loop in one click. The whole stack runs locally
 under Docker: one API key in `.env`, then `docker compose up`.
 
 The point of this project isn't "wraps a handbook in a chatbot." It's
-the **trust loop**: we have to get the answer right, *and* we have to
-be able to show that we did, *and* when we can't, the next parent
+the **trust loop**: we have to get the answer right, _and_ we have to
+be able to show that we did, _and_ when we can't, the next parent
 still gets the right answer instead of the same wrong one.
 
 ## What's interesting about this
@@ -26,7 +26,7 @@ still gets the right answer instead of the same wrong one.
   and `escalate` fields. Free-text answers from the model are a bug.
   A malformed response becomes a graceful escalation, never a 500.
 - **A closed loop that actually closes.** Staff members see the gaps
-  the AI admitted to, fill them in, and the *next* parent asking
+  the AI admitted to, fill them in, and the _next_ parent asking
   the same question gets a high-confidence answer with a citation
   pointing to the brand-new entry — in about fifteen seconds on a
   live demo, no index rebuild, no restart.

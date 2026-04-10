@@ -52,6 +52,7 @@ The preflight classifier (`lib/llm/preflight/specific-child.ts`) has
 four pattern groups plus a negative (policy-question) set. Review each:
 
 **Group 1a: Possessive + family noun + health vocabulary**
+
 - Does HEALTH_WORDS cover all common symptoms, conditions, medications?
 - Are there missing terms a real parent would use? (Check: slang,
   euphemisms, regional terms, non-English health words common in
@@ -61,12 +62,14 @@ four pattern groups plus a negative (policy-question) set. Review each:
   groups)
 
 **Group 1b: Possessive + attendance-decision verb**
+
 - Does this fire on "send/bring/take/keep my child" and "my child
   come/attend/return/stay"?
 - Does it correctly NOT fire on enrollment/schedule questions
   without health context?
 
 **Group 2: Proper name + health proximity**
+
 - Is the name regex case-SENSITIVE? (Must be — lowercase "children"
   must not match)
 - Is the NAME_ALLOWLIST complete? (Sentence starters, days, months,
@@ -75,16 +78,19 @@ four pattern groups plus a negative (policy-question) set. Review each:
 - Is the proximity window (80 chars) reasonable?
 
 **Group 3: Pronoun + health context**
+
 - Are contractions handled? (he's, she's, hasn't, etc.)
 - Does the health-context requirement prevent false positives on
   "He wants to join the art class"?
 
 **Group 4: Action requests**
+
 - Do medication-administration patterns cover common formulations?
 - Does the custody/authorization sub-pattern fire unconditionally
   (no health context required)?
 
 **Negative set: Policy questions**
+
 - Does every pattern that contains "my child" + health words also
   have a corresponding policy-question negative that prevents
   false holds on "What is the fever policy?" style questions?
@@ -96,6 +102,7 @@ four pattern groups plus a negative (policy-question) set. Review each:
 ### Unit Test Audit
 
 The preflight classifier has ~1200+ unit tests. Review:
+
 - Are all four pattern groups tested with both positive (hold) and
   negative (pass) cases?
 - Are edge cases covered? (contractions, informal phrasing, past
@@ -110,15 +117,18 @@ The preflight classifier has ~1200+ unit tests. Review:
 ### Channel-by-Channel
 
 **1. Hallucination channel**
+
 - Does it check BOTH `cited_entries` and `directly_addressed_by`?
 - Does it use the FULL document source list (entries + overrides),
   not just cited sources?
 
 **2. Self-escalation channel**
+
 - Does it fire on `escalate === true` from the model?
 - Does the detail field carry the model's own escalation_reason?
 
 **3. Coverage channel**
+
 - Does it only hold when BOTH `cited_entries` and
   `directly_addressed_by` are empty?
 - Does it pass when `directly_addressed_by` is `undefined` (model
@@ -127,6 +137,7 @@ The preflight classifier has ~1200+ unit tests. Review:
   `directly_addressed_by` is empty? (Honest hedged answer)
 
 **4. Medical-shape channel**
+
 - Do patterns require second-person possessive/pronoun (your child,
   him, her) to distinguish directives from policy paraphrases?
 - Is the "call 911" bare pattern removed? (It over-fires on
@@ -134,6 +145,7 @@ The preflight classifier has ~1200+ unit tests. Review:
 - Are dosage patterns (mg, ml, mcg, cc) present?
 
 **5. Numeric channel**
+
 - Does it search the FULL document (allSources), not just cited?
 - Does canonicalization handle phone numbers, dollar amounts,
   temperatures, percentages?
@@ -141,6 +153,7 @@ The preflight classifier has ~1200+ unit tests. Review:
   multiple times?
 
 **6. Entity channel**
+
 - Does it search the FULL document, not just cited?
 - Does the multi-word regex handle hyphens (Pre-K) and all-caps
   acronyms (DCFD, NAEYC)?
@@ -151,6 +164,7 @@ The preflight classifier has ~1200+ unit tests. Review:
 ### Disabled Channels
 
 **Lexical channel** — disabled in the registry but code exists.
+
 - Document WHY it's disabled (recall metric too noisy on paraphrased
   answers, 0.28–0.53 range overlaps with partial hallucinations)
 - If re-enabled, what metric change would make it viable?
@@ -168,6 +182,7 @@ The preflight classifier has ~1200+ unit tests. Review:
 ## Threshold Constants
 
 Document every tunable constant and its rationale:
+
 - `MIN_TOKENS_FOR_RECALL` (lexical, disabled)
 - `RECALL_THRESHOLD` (lexical, disabled)
 - `MIN_SINGLE_WORD_LEN` (entity extraction)

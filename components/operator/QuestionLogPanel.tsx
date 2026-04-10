@@ -2,14 +2,7 @@
 
 import { useState } from "react";
 import useSWR from "swr";
-import {
-  AlertTriangle,
-  Clock,
-  ChevronDown,
-  ChevronUp,
-  MessageSquare,
-  Loader2,
-} from "lucide-react";
+import { AlertTriangle, Clock, ChevronDown, ChevronUp, MessageSquare, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 
@@ -35,23 +28,13 @@ const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
 function ConfidenceBar({ value }: { value: number }) {
   const pct = Math.round(value * 100);
-  const color =
-    value >= 0.8
-      ? "bg-emerald-400"
-      : value >= 0.5
-        ? "bg-amber-400"
-        : "bg-red-400";
+  const color = value >= 0.8 ? "bg-emerald-400" : value >= 0.5 ? "bg-amber-400" : "bg-red-400";
   return (
     <div className="flex items-center gap-2">
       <div className="flex-1 bg-gray-100 rounded-full h-2 overflow-hidden">
-        <div
-          className={cn("h-full rounded-full", color)}
-          style={{ width: `${pct}%` }}
-        />
+        <div className={cn("h-full rounded-full", color)} style={{ width: `${pct}%` }} />
       </div>
-      <span className="text-xs font-semibold text-gray-500 w-8 text-right">
-        {pct}%
-      </span>
+      <span className="text-xs font-semibold text-gray-500 w-8 text-right">{pct}%</span>
     </div>
   );
 }
@@ -102,21 +85,17 @@ export default function QuestionLogPanel() {
           <AlertTriangle className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
           <div>
             <p className="text-sm font-semibold text-amber-800">
-              {escalatedCount} question{escalatedCount !== 1 ? "s" : ""} need
-              your attention
+              {escalatedCount} question{escalatedCount !== 1 ? "s" : ""} need your attention
             </p>
             <p className="text-xs text-amber-600 mt-0.5">
-              The AI wasn&apos;t confident enough to answer these — a staff
-              response is needed.
+              The AI wasn&apos;t confident enough to answer these — a staff response is needed.
             </p>
           </div>
         </div>
       )}
 
       {events.length === 0 && (
-        <div className="text-center py-12 text-sm text-gray-400">
-          No questions to show.
-        </div>
+        <div className="text-center py-12 text-sm text-gray-400">No questions to show.</div>
       )}
 
       {/* Question cards */}
@@ -135,9 +114,7 @@ export default function QuestionLogPanel() {
             >
               <button
                 className="w-full text-left px-4 py-4 flex items-start gap-3"
-                onClick={() =>
-                  setExpanded(expanded === item.id ? null : item.id)
-                }
+                onClick={() => setExpanded(expanded === item.id ? null : item.id)}
               >
                 {/* Status icon */}
                 <div
@@ -227,9 +204,7 @@ export default function QuestionLogPanel() {
                       <p className="text-xs font-semibold text-amber-700 mb-1">
                         Why it was flagged
                       </p>
-                      <p className="text-xs text-amber-700 leading-relaxed">
-                        {holdReason}
-                      </p>
+                      <p className="text-xs text-amber-700 leading-relaxed">{holdReason}</p>
                     </div>
                   )}
                   {item.result.escalate && !item.resolvedAt && (

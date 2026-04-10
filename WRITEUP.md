@@ -9,8 +9,8 @@ in service of closing that loop in public, not papering over it.
 
 ## The thesis
 
-Most LLM demos fail one test: *show me the question you got
-wrong, and what happens next*. The typical answer is "add it to
+Most LLM demos fail one test: _show me the question you got
+wrong, and what happens next_. The typical answer is "add it to
 training data," "RAG better," or "escalate to a human" — shrugs
 dressed as roadmaps.
 
@@ -18,7 +18,7 @@ The trust loop takes the question seriously. When the assistant
 doesn't know something, it says so, in the parent's UI, with a
 calm escalation card that names why. The unanswered question
 lands in a staff feed with the model's draft preserved. A staff
-member clicks *Answer this*, writes two sentences, and the **next
+member clicks _Answer this_, writes two sentences, and the **next
 parent asking the same question gets a high-confidence answer
 citing the entry the staff member just wrote** — about fifteen
 seconds, no index rebuild, no restart. That's the demo. It either
@@ -45,7 +45,7 @@ models.
 - S3 primitives on MinIO (versioning, SSE-S3, date-partitioned
   event log). Migration to AWS is "swap the endpoint."
 - A closed-loop operator console: one click creates an entry
-  *and* resolves the event; the UI revalidates both feeds in the
+  _and_ resolves the event; the UI revalidates both feeds in the
   same tick.
 
 **Out, and why:**

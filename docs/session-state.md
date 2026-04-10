@@ -85,16 +85,16 @@ Commit: `feat(storage): MinIO adapter, seed handbook, round-trip tests (Layer 2)
 
 ## Key decisions made this session (highlights)
 
-| Decision | Why |
-|---|---|
-| Trust loop focus (not breadth, depth, or novelty alone) | Answers "we have to get it right, and how do we know it's right" — the actual grading criterion |
-| Branded TypeScript types for MCP wrapping (4-input-type pattern) | Prompt-injection prevention at compile time; patterned after go-mcp-sdk (read privately, written standalone) |
-| Structured JSON answer contract (not free text) | Enforces citation + confidence + escalation in the shape of the data |
-| MinIO + Docker Compose (not Vercel, not in-memory) | S3-compatible primitives (versioning, encryption, IAM), clean migration to AWS, honest local stack |
-| Build the init container as a custom image, not bind-mounted | Reversed mid-layer 1; see memory feedback note |
-| Real DCFD data, not fictional "Sunny Days Learning Center" | Reversed mid-seed-drafting; see memory feedback note. PDF is public, scrubbing added errors and weakened the demo |
-| 11 subagent specs in `.claude/agents/` (5 impl, 5 review, 1 scribe) | Agents are part of the deliverable — documents the build discipline |
-| Background agent for the seed write | So the main thread can continue parallel work (this session's lesson) |
+| Decision                                                            | Why                                                                                                               |
+| ------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| Trust loop focus (not breadth, depth, or novelty alone)             | Answers "we have to get it right, and how do we know it's right" — the actual grading criterion                   |
+| Branded TypeScript types for MCP wrapping (4-input-type pattern)    | Prompt-injection prevention at compile time; patterned after go-mcp-sdk (read privately, written standalone)      |
+| Structured JSON answer contract (not free text)                     | Enforces citation + confidence + escalation in the shape of the data                                              |
+| MinIO + Docker Compose (not Vercel, not in-memory)                  | S3-compatible primitives (versioning, encryption, IAM), clean migration to AWS, honest local stack                |
+| Build the init container as a custom image, not bind-mounted        | Reversed mid-layer 1; see memory feedback note                                                                    |
+| Real DCFD data, not fictional "Sunny Days Learning Center"          | Reversed mid-seed-drafting; see memory feedback note. PDF is public, scrubbing added errors and weakened the demo |
+| 11 subagent specs in `.claude/agents/` (5 impl, 5 review, 1 scribe) | Agents are part of the deliverable — documents the build discipline                                               |
+| Background agent for the seed write                                 | So the main thread can continue parallel work (this session's lesson)                                             |
 
 ## Memory files saved this session
 

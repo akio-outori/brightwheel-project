@@ -113,15 +113,10 @@ export default function OperatorDashboard() {
                 icon: Clock,
               },
             ].map((s) => (
-              <div
-                key={s.label}
-                className="bg-white/15 backdrop-blur rounded-xl p-3 text-center"
-              >
+              <div key={s.label} className="bg-white/15 backdrop-blur rounded-xl p-3 text-center">
                 <s.icon className="w-4 h-4 text-white/70 mx-auto mb-1" />
                 <div className="text-xl font-bold text-white">{s.value}</div>
-                <div className="text-[10px] text-white/60 leading-tight mt-0.5">
-                  {s.sublabel}
-                </div>
+                <div className="text-[10px] text-white/60 leading-tight mt-0.5">{s.sublabel}</div>
               </div>
             ))}
           </div>

@@ -1,12 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import {
-  AlertCircle,
-  CheckCircle,
-  BookOpen,
-  Sparkles,
-} from "lucide-react";
+import { AlertCircle, CheckCircle, BookOpen, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export interface ChatMessageData {
@@ -25,10 +20,7 @@ export default function ChatMessage({ message }: { message: ChatMessageData }) {
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.25 }}
-      className={cn(
-        "flex gap-2.5 mb-4",
-        isUser ? "justify-end" : "justify-start",
-      )}
+      className={cn("flex gap-2.5 mb-4", isUser ? "justify-end" : "justify-start")}
     >
       {!isUser && (
         <div className="w-8 h-8 rounded-full bg-[#5B4FCF] flex items-center justify-center flex-shrink-0 mt-0.5 shadow-md">
@@ -73,9 +65,7 @@ export default function ChatMessage({ message }: { message: ChatMessageData }) {
         {!isUser && message.type === "answer" && (
           <div className="flex items-center gap-1 mt-0.5 ml-1">
             <CheckCircle className="w-3 h-3 text-emerald-500" />
-            <span className="text-[11px] text-emerald-600 font-medium">
-              Verified policy
-            </span>
+            <span className="text-[11px] text-emerald-600 font-medium">Verified policy</span>
           </div>
         )}
       </div>

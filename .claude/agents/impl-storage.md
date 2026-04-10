@@ -105,12 +105,12 @@ export const HandbookCategory = z.enum([
 export type HandbookCategory = z.infer<typeof HandbookCategory>;
 
 export const HandbookEntrySchema = z.object({
-  id: z.string().regex(/^[a-z0-9-]+$/),           // url-safe slug
+  id: z.string().regex(/^[a-z0-9-]+$/), // url-safe slug
   title: z.string().min(1).max(200),
   category: HandbookCategory,
-  body: z.string().min(1).max(20_000),            // prose, may be long
+  body: z.string().min(1).max(20_000), // prose, may be long
   sourcePages: z.array(z.number().int().nonnegative()).default([]),
-  lastUpdated: z.string().min(1),                 // "2019" or ISO 8601
+  lastUpdated: z.string().min(1), // "2019" or ISO 8601
 });
 export type HandbookEntry = z.infer<typeof HandbookEntrySchema>;
 
@@ -140,7 +140,7 @@ export const NeedsAttentionEventSchema = z.object({
 export type NeedsAttentionEvent = z.infer<typeof NeedsAttentionEventSchema>;
 ```
 
-When in doubt, *lengthen the validation, don't shorten it*. The schemas
+When in doubt, _lengthen the validation, don't shorten it_. The schemas
 are what protect the LLM boundary from corrupt or oversized inputs.
 
 ## Adapter Surface
@@ -152,13 +152,23 @@ from `lib/storage/`.
 // lib/storage/handbook.ts
 export async function listHandbookEntries(): Promise<HandbookEntry[]>;
 export async function getHandbookEntry(id: string): Promise<HandbookEntry | null>;
-export async function createHandbookEntry(draft: Omit<HandbookEntry, "id" | "lastUpdated">): Promise<HandbookEntry>;
-export async function updateHandbookEntry(id: string, patch: Partial<Omit<HandbookEntry, "id">>): Promise<HandbookEntry>;
+export async function createHandbookEntry(
+  draft: Omit<HandbookEntry, "id" | "lastUpdated">,
+): Promise<HandbookEntry>;
+export async function updateHandbookEntry(
+  id: string,
+  patch: Partial<Omit<HandbookEntry, "id">>,
+): Promise<HandbookEntry>;
 
 // lib/storage/needs-attention.ts
-export async function logNeedsAttention(input: Omit<NeedsAttentionEvent, "id" | "created_at" | "resolved_at" | "resolved_by_entry_id">): Promise<NeedsAttentionEvent>;
+export async function logNeedsAttention(
+  input: Omit<NeedsAttentionEvent, "id" | "created_at" | "resolved_at" | "resolved_by_entry_id">,
+): Promise<NeedsAttentionEvent>;
 export async function listOpenNeedsAttention(): Promise<NeedsAttentionEvent[]>;
-export async function resolveNeedsAttention(id: string, resolvedByEntryId: string): Promise<NeedsAttentionEvent>;
+export async function resolveNeedsAttention(
+  id: string,
+  resolvedByEntryId: string,
+): Promise<NeedsAttentionEvent>;
 ```
 
 This is the contract the rest of the codebase depends on. Changing a
@@ -177,8 +187,8 @@ services:
     volumes:
       - minio-data:/data
     ports:
-      - "9000:9000"   # S3 API
-      - "9001:9001"   # web console (dev only)
+      - "9000:9000" # S3 API
+      - "9001:9001" # web console (dev only)
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
       interval: 5s

@@ -34,7 +34,7 @@ satisfies it. The reviewer will catch you if it doesn't.
 
 **You do not own:**
 
-- `app/api/ask/route.ts` — that's `impl-parent-ux`. It *imports* your
+- `app/api/ask/route.ts` — that's `impl-parent-ux`. It _imports_ your
   `askLLM()` function but the route handler is theirs.
 - Storage code — that's `impl-storage`.
 - Any UI.
@@ -67,14 +67,16 @@ satisfies it. The reviewer will catch you if it doesn't.
 ```ts
 // lib/llm/types.ts
 declare const SystemPromptBrand: unique symbol;
-declare const AppIntentBrand:    unique symbol;
-declare const MCPDataBrand:      unique symbol;
-declare const UserInputBrand:    unique symbol;
+declare const AppIntentBrand: unique symbol;
+declare const MCPDataBrand: unique symbol;
+declare const UserInputBrand: unique symbol;
 
-export type SystemPrompt = string  & { readonly [SystemPromptBrand]: true };
-export type AppIntent    = string  & { readonly [AppIntentBrand]:    true };
-export type MCPData      = { readonly value: Record<string, unknown> } & { readonly [MCPDataBrand]: true };
-export type UserInput    = string  & { readonly [UserInputBrand]:    true };
+export type SystemPrompt = string & { readonly [SystemPromptBrand]: true };
+export type AppIntent = string & { readonly [AppIntentBrand]: true };
+export type MCPData = { readonly value: Record<string, unknown> } & {
+  readonly [MCPDataBrand]: true;
+};
+export type UserInput = string & { readonly [UserInputBrand]: true };
 
 export function SystemPrompt(value: string): SystemPrompt {
   if (value.length === 0) throw new Error("SystemPrompt may not be empty");
@@ -220,7 +222,7 @@ and nothing else from `lib/llm/client.ts`.
 
 ## The System Prompt
 
-`lib/llm/system-prompts/parent.md` is a *static markdown file*. It is
+`lib/llm/system-prompts/parent.md` is a _static markdown file_. It is
 loaded once at process start (or on each request, in dev). It contains:
 
 - The model's role ("You are the AI Front Desk for a daycare.")

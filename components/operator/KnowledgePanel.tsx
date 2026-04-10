@@ -96,10 +96,7 @@ const CATEGORY_COLORS: Record<string, string> = {
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
 export default function KnowledgePanel() {
-  const { data, error, isLoading, mutate } = useSWR<HandbookResponse>(
-    "/api/handbook",
-    fetcher,
-  );
+  const { data, error, isLoading, mutate } = useSWR<HandbookResponse>("/api/handbook", fetcher);
   const [editing, setEditing] = useState<string | null>(null);
   const [editText, setEditText] = useState("");
   const [activeCategory, setActiveCategory] = useState("all");
@@ -145,9 +142,7 @@ export default function KnowledgePanel() {
 
   const categories = [...new Set(items.map((i) => i.category))].sort();
   const filtered =
-    activeCategory === "all"
-      ? items
-      : items.filter((i) => i.category === activeCategory);
+    activeCategory === "all" ? items : items.filter((i) => i.category === activeCategory);
 
   const startEdit = (item: DisplayItem) => {
     setEditing(item.id);
@@ -175,13 +170,10 @@ export default function KnowledgePanel() {
   return (
     <div>
       <div className="bg-[#5B4FCF]/5 border border-[#5B4FCF]/10 rounded-2xl p-4 mb-5">
-        <p className="text-sm font-semibold text-[#5B4FCF] mb-0.5">
-          Knowledge Base
-        </p>
+        <p className="text-sm font-semibold text-[#5B4FCF] mb-0.5">Knowledge Base</p>
         <p className="text-xs text-gray-500 leading-relaxed">
-          {data.document.metadata.title} (v{data.document.metadata.version}) —{" "}
-          {entries.length} handbook entries, {overrides.length} operator
-          overrides.
+          {data.document.metadata.title} (v{data.document.metadata.version}) — {entries.length}{" "}
+          handbook entries, {overrides.length} operator overrides.
         </p>
       </div>
 
@@ -209,8 +201,7 @@ export default function KnowledgePanel() {
           const Icon = ICON_MAP[item.category] || Clock;
           const isEditing = editing === item.id;
           const colorClass =
-            CATEGORY_COLORS[item.category] ||
-            "bg-gray-50 text-gray-500 border-gray-100";
+            CATEGORY_COLORS[item.category] || "bg-gray-50 text-gray-500 border-gray-100";
 
           return (
             <div
@@ -241,9 +232,7 @@ export default function KnowledgePanel() {
                             </span>
                           )}
                         </div>
-                        <p className="text-sm font-bold text-gray-800 leading-snug">
-                          {item.title}
-                        </p>
+                        <p className="text-sm font-bold text-gray-800 leading-snug">{item.title}</p>
                       </div>
                       {!isEditing && item.layer === "override" && (
                         <button
@@ -271,8 +260,7 @@ export default function KnowledgePanel() {
                               disabled={saving}
                               className="flex items-center gap-1.5 px-3 py-1.5 bg-[#5B4FCF] text-white text-xs font-semibold rounded-lg hover:bg-[#4A3FB8] transition-colors disabled:opacity-50"
                             >
-                              <Check className="w-3 h-3" />{" "}
-                              {saving ? "Saving..." : "Save changes"}
+                              <Check className="w-3 h-3" /> {saving ? "Saving..." : "Save changes"}
                             </button>
                             <button
                               onClick={() => setEditing(null)}

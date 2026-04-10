@@ -9,21 +9,13 @@ import TypingIndicator from "@/components/chat/TypingIndicator";
 import SuggestedQuestions from "@/components/chat/SuggestedQuestions";
 import { SUGGESTED_QUESTIONS } from "@/data/aiResponses";
 import { CENTER } from "@/data/centerData";
+import { AnswerContractSchema, type AnswerContract } from "@/lib/llm/contract";
 
 const GREETING: ChatMessageData = {
   role: "assistant",
   text: `Hi there! \ud83d\udc4b I'm the Sunshine Academy front desk assistant.\n\nI can answer questions about our hours, tuition, health policies, meals, enrollment, and more \u2014 instantly, any time of day.\n\nWhat can I help you with?`,
   type: "answer",
 };
-
-interface AnswerContract {
-  answer: string;
-  confidence: "high" | "low";
-  cited_entries: string[];
-  directly_addressed_by?: string[];
-  escalate: boolean;
-  escalation_reason?: string;
-}
 
 function contractToMessage(contract: AnswerContract): ChatMessageData {
   if (contract.escalate) {
@@ -69,10 +61,7 @@ export function ParentChat() {
     if (!query) return;
     setInput("");
     setShowSuggestions(false);
-    setMessages((prev) => [
-      ...prev,
-      { role: "user", text: query, initials: "P" },
-    ]);
+    setMessages((prev) => [...prev, { role: "user", text: query, initials: "P" }]);
     setIsTyping(true);
 
     try {
@@ -95,9 +84,21 @@ export function ParentChat() {
         return;
       }
 
-      const contract = (await res.json()) as AnswerContract;
+      const raw: unknown = await res.json();
+      const parsed = AnswerContractSchema.safeParse(raw);
       setIsTyping(false);
-      setMessages((prev) => [...prev, contractToMessage(contract)]);
+      if (!parsed.success) {
+        setMessages((prev) => [
+          ...prev,
+          {
+            role: "assistant",
+            text: "I'm having trouble processing that response. Please try again, or call us directly at (505) 867-5309.",
+            type: "escalated",
+          },
+        ]);
+        return;
+      }
+      setMessages((prev) => [...prev, contractToMessage(parsed.data)]);
     } catch {
       setIsTyping(false);
       setMessages((prev) => [
@@ -136,9 +137,7 @@ export function ParentChat() {
                   <p className="text-white/70 text-[10px] font-medium tracking-wide uppercase">
                     brightdesk
                   </p>
-                  <h1 className="text-white font-bold text-sm leading-tight">
-                    {CENTER.name}
-                  </h1>
+                  <h1 className="text-white font-bold text-sm leading-tight">{CENTER.name}</h1>
                 </div>
               </div>
               <a
@@ -155,16 +154,12 @@ export function ParentChat() {
               </div>
               <div>
                 <div className="flex items-center gap-2 mb-1">
-                  <p className="text-white font-semibold text-sm">
-                    AI Front Desk
-                  </p>
+                  <p className="text-white font-semibold text-sm">AI Front Desk</p>
                   <span className="bg-emerald-400 text-white text-[10px] font-semibold px-2 py-0.5 rounded-full">
                     ● Live
                   </span>
                 </div>
-                <p className="text-white/70 text-xs">
-                  Always available · Instant answers
-                </p>
+                <p className="text-white/70 text-xs">Always available · Instant answers</p>
               </div>
             </div>
           </div>
@@ -175,9 +170,7 @@ export function ParentChat() {
           {messages.map((msg, i) => (
             <ChatMessage key={i} message={msg} />
           ))}
-          <AnimatePresence>
-            {isTyping && <TypingIndicator />}
-          </AnimatePresence>
+          <AnimatePresence>{isTyping && <TypingIndicator />}</AnimatePresence>
           <div ref={bottomRef} />
         </div>
 
@@ -190,10 +183,7 @@ export function ParentChat() {
               exit={{ opacity: 0, height: 0 }}
               className="flex-shrink-0 px-4 pb-3"
             >
-              <SuggestedQuestions
-                questions={SUGGESTED_QUESTIONS}
-                onSelect={sendMessage}
-              />
+              <SuggestedQuestions questions={SUGGESTED_QUESTIONS} onSelect={sendMessage} />
             </motion.div>
           )}
         </AnimatePresence>
@@ -222,9 +212,7 @@ export function ParentChat() {
             </button>
           </div>
           <div className="flex items-center justify-between mt-2 px-1">
-            <p className="text-[10px] text-gray-400">
-              Powered by BrightDesk AI
-            </p>
+            <p className="text-[10px] text-gray-400">Powered by BrightDesk AI</p>
             <Link
               href="/admin"
               className="text-[10px] text-gray-400 hover:text-[#5B4FCF] flex items-center gap-0.5 transition-colors"
