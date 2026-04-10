@@ -154,17 +154,19 @@ export default function KnowledgePanel() {
     if (item.layer !== "override") return;
     setSaving(true);
     try {
-      await fetch(`/api/overrides/${item.id}`, {
+      const res = await fetch(`/api/overrides/${item.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ body: editText }),
       });
+      if (!res.ok) throw new Error(`Save failed (HTTP ${res.status})`);
       await mutate();
+      setEditing(null);
     } catch (err) {
       console.error("Failed to save override:", err);
+      alert(err instanceof Error ? err.message : "Failed to save. Please try again.");
     } finally {
       setSaving(false);
-      setEditing(null);
     }
   };
 
@@ -173,8 +175,10 @@ export default function KnowledgePanel() {
       <div className="bg-[#5B4FCF]/5 border border-[#5B4FCF]/10 rounded-2xl p-4 mb-5">
         <p className="text-sm font-semibold text-[#5B4FCF] mb-0.5">Knowledge Base</p>
         <p className="text-xs text-gray-500 leading-relaxed">
-          {data.document.metadata.title} (v{data.document.metadata.version}) — {entries.length}{" "}
-          handbook entries, {overrides.length} operator overrides.
+          {entries.length} entries from the {data.document.metadata.title}
+          {overrides.length > 0 &&
+            `, plus ${overrides.length} staff answer${overrides.length !== 1 ? "s" : ""}`}
+          . Your staff answers appear first — they take priority over the original handbook.
         </p>
       </div>
 
@@ -350,7 +354,7 @@ function AddOverrideForm() {
         className="w-full mt-3 border-2 border-dashed border-gray-200 hover:border-[#5B4FCF] rounded-2xl py-4 flex items-center justify-center gap-2 text-gray-400 hover:text-[#5B4FCF] transition-all text-sm font-semibold group"
       >
         <Plus className="w-4 h-4 group-hover:scale-110 transition-transform" />
-        Add override
+        Add a staff answer
       </button>
     );
   }
@@ -358,7 +362,7 @@ function AddOverrideForm() {
   return (
     <div className="mt-3 space-y-2 border-2 border-[#5B4FCF]/20 rounded-2xl p-4 bg-[#5B4FCF]/5">
       <div className="flex items-center justify-between">
-        <p className="text-sm font-semibold text-[#5B4FCF]">New override</p>
+        <p className="text-sm font-semibold text-[#5B4FCF]">New staff answer</p>
         <button onClick={() => setOpen(false)} className="text-gray-400 hover:text-gray-600">
           <X className="w-4 h-4" />
         </button>

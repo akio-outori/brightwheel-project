@@ -18,14 +18,16 @@ import {
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const CreateRequestSchema = z.object({
-  title: z.string().min(1).max(200),
-  category: HandbookCategorySchema,
-  body: z.string().min(1).max(20_000),
-  sourcePages: z.array(z.number().int().nonnegative()).default([]),
-  replacesEntryId: z.string().min(1).max(120).nullable().default(null),
-  createdBy: z.string().min(1).max(200).nullable().default(null),
-});
+const CreateRequestSchema = z
+  .object({
+    title: z.string().min(1).max(200),
+    category: HandbookCategorySchema,
+    body: z.string().min(1).max(20_000),
+    sourcePages: z.array(z.number().int().nonnegative()).default([]),
+    replacesEntryId: z.string().min(1).max(120).nullable().default(null),
+    createdBy: z.string().min(1).max(200).nullable().default(null),
+  })
+  .strict();
 
 export async function GET(): Promise<Response> {
   try {

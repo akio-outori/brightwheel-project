@@ -33,9 +33,22 @@ export function buildStockResponse(holdReason: HoldReason): AnswerContract {
  *  Returns the raw HoldReason if the prefix is present, otherwise
  *  null. The operator UI uses this to decide whether to render a
  *  hold-reason badge vs a model-self-escalation reason. */
+const VALID_HOLD_REASONS: ReadonlySet<string> = new Set<HoldReason>([
+  "hallucinated_citation",
+  "model_self_escalated",
+  "no_direct_coverage",
+  "lexical_unsupported",
+  "fabricated_numeric",
+  "fabricated_entity",
+  "medical_instruction",
+  "specific_child_question",
+]);
+
 export function parseHoldReason(escalationReason: string | undefined): HoldReason | null {
   if (!escalationReason) return null;
   const prefix = "held_for_review:";
   if (!escalationReason.startsWith(prefix)) return null;
-  return escalationReason.slice(prefix.length) as HoldReason;
+  const candidate = escalationReason.slice(prefix.length);
+  if (!VALID_HOLD_REASONS.has(candidate)) return null;
+  return candidate as HoldReason;
 }

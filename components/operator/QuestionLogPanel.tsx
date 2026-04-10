@@ -47,11 +47,23 @@ function ConfidenceBadge({ confidence }: { confidence: "high" | "low" }) {
   );
 }
 
-/** Format a raw escalation_reason from the backend for display.
- *  Strips the `held_for_review:` prefix and humanizes underscores. */
+/** Map internal hold reasons to operator-friendly language. */
+const HOLD_REASON_LABELS: Record<string, string> = {
+  hallucinated_citation: "Cited a source that doesn't exist",
+  model_self_escalated: "The assistant wasn't sure",
+  no_direct_coverage: "We don't have an answer for this yet",
+  lexical_unsupported: "Answer doesn't match our records",
+  fabricated_numeric: "Contains a number we can't verify",
+  fabricated_entity: "Mentions a name we can't verify",
+  medical_instruction: "Contains medical advice that needs staff review",
+  specific_child_question: "About a specific child — needs a person",
+  low_confidence: "The assistant wasn't sure enough to answer",
+};
+
 function formatHoldReason(reason: string | undefined): string | null {
   if (!reason) return null;
-  return reason.replace("held_for_review:", "").replace(/_/g, " ");
+  const key = reason.replace("held_for_review:", "");
+  return HOLD_REASON_LABELS[key] ?? key.replace(/_/g, " ");
 }
 
 export default function QuestionLogPanel() {
@@ -92,14 +104,17 @@ export default function QuestionLogPanel() {
               {escalatedCount} question{escalatedCount !== 1 ? "s" : ""} need your attention
             </p>
             <p className="text-xs text-amber-600 mt-0.5">
-              The AI wasn&apos;t confident enough to answer these — a staff response is needed.
+              A parent asked something we don&apos;t have an answer for yet. Your response closes
+              the loop.
             </p>
           </div>
         </div>
       )}
 
       {events.length === 0 && (
-        <div className="text-center py-12 text-sm text-gray-400">No questions to show.</div>
+        <div className="text-center py-12 text-sm text-gray-400">
+          All caught up — no parent questions waiting.
+        </div>
       )}
 
       {/* Question cards */}
