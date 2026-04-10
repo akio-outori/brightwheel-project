@@ -3,10 +3,9 @@
 // distinct from asking a general informational question about
 // program policy.
 //
-// Architecture borrowed from agent-dmz/internal/classify/*.go:
-// compiled regex patterns grouped by threat category, each with a
-// documented purpose, running in short-circuit order. The first
-// match wins.
+// Architecture: compiled regex patterns grouped by threat category,
+// each with a documented purpose, running in short-circuit order.
+// The first match wins.
 //
 // Design principle: the patterns fire on the QUESTION (pre-response),
 // not on the model's draft. This saves the LLM call entirely for

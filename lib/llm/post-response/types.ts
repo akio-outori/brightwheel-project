@@ -3,12 +3,9 @@
 // draft is safe to return to the parent. It is entirely deterministic
 // — every channel is plain TypeScript, no model calls, no network.
 //
-// Architecture borrowed from two places:
-//   - go-mcp-sdk/sdk/grounding/* — stacked channels (lexical, numeric,
-//     proximity) that each compute evidence for whether an LLM output
-//     is grounded in provided source material.
-//   - agent-dmz/internal/classify/pipeline.go — short-circuit classifier
-//     pipeline that stops at the first channel to raise a verdict.
+// Architecture: stacked deterministic channels that each compute
+// evidence for whether an LLM output is grounded in provided source
+// material, running in short-circuit order (first hold wins).
 //
 // The pipeline itself is dumb: it runs channels in order, returns the
 // first hold, or passes if everything is clean. Per-channel logic
