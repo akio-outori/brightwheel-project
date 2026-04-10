@@ -125,7 +125,12 @@ describe("stock response helpers", () => {
 
   it("parses the held_for_review: prefix back out of an escalation_reason", () => {
     expect(parseHoldReason("held_for_review:lexical_unsupported")).toBe("lexical_unsupported");
+    expect(parseHoldReason("held_for_review:specific_child_question")).toBe(
+      "specific_child_question",
+    );
     expect(parseHoldReason("sensitive_topic")).toBeNull();
     expect(parseHoldReason(undefined)).toBeNull();
+    // Invalid hold reason after prefix → null (validated against union)
+    expect(parseHoldReason("held_for_review:made_up_reason")).toBeNull();
   });
 });

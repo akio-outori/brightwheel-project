@@ -153,6 +153,24 @@ describe("POST /api/ask", () => {
     expect(data.escalation_reason).toContain("model_self_escalated");
   });
 
+  it("forces escalate=true when model returns low confidence without escalating", async () => {
+    vi.mocked(askLLM).mockResolvedValueOnce({
+      answer: "I think maybe the hours are 7 to 6 but I'm not sure.",
+      confidence: "low",
+      cited_entries: ["hours"],
+      directly_addressed_by: ["hours"],
+      escalate: false,
+      escalation_reason: undefined,
+    });
+    const res = await POST(makeRequest({ question: "What are the program hours?" }));
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    // API boundary enforces: low confidence = always escalate
+    expect(data.escalate).toBe(true);
+    expect(data.escalation_reason).toBe("low_confidence");
+    expect(logNeedsAttention).toHaveBeenCalled();
+  });
+
   it("returns 500 on LLM failure", async () => {
     vi.mocked(askLLM).mockRejectedValueOnce(new Error("API timeout"));
     const res = await POST(makeRequest({ question: "What are the program hours?" }));
