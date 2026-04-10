@@ -27,6 +27,7 @@ import {
   listHandbookEntries,
   listOperatorOverrides,
 } from "../storage";
+import { EVENTS_BUCKET, getClient } from "../storage/client";
 import type {
   DocumentMetadata,
   HandbookEntry,
@@ -136,9 +137,36 @@ async function cleanupTestOverrides(): Promise<void> {
       );
     }
   } catch (err) {
-    // Cleanup failures shouldn't fail the suite — log and move on.
     // eslint-disable-next-line no-console
     console.warn("[integration] override cleanup failed:", err);
+  }
+}
+
+/**
+ * Sweep ALL needs-attention events from the events bucket. Integration
+ * runs write dozens of events per run; without cleanup the bucket
+ * exceeds the MinIO SDK's XML parser entity limit (~1000 objects)
+ * and the listObjectsV2 call crashes. This runs at suite end.
+ */
+async function cleanupAllEvents(): Promise<void> {
+  try {
+    const client = getClient();
+    const bucket = EVENTS_BUCKET();
+    const keys: string[] = [];
+    const stream = client.listObjectsV2(bucket, "needs-attention/", true);
+    for await (const obj of stream) {
+      if (obj.name) keys.push(obj.name);
+    }
+    if (keys.length > 0) {
+      await client.removeObjects(bucket, keys);
+      // eslint-disable-next-line no-console
+      console.log(
+        `[integration] cleaned up ${keys.length} needs-attention event(s)`,
+      );
+    }
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.warn("[integration] events cleanup failed:", err);
   }
 }
 
@@ -336,6 +364,7 @@ export function setupIntegrationTest(): void {
 
   afterAll(async () => {
     await cleanupTestOverrides();
+    await cleanupAllEvents();
     __resetDocumentCache();
   });
 }

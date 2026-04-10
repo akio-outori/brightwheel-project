@@ -26,6 +26,7 @@ const HOLD_REASON_LABELS: Record<HoldReason, { label: string; tone: BadgeTone }>
   fabricated_numeric: { label: "Fabricated number", tone: "red" },
   fabricated_entity: { label: "Fabricated entity", tone: "red" },
   medical_instruction: { label: "Medical instruction", tone: "red" },
+  specific_child_question: { label: "Specific child", tone: "red" },
 };
 
 type BadgeTone = "red" | "amber" | "slate";

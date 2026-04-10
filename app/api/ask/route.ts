@@ -34,6 +34,7 @@ import {
   type AnswerContract,
 } from "@/lib/llm";
 import { getActiveAgentConfig } from "@/lib/llm/config";
+import { classifySpecificChild } from "@/lib/llm/preflight";
 import {
   buildStockResponse,
   runPostResponsePipeline,
@@ -94,7 +95,34 @@ export async function POST(req: Request): Promise<Response> {
       listOperatorOverrides(docId),
     ]);
 
-    // 3. Build MCPData and call the LLM.
+    // 3. Preflight: specific-child classifier. If the parent's
+    // question is clearly about an individual child's health or
+    // safety situation (possessive + family noun, proper name near
+    // health words, third-person pronouns in medical context), hold
+    // immediately — don't spend an LLM call generating a draft that
+    // the post-response pipeline would catch anyway. The parent
+    // gets the stock "a staff member is reviewing this" response.
+    const preflight = classifySpecificChild(question);
+    if (preflight.verdict === "hold") {
+      const stockResponse = buildStockResponse(preflight.reason);
+      await logNeedsAttention({
+        docId,
+        question,
+        result: {
+          answer: "",
+          confidence: "low",
+          cited_entries: [],
+          escalate: true,
+          escalation_reason: `held_for_review:${preflight.reason}`,
+        },
+      });
+      console.log(
+        `[/api/ask] preflight hold (${preflight.reason}): ${preflight.detail ?? "(no detail)"}`,
+      );
+      return Response.json(stockResponse);
+    }
+
+    // 4. Build MCPData and call the LLM.
     const cfg = await getActiveAgentConfig();
     const systemPromptText = cfg.systemPrompt;
     const mcpData = MCPData({

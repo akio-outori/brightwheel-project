@@ -59,7 +59,8 @@ export type HoldReason =
   | "lexical_unsupported"
   | "fabricated_numeric"
   | "fabricated_entity"
-  | "medical_instruction";
+  | "medical_instruction"
+  | "specific_child_question";
 
 /** A channel is a pure function from input to verdict. No I/O, no
  *  async, no state. Enforced by the signature — this is a deliberate
