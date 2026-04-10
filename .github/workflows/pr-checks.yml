@@ -137,6 +137,12 @@ jobs:
   codeql:
     name: CodeQL static analysis
     runs-on: ubuntu-latest
+    # CodeQL requires GitHub Advanced Security enabled on the repo.
+    # For private repos on free/team plans this may not be available.
+    # The job is non-blocking so the PR isn't held up by a feature
+    # that needs manual enablement; once Advanced Security is turned
+    # on, remove continue-on-error to make it a hard gate.
+    continue-on-error: true
     permissions:
       contents: read
       security-events: write
