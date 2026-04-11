@@ -161,9 +161,23 @@ export default function OperatorDashboard() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Top nav */}
-      <div className="bg-[#5B4FCF] px-5 pt-10 pb-5 relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-64 h-64 rounded-full bg-white/5 -translate-y-24 translate-x-24" />
+      {/*
+        Top nav.
+        NOTE on overflow: the purple header used to have
+        `overflow-hidden` so the decorative circle in the
+        corner didn't bleed outside its bounds. But that also
+        clipped the bell / settings dropdowns, which need to
+        extend downward *past* the header into the content
+        area. Fix: the header itself no longer clips, and the
+        decorative circle lives in a dedicated absolutely-
+        positioned clipping container that sits behind the
+        content. `pointer-events-none` keeps it from eating
+        clicks meant for the buttons above.
+      */}
+      <div className="bg-[#5B4FCF] px-5 pt-10 pb-5 relative">
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <div className="absolute top-0 right-0 w-64 h-64 rounded-full bg-white/5 -translate-y-24 translate-x-24" />
+        </div>
         <div className="relative z-10 max-w-2xl mx-auto">
           <div className="flex items-center justify-between mb-6">
             {/* Brand / staff settings menu */}
@@ -189,7 +203,7 @@ export default function OperatorDashboard() {
                 </div>
               </button>
               {settingsOpen && (
-                <div className="absolute left-0 mt-2 w-64 bg-white rounded-2xl shadow-xl ring-1 ring-black/5 overflow-hidden z-20">
+                <div className="absolute left-0 mt-2 w-64 bg-white rounded-2xl shadow-xl ring-1 ring-black/5 overflow-hidden z-40">
                   <div className="px-4 py-3 border-b border-gray-100 flex items-center gap-3">
                     <div className="w-10 h-10 rounded-full bg-[#5B4FCF] text-white flex items-center justify-center font-semibold text-sm">
                       {CURRENT_STAFF.initials}
@@ -255,7 +269,7 @@ export default function OperatorDashboard() {
                   )}
                 </button>
                 {bellOpen && (
-                  <div className="absolute right-0 mt-2 w-80 bg-white rounded-2xl shadow-xl ring-1 ring-black/5 overflow-hidden z-20">
+                  <div className="absolute right-0 mt-2 w-80 bg-white rounded-2xl shadow-xl ring-1 ring-black/5 overflow-hidden z-40">
                     <div className="px-4 py-3 border-b border-gray-100">
                       <p className="text-sm font-semibold text-gray-900">
                         {unresolved.length === 0
@@ -268,7 +282,13 @@ export default function OperatorDashboard() {
                           : "Click one to jump in."}
                       </p>
                     </div>
-                    <div className="max-h-80 overflow-y-auto">
+                    {/* No internal scroll — the dropdown sizes to its
+                        content so everything is visible at once. If
+                        the queue grows unreasonably long in practice
+                        we can add a virtualized list, but the whole
+                        point of the dashboard is that this queue is
+                        short. */}
+                    <div>
                       {unresolved.length === 0 ? (
                         <div className="px-4 py-6 text-center text-xs text-gray-400">
                           Nothing to review.
