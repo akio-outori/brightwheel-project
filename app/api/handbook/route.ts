@@ -6,6 +6,7 @@
 // surface and the operator console's "current document" view in a
 // single round trip: metadata, seed entries, and overrides.
 
+import { ensureStorageReady } from "@/lib/storage/init";
 import {
   getActiveDocumentId,
   getDocumentMetadata,
@@ -19,6 +20,7 @@ export const dynamic = "force-dynamic";
 
 export async function GET(): Promise<Response> {
   try {
+    await ensureStorageReady();
     const docId = getActiveDocumentId();
     const [metadata, entries, overrides] = await Promise.all([
       getDocumentMetadata(docId),

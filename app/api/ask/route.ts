@@ -40,6 +40,7 @@ import {
   runPostResponsePipeline,
   type GroundingSource,
 } from "@/lib/llm/post-response";
+import { ensureStorageReady } from "@/lib/storage/init";
 import {
   getActiveDocumentId,
   getDocumentMetadata,
@@ -84,7 +85,10 @@ export async function POST(req: Request): Promise<Response> {
   const { question } = parsed.data;
 
   try {
-    // 2. Resolve the active document and load both layers.
+    // 2. Ensure storage is initialized (buckets + seed).
+    await ensureStorageReady();
+
+    // 3. Resolve the active document and load both layers.
     const docId = getActiveDocumentId();
     const [metadata, entries, overrides] = await Promise.all([
       getDocumentMetadata(docId),

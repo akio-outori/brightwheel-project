@@ -3,6 +3,10 @@
 
 import { describe, expect, it, vi } from "vitest";
 
+vi.mock("@/lib/storage/init", () => ({
+  ensureStorageReady: vi.fn().mockResolvedValue(undefined),
+}));
+
 vi.mock("@/lib/storage", () => ({
   getActiveDocumentId: () => "test-doc",
   getDocumentMetadata: vi.fn().mockResolvedValue({

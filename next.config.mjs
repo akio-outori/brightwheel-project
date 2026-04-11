@@ -9,7 +9,8 @@ const nextConfig = {
   // detect from imports, so plain readFile targets get dropped.
   // Pin them explicitly so they make it into .next/standalone/config.
   outputFileTracingIncludes: {
-    "/api/ask": ["./config/**/*"],
+    "/api/ask": ["./config/**/*", "./data/**/*"],
+    "/api/handbook": ["./data/**/*"],
     "/": ["./config/**/*"],
   },
 };
