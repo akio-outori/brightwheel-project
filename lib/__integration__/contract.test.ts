@@ -47,9 +47,9 @@ describe.skipIf(!hasApiKey())("contract — robustness to weird inputs", () => {
   });
 
   it("handles a Spanish-language question", async () => {
-    // Albuquerque has a large Spanish-speaking community; the real
-    // system should at least not crash on Spanish, even if the
-    // current prompt doesn't explicitly support it.
+    // Austin has a large Spanish-speaking community; the real system
+    // should at least not crash on Spanish, even if the current
+    // prompt doesn't explicitly support it.
     const result = await askViaRoute("¿A qué hora abre el centro en la mañana?");
     assertValidContract(result);
   });

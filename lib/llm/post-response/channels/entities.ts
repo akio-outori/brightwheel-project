@@ -73,11 +73,11 @@ const CAPITALIZATION_ALLOWLIST: ReadonlySet<string> = new Set([
 const MIN_SINGLE_WORD_LEN = 5;
 
 /** Strip a leading sentence-initial or allowlisted first word from
- *  a multi-word match. "Contact Director Maria" at sentence start
- *  becomes "Director Maria"; "The DCFD Main Office" becomes "DCFD
- *  Main Office". Applied only to the first word because subsequent
- *  words can legitimately be proper nouns even if they also match
- *  common English words. */
+ *  a multi-word match. "Contact Director Maya" at sentence start
+ *  becomes "Director Maya"; "The Sunflower Family App" becomes
+ *  "Sunflower Family App". Applied only to the first word because
+ *  subsequent words can legitimately be proper nouns even if they
+ *  also match common English words. */
 function trimSentenceInitialFirstWord(
   match: string,
   matchStartIndex: number,
@@ -109,8 +109,8 @@ export function extractEntities(text: string): string[] {
 
   // Multi-word capitalized sequences. Each "word" is either a
   // Titlecase word (`Director`, `Office`), an all-caps acronym
-  // (`DCFD`, `IEP`, `NAEYC`), or a hyphenated compound like
-  // `Pre-K` or `Mother-in-Law`. Lowercase connective words like
+  // (`IEP`, `ASQ`, `EpiPen`), or a hyphenated compound like
+  // `Pre-K` or `Reggio-Emilia`. Lowercase connective words like
   // "of", "and", "the" are allowed between capitalized words.
   const capitalizedWord = "(?:[A-Z][a-z]*(?:-[A-Z][a-z]*)*|[A-Z]{2,}(?:-[A-Z][a-z]*)*)";
   const connective = "(?:of|and|the|at|for|in|on|de|la|el)";

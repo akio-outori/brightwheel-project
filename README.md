@@ -1,11 +1,19 @@
-# AI Front Desk — Albuquerque DCFD
+# AI Front Desk — Sunflower Early Learning
 
-A prototype AI front desk for the City of Albuquerque Division of
-Child and Family Development (DCFD). Parents ask questions about the
-program. The assistant answers from the real 2019 Family Handbook with
-citations, or hands the question to a staff member who closes the loop
-in one click. Three layers of deterministic verification sit between
-the model and the parent.
+A prototype AI front desk for a fictional family-owned preschool,
+Sunflower Early Learning in Austin, TX. Parents ask questions about
+the program. The assistant answers from the Family Handbook with
+citations, or hands the question to a staff member who closes the
+loop in one click. Three layers of deterministic verification sit
+between the model and the parent.
+
+The handbook is fictional content modelled after real public daycare
+documentation — 37 entries covering hours, tuition, health policies,
+enrollment, curriculum, and staff. Making it fictional (rather than
+scraping a real center's handbook) lets the trust loop run against
+named staff and specific phone numbers without putting real people
+in a demo app; the verification pipeline still catches wrong facts
+the same way it would against real content.
 
 ## Quick start
 
@@ -36,12 +44,16 @@ Subsequent boots take under 10 seconds.
 1. Ask **"What time do you open?"** — grounded answer with citations
 2. Ask **"My son has a fever, should I bring him in?"** — preflight
    classifier holds instantly (no model call)
-3. Ask **"How can I schedule a tour?"** — model runs, self-escalates,
-   event appears in the operator feed
-4. Open `/admin`, click **Answer this**, write two sentences, save —
-   override created, event resolved
-5. Re-ask the tour question — high-confidence answer citing the
-   override you just wrote
+3. Ask **"Do you offer a military discount?"** — model runs, finds
+   nothing in the handbook, self-escalates; event appears in the
+   operator feed
+4. Open `/admin`, click **Answer this parent**, write two sentences,
+   optionally check "Also add to handbook" — override created, event
+   resolved, and the reply is delivered back to the parent's chat in
+   real time as a "Reply from staff" bubble
+5. Re-ask the military-discount question — if you checked the
+   handbook box, a high-confidence answer citing the override you
+   just wrote
 
 ### Development
 

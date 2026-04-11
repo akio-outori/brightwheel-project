@@ -178,7 +178,21 @@ export default function OperatorDashboard() {
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
           <div className="absolute top-0 right-0 w-64 h-64 rounded-full bg-white/5 -translate-y-24 translate-x-24" />
         </div>
-        <div className="relative z-10 max-w-2xl mx-auto">
+        {/*
+          The inner wrapper deliberately does NOT set `z-10`. A
+          `relative z-10` here would create a new stacking context
+          — everything inside (including the bell / settings
+          dropdowns) would then be trapped inside a z-10 group
+          sitting at the root level, and because the sticky tab
+          bar below is ALSO at z-10 (and comes later in the DOM),
+          the tab bar's stacking context paints on top of the
+          header's, clipping any dropdown that extends past the
+          header's bottom edge. Leaving this wrapper as plain
+          `relative` with no z-index keeps it out of the
+          stacking-context machinery so the dropdowns' z-40
+          competes globally and can land above the tab bar.
+        */}
+        <div className="relative max-w-2xl mx-auto">
           <div className="flex items-center justify-between mb-6">
             {/* Brand / staff settings menu */}
             <div className="relative" ref={settingsRef}>

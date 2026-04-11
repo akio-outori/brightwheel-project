@@ -8,10 +8,11 @@ import { z } from "zod";
 // Documents
 // ---------------------------------------------------------------------------
 
-// A document is a single source handbook. Today there is one document
-// (the DCFD Family Handbook) and every session loads it. The `docId`
-// is the seam where future session-backed document selection will
-// live; for now it is a constant returned by getActiveDocumentId().
+// A document is a single source handbook. Today there is one
+// document (the Sunflower Early Learning Family Handbook) and every
+// session loads it. The `docId` is the seam where future
+// session-backed document selection will live; for now it is a
+// constant returned by getActiveDocumentId().
 //
 // The metadata object is written once by the init script and read
 // on every request by the ask route and the operator console. It

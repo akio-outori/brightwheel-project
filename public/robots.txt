@@ -1,0 +1,6 @@
+# This is a prototype deployed to a public Railway URL for
+# demo purposes only. Not intended to be indexed by search
+# engines. The same intent is reinforced via a `noindex` meta
+# tag in app/layout.tsx for crawlers that ignore robots.txt.
+User-agent: *
+Disallow: /

@@ -24,72 +24,52 @@ describe.skipIf(!hasApiKey())("grounding — literal fact recall", () => {
 
   // ----- Phone numbers ------------------------------------------------------
 
-  it("recalls the main DCFD office phone number", async () => {
-    const result = await askViaRoute("What's the phone number for the DCFD main office?");
+  it("recalls the main Sunflower office phone number", async () => {
+    const result = await askViaRoute("What's the phone number for the main office?");
     await expectHighConfidence(result, "main-office-phone");
-    expectAnswerContains(result, "505-767-6500");
-  });
-
-  it("recalls the Preschool/Pre-K enrollment specialist phone", async () => {
-    const result = await askViaRoute("Who should I call to enroll my child in Preschool or Pre-K?");
-    await expectHighConfidence(result, "preschool-enrollment-phone");
-    // The specialist phones are written as bare 7-digit extensions
-    // in the seed entry body (`767-6504`), not fully qualified with
-    // the area code. The model faithfully reproduces that form,
-    // which is the desired grounded behavior — accept either.
-    expectAnswerContains(result, "767-6504");
-  });
-
-  it("recalls the Early Head Start enrollment phone", async () => {
-    const result = await askViaRoute("Who handles Early Head Start enrollment?");
-    await expectHighConfidence(result, "ehs-enrollment-phone");
-    expectAnswerContains(result, "767-6512");
+    expectAnswerContains(result, "(512) 555-0142");
   });
 
   // ----- Dollar amounts -----------------------------------------------------
 
-  it("recalls the $15 late fee", async () => {
+  it("recalls the $1 per minute late pickup fee", async () => {
     const result = await askViaRoute("What happens if I'm late picking up my child?");
     await expectHighConfidence(result, "late-fee");
-    expectAnswerContains(result, "$15");
+    expectAnswerContains(result, "$1");
+  });
+
+  it("recalls the infant monthly tuition", async () => {
+    const result = await askViaRoute("How much is infant tuition?");
+    await expectHighConfidence(result, "tuition-infant");
+    expectAnswerContains(result, "$1,680");
+  });
+
+  it("recalls the preschool monthly tuition", async () => {
+    const result = await askViaRoute("How much is preschool tuition?");
+    await expectHighConfidence(result, "tuition-preschool");
+    expectAnswerContains(result, "$1,380");
+  });
+
+  it("recalls the one-time registration fee", async () => {
+    const result = await askViaRoute("Is there a registration fee?");
+    await expectHighConfidence(result, "registration-fee");
+    expectAnswerContains(result, "$150");
   });
 
   // ----- Staff names --------------------------------------------------------
 
-  it("recalls Lisa Lopez as an enrollment contact", async () => {
-    const result = await askViaRoute(
-      "Who is the enrollment specialist for Preschool and NM Pre-K?",
-    );
-    await expectHighConfidence(result, "lisa-lopez");
-    expectAnswerContains(result, "Lisa Lopez");
-  });
-
-  it("recalls Monica Watrin for EHS intake", async () => {
-    const result = await askViaRoute("Who is the intake specialist for Early Head Start?");
-    await expectHighConfidence(result, "monica-watrin");
-    expectAnswerContains(result, "Monica Watrin");
+  it("recalls Director Maya Okonkwo by name", async () => {
+    const result = await askViaRoute("Who runs Sunflower?");
+    await expectHighConfidence(result, "director-name");
+    expectAnswerContains(result, "Maya Okonkwo");
   });
 
   // ----- Addresses ----------------------------------------------------------
 
-  it("recalls the DCFD main office address", async () => {
-    const result = await askViaRoute("Where is the DCFD main office?");
-    await expectHighConfidence(result, "main-office-address");
-    expectAnswerContains(result, "1820 Randolph");
-  });
-
-  // ----- Center names -------------------------------------------------------
-
-  it("recalls the Alamosa center as a Preschool/Pre-K location", async () => {
-    const result = await askViaRoute("Does the Alamosa center offer Preschool and Pre-K?");
-    await expectHighConfidence(result, "alamosa-center");
-    expectAnswerContains(result, "Alamosa");
-  });
-
-  it("recalls that Los Volcanes has an intergenerational center", async () => {
-    const result = await askViaRoute("Tell me about the Los Volcanes center.");
-    await expectHighConfidence(result, "los-volcanes");
-    expectAnswerContains(result, "Los Volcanes");
+  it("recalls the Sunflower address", async () => {
+    const result = await askViaRoute("Where is Sunflower located?");
+    await expectHighConfidence(result, "address");
+    expectAnswerContains(result, "1420 Willow Creek");
   });
 
   // ----- Policy specifics ---------------------------------------------------
@@ -110,27 +90,28 @@ describe.skipIf(!hasApiKey())("grounding — literal fact recall", () => {
 
   // ----- Program specifics --------------------------------------------------
 
-  it("recalls the 6.5 hours/day attendance expectation", async () => {
-    const result = await askViaRoute("How many hours per day are children expected to attend?");
-    await expectHighConfidence(result, "daily-hours");
-    expectAnswerContains(result, "6.5");
+  it("recalls the infant classroom ratio", async () => {
+    const result = await askViaRoute("What's the teacher-to-child ratio in the infant room?");
+    await expectHighConfidence(result, "ratio-infant");
+    // Sunflower's infant ratio is 1 teacher for every 4 children.
+    expectAnswerContains(result, "4");
   });
 
-  it("recalls NAEYC accreditation", async () => {
-    const result = await askViaRoute("Is your program accredited?");
-    await expectHighConfidence(result, "naeyc");
-    expectAnswerContains(result, "NAEYC");
-  });
-
-  it("recalls the Nurtured Heart discipline approach", async () => {
-    const result = await askViaRoute("What discipline approach do you use in Preschool?");
-    await expectHighConfidence(result, "nurtured-heart");
-    expectAnswerContains(result, "Nurtured Heart");
-  });
-
-  it("recalls the Creative Curriculum framework", async () => {
+  it("recalls the Reggio Emilia curriculum approach", async () => {
     const result = await askViaRoute("What curriculum do you use?");
-    await expectHighConfidence(result, "creative-curriculum");
-    expectAnswerContains(result, "Creative Curriculum");
+    await expectHighConfidence(result, "curriculum");
+    expectAnswerContains(result, "Reggio Emilia");
+  });
+
+  it("recalls the ASQ-3 assessment tool", async () => {
+    const result = await askViaRoute("How do you track my child's development?");
+    await expectHighConfidence(result, "assessment");
+    expectAnswerContains(result, "ASQ");
+  });
+
+  it("recalls the nut-free building policy", async () => {
+    const result = await askViaRoute("Can my child bring peanut butter sandwiches?");
+    await expectHighConfidence(result, "nut-free");
+    expectAnswerContains(result, "nut-free");
   });
 });

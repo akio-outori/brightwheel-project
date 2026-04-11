@@ -5,9 +5,9 @@
 The handbook is split into two layers scoped per document:
 
 - **Entries (seed layer):** Immutable after the init script runs.
-  Extracted from the source document (the 2019 DCFD Family Handbook).
-  73 entries covering enrollment, hours, health policy, fees,
-  curriculum, staff contacts, center locations, and more.
+  Seeded from the Sunflower Early Learning Family Handbook — 37
+  fictional entries covering hours, tuition, enrollment, health
+  policy, meals, curriculum, discipline, communication, and staff.
 
 - **Overrides (operator layer):** Mutable. Created, updated, and
   deleted at runtime by operators through the console or the
@@ -28,7 +28,7 @@ handbook/
       metadata.json              # DocumentMetadata
       entries/{entryId}.json     # HandbookEntry (seed, immutable)
       overrides/{overrideId}.json # OperatorOverride (mutable)
-  .seed-complete-v2              # Sentinel (skip re-seed if present)
+  .seed-complete-v3              # Sentinel (skip re-seed if present)
 
 events/
   needs-attention/
@@ -107,13 +107,13 @@ body of this function; nothing else changes.
 ```json
 {
   "document": {
-    "id": "dcfd-family-handbook",
-    "title": "Albuquerque DCFD Family Handbook",
-    "version": "2019",
-    "source": "dcfd-family-handbook.pdf"
+    "id": "sunflower-handbook",
+    "title": "Sunflower Early Learning Family Handbook",
+    "version": "2026",
+    "source": "sunflower-family-handbook.pdf"
   },
   "entries": [
-    { "id": "dcfd-main-office", "title": "...", ... }
+    { "id": "contact", "title": "...", ... }
   ]
 }
 ```

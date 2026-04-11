@@ -100,8 +100,8 @@ describe.skipIf(!hasApiKey())("escalation — gaps the handbook does not cover",
     await expectEscalation(result, "teacher-turnover");
   });
 
-  it("escalates 'What's the salary of a DCFD head teacher?'", async () => {
-    const result = await askViaRoute("What's the salary of a DCFD head teacher?");
+  it("escalates 'What's the salary of a Sunflower lead teacher?'", async () => {
+    const result = await askViaRoute("What's the salary of a Sunflower lead teacher?");
     await expectEscalation(result, "teacher-salary");
   });
 });
