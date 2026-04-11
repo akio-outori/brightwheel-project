@@ -1,0 +1,108 @@
+// Tests for the app-level storage initialization module.
+// Verifies idempotency, retry behavior, and seed logic.
+
+import { describe, expect, it, vi, beforeEach } from "vitest";
+
+// Mock the storage client and minio-json helpers before importing init
+vi.mock("../client", () => ({
+  getClient: vi.fn().mockReturnValue({
+    listBuckets: vi.fn().mockResolvedValue([]),
+    bucketExists: vi.fn().mockResolvedValue(false),
+    makeBucket: vi.fn().mockResolvedValue(undefined),
+    setBucketVersioning: vi.fn().mockResolvedValue(undefined),
+  }),
+  HANDBOOK_BUCKET: () => "handbook-test",
+  EVENTS_BUCKET: () => "events-test",
+}));
+
+vi.mock("../minio-json", () => ({
+  readJson: vi.fn().mockResolvedValue(null),
+  writeJson: vi.fn().mockResolvedValue(undefined),
+}));
+
+// Mock fs to return a minimal seed file
+vi.mock("node:fs/promises", () => ({
+  readFile: vi.fn().mockResolvedValue(
+    JSON.stringify({
+      document: { id: "test-doc", title: "Test", version: "1", source: "test.pdf" },
+      entries: [
+        { id: "entry-1", title: "Entry 1", category: "general", body: "Body 1" },
+        { id: "entry-2", title: "Entry 2", category: "general", body: "Body 2" },
+      ],
+    }),
+  ),
+}));
+
+import { getClient } from "../client";
+import { readJson, writeJson } from "../minio-json";
+
+// Import after mocks
+let ensureStorageReady: () => Promise<void>;
+
+beforeEach(async () => {
+  vi.clearAllMocks();
+  // Reset the module to clear the `initialized` flag
+  vi.resetModules();
+  const mod = await import("../init");
+  ensureStorageReady = mod.ensureStorageReady;
+});
+
+describe("ensureStorageReady", () => {
+  it("creates buckets, seeds entries, and writes sentinel", async () => {
+    await ensureStorageReady();
+
+    const client = getClient();
+    // Buckets created
+    expect(client.bucketExists).toHaveBeenCalledTimes(2);
+    expect(client.makeBucket).toHaveBeenCalledTimes(2);
+
+    // Versioning enabled
+    expect(client.setBucketVersioning).toHaveBeenCalled();
+
+    // Sentinel checked
+    expect(readJson).toHaveBeenCalledWith("handbook-test", ".seed-complete-v2");
+
+    // Metadata + 2 entries + sentinel = 4 writes
+    expect(writeJson).toHaveBeenCalledTimes(4);
+
+    // First write is metadata
+    const metaCall = vi.mocked(writeJson).mock.calls[0];
+    expect(metaCall![0]).toBe("handbook-test");
+    expect(metaCall![1]).toBe("documents/test-doc/metadata.json");
+
+    // Last write is sentinel
+    const sentinelCall = vi.mocked(writeJson).mock.calls[3];
+    expect(sentinelCall![1]).toBe(".seed-complete-v2");
+  });
+
+  it("skips seeding when sentinel exists", async () => {
+    vi.mocked(readJson).mockResolvedValueOnce({ seeded_at: "2026-01-01", layout: "v2" });
+
+    await ensureStorageReady();
+
+    // Only sentinel read, no entry writes
+    expect(readJson).toHaveBeenCalledTimes(1);
+    expect(writeJson).not.toHaveBeenCalled();
+  });
+
+  it("skips bucket creation when buckets already exist", async () => {
+    const client = getClient();
+    vi.mocked(client.bucketExists).mockResolvedValue(true);
+    vi.mocked(readJson).mockResolvedValueOnce({ seeded_at: "2026-01-01", layout: "v2" });
+
+    await ensureStorageReady();
+
+    expect(client.makeBucket).not.toHaveBeenCalled();
+  });
+
+  it("is idempotent — second call is a no-op", async () => {
+    await ensureStorageReady();
+    vi.clearAllMocks();
+
+    await ensureStorageReady();
+
+    // Nothing called on second run
+    expect(getClient().listBuckets).not.toHaveBeenCalled();
+    expect(readJson).not.toHaveBeenCalled();
+  });
+});

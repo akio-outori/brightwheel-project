@@ -16,8 +16,19 @@
 
 import { readFile } from "node:fs/promises";
 import path from "node:path";
+import { z } from "zod";
 import { getClient, HANDBOOK_BUCKET, EVENTS_BUCKET } from "./client";
 import { writeJson, readJson } from "./minio-json";
+
+const SeedFileSchema = z.object({
+  document: z.object({
+    id: z.string().min(1),
+    title: z.string().min(1),
+    version: z.string().min(1),
+    source: z.string().min(1),
+  }),
+  entries: z.array(z.record(z.unknown())),
+});
 
 const SENTINEL_KEY = ".seed-complete-v2";
 const SEED_FILE_PATH = path.join(process.cwd(), "data/seed-handbook.json");
@@ -97,13 +108,12 @@ async function doInit(): Promise<void> {
     return;
   }
 
-  const seed = JSON.parse(seedRaw) as {
-    document: { id: string; title: string; version: string; source: string };
-    entries: Array<Record<string, unknown>>;
-  };
-
+  const parsed = SeedFileSchema.safeParse(JSON.parse(seedRaw));
+  if (!parsed.success) {
+    throw new Error(`Seed file failed validation: ${parsed.error.message}`);
+  }
+  const seed = parsed.data;
   const docId = seed.document.id;
-  if (!docId) throw new Error("Seed file missing document.id");
 
   const docPrefix = `documents/${docId}`;
   console.log(`[storage-init] seeding document ${docId} (${seed.entries.length} entries)`);
