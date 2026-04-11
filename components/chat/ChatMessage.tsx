@@ -93,7 +93,7 @@ export default function ChatMessage({ message }: { message: ChatMessageData }) {
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.25 }}
-        className={cn("flex gap-2.5 mb-6", isUser ? "justify-end" : "justify-start")}
+        className={cn("flex gap-2.5 mb-8", isUser ? "justify-end" : "justify-start")}
       >
         {!isUser && (
           <div className="w-8 h-8 rounded-full bg-[#5B4FCF] flex items-center justify-center flex-shrink-0 mt-0.5 shadow-md">
@@ -139,27 +139,42 @@ export default function ChatMessage({ message }: { message: ChatMessageData }) {
             )}
           </div>
 
-          {!isUser && message.citedEntries && message.citedEntries.length > 0 && (
-            <div className="flex flex-wrap gap-1.5 mt-2 ml-1">
-              {message.citedEntries.map((entry) => (
-                <button
-                  key={entry.id}
-                  type="button"
-                  onClick={() => setOpenEntry(entry)}
-                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-indigo-50 text-[10px] font-medium text-indigo-700 ring-1 ring-inset ring-indigo-200 hover:bg-indigo-100 hover:ring-indigo-300 transition-colors cursor-pointer"
-                >
-                  <BookOpen className="w-2.5 h-2.5" />
-                  {entry.title}
-                </button>
-              ))}
-            </div>
-          )}
-          {!isUser && message.type === "answer" && (
-            <div className="flex items-center gap-1 mt-1 ml-1">
-              <CheckCircle className="w-3 h-3 text-emerald-500" />
-              <span className="text-[11px] text-emerald-600 font-medium">Verified policy</span>
-            </div>
-          )}
+          {!isUser &&
+            ((message.citedEntries && message.citedEntries.length > 0) ||
+              message.type === "answer") && (
+              // Metadata cluster: citation pills + "Verified policy"
+              // badge. Grouped in a single container with its own
+              // internal spacing so the cluster reads as part of the
+              // preceding bubble, not a floating block between
+              // messages. `mt-1.5` keeps it snug against the bubble;
+              // the outer motion.div's `mb-8` is what separates this
+              // unit from the next message.
+              <div className="mt-1.5 ml-1 flex flex-col gap-1">
+                {message.citedEntries && message.citedEntries.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5">
+                    {message.citedEntries.map((entry) => (
+                      <button
+                        key={entry.id}
+                        type="button"
+                        onClick={() => setOpenEntry(entry)}
+                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-indigo-50 text-[10px] font-medium text-indigo-700 ring-1 ring-inset ring-indigo-200 hover:bg-indigo-100 hover:ring-indigo-300 transition-colors cursor-pointer"
+                      >
+                        <BookOpen className="w-2.5 h-2.5" />
+                        {entry.title}
+                      </button>
+                    ))}
+                  </div>
+                )}
+                {message.type === "answer" && (
+                  <div className="flex items-center gap-1">
+                    <CheckCircle className="w-3 h-3 text-emerald-500" />
+                    <span className="text-[11px] text-emerald-600 font-medium">
+                      Verified policy
+                    </span>
+                  </div>
+                )}
+              </div>
+            )}
         </div>
 
         {isUser && (
