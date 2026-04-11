@@ -9,7 +9,8 @@ export default function TypingIndicator() {
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: 8 }}
-      className="flex gap-2.5 mb-8"
+      // Spacing owned by the parent chat container's `space-y-*`.
+      className="flex gap-2.5"
     >
       <div className="w-8 h-8 rounded-full bg-[#5B4FCF] flex items-center justify-center flex-shrink-0 shadow-md">
         <Sparkles className="w-3.5 h-3.5 text-white" />

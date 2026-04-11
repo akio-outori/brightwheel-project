@@ -91,6 +91,28 @@ export async function logNeedsAttention(draft: NeedsAttentionDraft): Promise<Nee
 export async function listOpenNeedsAttention(options?: {
   docId?: string;
 }): Promise<NeedsAttentionEvent[]> {
+  return listNeedsAttention({ ...(options ?? {}), includeResolved: false });
+}
+
+/**
+ * Like `listOpenNeedsAttention` but returns resolved events too.
+ * The operator console uses this for the "By staff" filter, which
+ * surfaces the history of questions staff have already answered.
+ * The same OPEN_WINDOW_DAYS partition scan is reused — a production
+ * deployment would want an index to push this into a time-range
+ * query, but for a prototype scanning two weeks of prefixes stays
+ * bounded.
+ */
+export async function listAllNeedsAttention(options?: {
+  docId?: string;
+}): Promise<NeedsAttentionEvent[]> {
+  return listNeedsAttention({ ...(options ?? {}), includeResolved: true });
+}
+
+async function listNeedsAttention(options: {
+  docId?: string;
+  includeResolved: boolean;
+}): Promise<NeedsAttentionEvent[]> {
   // Scan the last OPEN_WINDOW_DAYS partitions. This is a bounded-cost
   // list operation — a long-lived deployment would want an index.
   const now = new Date();
@@ -117,8 +139,8 @@ export async function listOpenNeedsAttention(options?: {
       );
     }
     const migrated = migrateEvent(parsed.data);
-    if (migrated.resolvedAt) continue;
-    if (options?.docId && migrated.docId !== options.docId) continue;
+    if (!options.includeResolved && migrated.resolvedAt) continue;
+    if (options.docId && migrated.docId !== options.docId) continue;
     events.push(migrated);
   }
 
