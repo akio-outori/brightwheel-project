@@ -54,17 +54,20 @@ import {
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const FixRequestSchema = z.object({
-  replyToParent: z.string().min(1).max(4000),
-  handbookOverride: z
-    .object({
-      title: z.string().min(1).max(200),
-      category: HandbookCategorySchema,
-      sourcePages: z.array(z.number().int().nonnegative()).default([]),
-      replacesEntryId: z.string().min(1).max(120).nullable().default(null),
-    })
-    .optional(),
-});
+const FixRequestSchema = z
+  .object({
+    replyToParent: z.string().min(1).max(4000),
+    handbookOverride: z
+      .object({
+        title: z.string().min(1).max(200),
+        category: HandbookCategorySchema,
+        sourcePages: z.array(z.number().int().nonnegative()).default([]),
+        replacesEntryId: z.string().min(1).max(120).nullable().default(null),
+      })
+      .strict()
+      .optional(),
+  })
+  .strict();
 
 export async function POST(
   req: Request,
@@ -90,8 +93,7 @@ export async function POST(
   // Step 1 (conditional): create the operator override if the
   // operator opted in. The override body is the same text as the
   // parent-facing reply — one message, two surfaces.
-  let overrideId: string | undefined;
-  let override = undefined as Awaited<ReturnType<typeof createOperatorOverride>> | undefined;
+  let override: Awaited<ReturnType<typeof createOperatorOverride>> | undefined;
   if (handbookOverride) {
     try {
       override = await createOperatorOverride(docId, {
@@ -102,7 +104,6 @@ export async function POST(
         replacesEntryId: handbookOverride.replacesEntryId,
         createdBy: null,
       });
-      overrideId = override.id;
     } catch (err) {
       if (err instanceof StorageError && err.code === "already_exists") {
         return Response.json(
@@ -123,14 +124,11 @@ export async function POST(
   try {
     const resolved = await resolveNeedsAttention(eventId, {
       operatorReply: replyToParent,
-      resolvedByOverrideId: overrideId,
+      resolvedByOverrideId: override?.id,
     });
     return Response.json({ override: override ?? null, event: resolved }, { status: 201 });
   } catch (err) {
-    console.error(
-      `[/api/needs-attention/${eventId}/resolve-with-entry] resolve failed:`,
-      err,
-    );
+    console.error(`[/api/needs-attention/${eventId}/resolve-with-entry] resolve failed:`, err);
     if (err instanceof StorageError && err.code === "not_found") {
       return Response.json(
         {

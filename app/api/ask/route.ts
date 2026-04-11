@@ -57,9 +57,11 @@ import {
 
 export const runtime = "nodejs";
 
-const AskRequestSchema = z.object({
-  question: z.string().min(1).max(2000),
-});
+const AskRequestSchema = z
+  .object({
+    question: z.string().min(1).max(2000),
+  })
+  .strict();
 
 // Intent is static. It's the app's instruction to the model about
 // what *kind* of task this is. Never includes user data.

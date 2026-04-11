@@ -26,7 +26,7 @@ vi.mock("@/lib/storage", async (importOriginal) => {
 });
 
 import { POST } from "../route";
-import { createOperatorOverride, resolveNeedsAttention } from "@/lib/storage";
+import { createOperatorOverride, resolveNeedsAttention, StorageError } from "@/lib/storage";
 
 beforeEach(() => vi.clearAllMocks());
 
@@ -83,10 +83,9 @@ describe("POST /api/needs-attention/[id]/resolve-with-entry", () => {
   });
 
   it("returns 400 when replyToParent is missing", async () => {
-    const res = await POST(
-      makeReq({ handbookOverride: { title: "Fix", category: "general" } }),
-      { params: Promise.resolve({ id: "evt-1" }) },
-    );
+    const res = await POST(makeReq({ handbookOverride: { title: "Fix", category: "general" } }), {
+      params: Promise.resolve({ id: "evt-1" }),
+    });
     expect(res.status).toBe(400);
   });
 
@@ -99,7 +98,7 @@ describe("POST /api/needs-attention/[id]/resolve-with-entry", () => {
 
   it("returns 409 on duplicate override title", async () => {
     vi.mocked(createOperatorOverride).mockRejectedValueOnce(
-      new (await import("@/lib/storage")).StorageError("exists", "already_exists"),
+      new StorageError("exists", "already_exists"),
     );
     const res = await POST(
       makeReq({
@@ -109,5 +108,87 @@ describe("POST /api/needs-attention/[id]/resolve-with-entry", () => {
       { params: Promise.resolve({ id: "evt-1" }) },
     );
     expect(res.status).toBe(409);
+  });
+
+  it("returns 500 when override creation fails unexpectedly", async () => {
+    vi.mocked(createOperatorOverride).mockRejectedValueOnce(new Error("disk full"));
+    const res = await POST(
+      makeReq({
+        replyToParent: "Here's the answer.",
+        handbookOverride: { title: "Fix", category: "general" },
+      }),
+      { params: Promise.resolve({ id: "evt-1" }) },
+    );
+    expect(res.status).toBe(500);
+    const data = await res.json();
+    expect(data.error).toBe("Could not create override.");
+  });
+
+  it("returns 409 partial-success when event not found after override was created", async () => {
+    vi.mocked(resolveNeedsAttention).mockRejectedValueOnce(
+      new StorageError("not found", "not_found"),
+    );
+    const res = await POST(
+      makeReq({
+        replyToParent: "Here's the answer.",
+        handbookOverride: { title: "Fix", category: "general" },
+      }),
+      { params: Promise.resolve({ id: "evt-1" }) },
+    );
+    expect(res.status).toBe(409);
+    const data = await res.json();
+    expect(data.partialSuccess).toBe(true);
+    expect(data.override.id).toBe("new-override");
+    expect(data.error).toContain("handbook entry was saved");
+  });
+
+  it("returns 409 when event not found (reply-only, no partial-success)", async () => {
+    vi.mocked(resolveNeedsAttention).mockRejectedValueOnce(
+      new StorageError("not found", "not_found"),
+    );
+    const res = await POST(makeReq({ replyToParent: "Just a reply." }), {
+      params: Promise.resolve({ id: "evt-1" }),
+    });
+    expect(res.status).toBe(409);
+    const data = await res.json();
+    expect(data.partialSuccess).toBe(false);
+    expect(data.override).toBeNull();
+  });
+
+  it("returns 500 partial-success when resolve fails after override was created", async () => {
+    vi.mocked(resolveNeedsAttention).mockRejectedValueOnce(new Error("minio down"));
+    const res = await POST(
+      makeReq({
+        replyToParent: "Here's the answer.",
+        handbookOverride: { title: "Fix", category: "general" },
+      }),
+      { params: Promise.resolve({ id: "evt-1" }) },
+    );
+    expect(res.status).toBe(500);
+    const data = await res.json();
+    expect(data.partialSuccess).toBe(true);
+    expect(data.override.id).toBe("new-override");
+    expect(data.error).toContain("handbook entry was saved");
+  });
+
+  it("returns 500 when resolve fails (reply-only)", async () => {
+    vi.mocked(resolveNeedsAttention).mockRejectedValueOnce(new Error("minio down"));
+    const res = await POST(makeReq({ replyToParent: "Just a reply." }), {
+      params: Promise.resolve({ id: "evt-1" }),
+    });
+    expect(res.status).toBe(500);
+    const data = await res.json();
+    expect(data.partialSuccess).toBe(false);
+    expect(data.override).toBeNull();
+  });
+
+  it("returns 400 on non-JSON body", async () => {
+    const req = new Request("http://localhost/api/needs-attention/evt-1/resolve-with-entry", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: "not json",
+    });
+    const res = await POST(req, { params: Promise.resolve({ id: "evt-1" }) });
+    expect(res.status).toBe(400);
   });
 });

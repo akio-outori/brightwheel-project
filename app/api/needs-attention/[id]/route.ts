@@ -13,13 +13,15 @@ import { resolveNeedsAttention, StorageError } from "@/lib/storage";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const ResolveRequestSchema = z.object({
-  resolvedByOverrideId: z
-    .string()
-    .min(1)
-    .max(120)
-    .regex(/^[a-z0-9-]+$/),
-});
+const ResolveRequestSchema = z
+  .object({
+    resolvedByOverrideId: z
+      .string()
+      .min(1)
+      .max(120)
+      .regex(/^[a-z0-9-]+$/),
+  })
+  .strict();
 
 export async function POST(
   req: Request,

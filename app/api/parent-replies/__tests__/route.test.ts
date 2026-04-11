@@ -39,9 +39,7 @@ describe("GET /api/parent-replies", () => {
 
   it("filters out malformed ids before hitting storage", async () => {
     vi.mocked(getResolvedEventsWithReplies).mockResolvedValueOnce([]);
-    const res = await GET(
-      makeReq(`/api/parent-replies?ids=not-a-uuid,${VALID_UUID_A},also-bad`),
-    );
+    const res = await GET(makeReq(`/api/parent-replies?ids=not-a-uuid,${VALID_UUID_A},also-bad`));
     expect(res.status).toBe(200);
     // Only the valid uuid should have been passed through.
     expect(getResolvedEventsWithReplies).toHaveBeenCalledWith([VALID_UUID_A]);
@@ -82,11 +80,7 @@ describe("GET /api/parent-replies", () => {
 
   it("dedupes and caps the ids list", async () => {
     vi.mocked(getResolvedEventsWithReplies).mockResolvedValueOnce([]);
-    await GET(
-      makeReq(
-        `/api/parent-replies?ids=${VALID_UUID_A},${VALID_UUID_A},${VALID_UUID_B}`,
-      ),
-    );
+    await GET(makeReq(`/api/parent-replies?ids=${VALID_UUID_A},${VALID_UUID_A},${VALID_UUID_B}`));
     const calledWith = vi.mocked(getResolvedEventsWithReplies).mock.calls[0]![0];
     expect(calledWith).toHaveLength(2);
     expect(calledWith).toContain(VALID_UUID_A);

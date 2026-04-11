@@ -28,6 +28,7 @@ import {
   getDocumentMetadata,
   getHandbookEntry,
   getOperatorOverride,
+  getResolvedEventsWithReplies,
   listHandbookEntries,
   listOpenNeedsAttention,
   listOperatorOverrides,
@@ -374,5 +375,129 @@ describe("needs-attention adapter", () => {
         },
       }),
     ).rejects.toMatchObject({ name: "ZodError" });
+  });
+
+  it("resolveNeedsAttention stores an operatorReply when supplied", async () => {
+    const logged = await logNeedsAttention({
+      docId: TEST_DOC_ID,
+      question: "Do you offer summer camp?",
+      result: {
+        answer: "(placeholder)",
+        confidence: "low",
+        cited_entries: [],
+        escalate: true,
+        escalation_reason: "no coverage",
+      },
+    });
+
+    const resolved = await resolveNeedsAttention(logged.id, {
+      operatorReply: "Yes — 8am to 4pm, $240/week.",
+      resolvedByOverrideId: "summer-camp-override",
+    });
+    expect(resolved.operatorReply).toBe("Yes — 8am to 4pm, $240/week.");
+    expect(resolved.resolvedByOverrideId).toBe("summer-camp-override");
+  });
+
+  it("resolveNeedsAttention stores a reply without an override when omitted", async () => {
+    const logged = await logNeedsAttention({
+      docId: TEST_DOC_ID,
+      question: "My son fell today — is he ok?",
+      result: {
+        answer: "(placeholder)",
+        confidence: "low",
+        cited_entries: [],
+        escalate: true,
+        escalation_reason: "specific_child_question",
+      },
+    });
+
+    // Reply-only resolve (the child-specific case — no handbook promotion).
+    const resolved = await resolveNeedsAttention(logged.id, {
+      operatorReply: "He's fine — I saw him at snack time, all smiles.",
+    });
+    expect(resolved.operatorReply).toBe("He's fine — I saw him at snack time, all smiles.");
+    expect(resolved.resolvedByOverrideId).toBeUndefined();
+  });
+
+  it("resolveNeedsAttention trims whitespace-only replies to undefined", async () => {
+    const logged = await logNeedsAttention({
+      docId: TEST_DOC_ID,
+      question: "Random question.",
+      result: {
+        answer: "(placeholder)",
+        confidence: "low",
+        cited_entries: [],
+        escalate: true,
+      },
+    });
+
+    const resolved = await resolveNeedsAttention(logged.id, {
+      operatorReply: "   \n  ",
+      resolvedByOverrideId: "some-override",
+    });
+    expect(resolved.operatorReply).toBeUndefined();
+  });
+
+  describe("getResolvedEventsWithReplies", () => {
+    it("returns an empty list when no ids are supplied", async () => {
+      const result = await getResolvedEventsWithReplies([]);
+      expect(result).toEqual([]);
+    });
+
+    it("returns only events that are resolved AND have a reply", async () => {
+      // Event A: resolved with reply — should appear
+      const a = await logNeedsAttention({
+        docId: TEST_DOC_ID,
+        question: "Question A",
+        result: { answer: "a", confidence: "low", cited_entries: [], escalate: true },
+      });
+      await resolveNeedsAttention(a.id, {
+        operatorReply: "Reply to A",
+        resolvedByOverrideId: "override-a",
+      });
+
+      // Event B: resolved but no reply (legacy path) — should NOT appear
+      const b = await logNeedsAttention({
+        docId: TEST_DOC_ID,
+        question: "Question B",
+        result: { answer: "b", confidence: "low", cited_entries: [], escalate: true },
+      });
+      await resolveNeedsAttention(b.id, { resolvedByOverrideId: "override-b" });
+
+      // Event C: still open — should NOT appear
+      const c = await logNeedsAttention({
+        docId: TEST_DOC_ID,
+        question: "Question C",
+        result: { answer: "c", confidence: "low", cited_entries: [], escalate: true },
+      });
+
+      const result = await getResolvedEventsWithReplies([a.id, b.id, c.id]);
+      expect(result).toHaveLength(1);
+      expect(result[0]!.id).toBe(a.id);
+      expect(result[0]!.operatorReply).toBe("Reply to A");
+    });
+
+    it("omits events whose ids weren't in the batch", async () => {
+      const wanted = await logNeedsAttention({
+        docId: TEST_DOC_ID,
+        question: "Wanted",
+        result: { answer: "w", confidence: "low", cited_entries: [], escalate: true },
+      });
+      await resolveNeedsAttention(wanted.id, {
+        operatorReply: "Wanted reply",
+      });
+
+      // Unrelated resolved event that shouldn't come back.
+      const other = await logNeedsAttention({
+        docId: TEST_DOC_ID,
+        question: "Unwanted",
+        result: { answer: "u", confidence: "low", cited_entries: [], escalate: true },
+      });
+      await resolveNeedsAttention(other.id, { operatorReply: "Unwanted reply" });
+
+      const result = await getResolvedEventsWithReplies([wanted.id]);
+      expect(result).toHaveLength(1);
+      expect(result[0]!.id).toBe(wanted.id);
+    });
   });
 });

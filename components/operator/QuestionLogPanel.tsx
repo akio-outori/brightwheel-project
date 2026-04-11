@@ -211,7 +211,7 @@ export default function QuestionLogPanel() {
                   {item.result.answer && (
                     <div>
                       <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5">
-                        AI Draft
+                        Suggested response
                       </p>
                       <p className="text-xs text-gray-600 leading-relaxed bg-gray-50 rounded-xl p-3 border border-gray-100">
                         {item.result.answer}
@@ -298,8 +298,15 @@ function ReplyForm({ eventId }: { eventId: string; question?: string }) {
         body: JSON.stringify(payload),
       });
       if (!res.ok) {
-        const detail = await res.json().catch(() => ({}));
-        throw new Error((detail as { error?: string }).error ?? `Failed (HTTP ${res.status})`);
+        const detail: unknown = await res.json().catch(() => ({}));
+        const message =
+          typeof detail === "object" &&
+          detail !== null &&
+          "error" in detail &&
+          typeof (detail as { error: unknown }).error === "string"
+            ? (detail as { error: string }).error
+            : `Failed (HTTP ${res.status})`;
+        throw new Error(message);
       }
       await Promise.all([mutate("/api/needs-attention"), mutate("/api/handbook")]);
       setOpen(false);
