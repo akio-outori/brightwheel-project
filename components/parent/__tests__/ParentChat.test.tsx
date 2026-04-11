@@ -203,4 +203,43 @@ describe("ParentChat polling → staff reply surfaced", () => {
       ),
     ).toBe(true);
   });
+
+  it("restores the prior chat history from localStorage on mount", () => {
+    // Seed a three-message conversation as if the parent had been
+    // chatting earlier. This is the bug the persistence fix solves:
+    // without it, flipping to the staff view and back loses the
+    // entire history.
+    //
+    // The question and the answer use phrases deliberately chosen
+    // to not overlap with either SUGGESTED_QUESTIONS or
+    // FOLLOWUP_SUGGESTIONS, so `getByText` can assert that they
+    // render exactly once (i.e. only as a chat bubble, not as a
+    // suggestion pill).
+    const priorMessages = [
+      { role: "assistant", text: "Hi — I'm the front desk.", type: "answer" },
+      { role: "user", text: "Do you pick up from Maple Elementary?", initials: "P" },
+      {
+        role: "assistant",
+        text: "We don't have a school pickup service at this time.",
+        type: "answer",
+      },
+    ];
+    window.localStorage.setItem("brightdesk:messages", JSON.stringify(priorMessages));
+
+    fetchMock.mockImplementation(async (input: RequestInfo) => {
+      const url = typeof input === "string" ? input : input.url;
+      if (url.includes("/api/handbook")) return jsonResponse(HANDBOOK_RESPONSE);
+      throw new Error(`Unexpected fetch to ${url}`);
+    });
+
+    renderParentChat();
+
+    // Both turns of the restored conversation should render as
+    // chat bubbles. `getByText` fails if either is missing or if
+    // the string appears more than once — catching the regression
+    // where the suggestion panel flashes on top of a restored
+    // history.
+    expect(screen.getByText(/Do you pick up from Maple Elementary/)).toBeTruthy();
+    expect(screen.getByText(/school pickup service at this time/)).toBeTruthy();
+  });
 });
