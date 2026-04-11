@@ -381,7 +381,22 @@ export function ParentChat() {
         </div>
 
         {/* Messages */}
-        <div className="flex-1 overflow-y-auto px-4 py-5 space-y-0">
+        {/*
+          Chat scroll area. `space-y-8` is doing the work of
+          separating stacked messages — NOT a `mb-8` on each
+          child. Tailwind's `space-y-*` compiles to a
+          `.space-y-N > :not([hidden]) ~ :not([hidden])` selector
+          that sets `margin-top` on every child after the first,
+          and because of the child+sibling combinators it has
+          higher specificity than a bare `.mb-N` class on the
+          child. An earlier attempt at this used `mb-4/6/8` on
+          each ChatMessage, which was silently overridden here
+          when the container was `space-y-0` (both margin-top
+          AND margin-bottom got zeroed on every sibling). Keeping
+          the spacing as a single container rule avoids that
+          trap.
+        */}
+        <div className="flex-1 overflow-y-auto px-4 py-5 space-y-8">
           {messages.map((msg, i) => (
             <ChatMessage key={i} message={msg} />
           ))}
