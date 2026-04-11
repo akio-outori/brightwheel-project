@@ -25,8 +25,8 @@ exporting the adapter functions they call.
 - `docker-compose.yml` — the `minio` and `minio-init` service definitions
 - `docker/minio-init/` — the init script (uses `mc` client) that creates
   buckets, sets policies, and seeds initial handbook content
-- `data/seed-handbook.json` — the starter handbook, extracted from the
-  City of Albuquerque DCFD Family Handbook (2019, public)
+- `data/seed-handbook.json` — the starter handbook, a fictional
+  "Sunflower Early Learning" preschool handbook (37 entries)
 - `lib/storage/types.ts` — TypeScript types and Zod schemas for handbook
   entries and needs-attention events
 - `lib/storage/handbook.ts` — read/write adapter for handbook entries
@@ -116,12 +116,12 @@ export type HandbookEntry = z.infer<typeof HandbookEntrySchema>;
 
 // Note: the schema uses `sourcePages` + `lastUpdated` rather than
 // `tags` + `last_updated_by` (the older shape). Rationale: the seed
-// data is a real public document (DCFD Family Handbook 2019), not
-// an operator-authored wiki. Page refs give the trust loop concrete
-// citations ("see page 14 of the handbook"), and a single
-// `lastUpdated` field fits both static source entries ("2019") and
-// operator-created entries (ISO datetime) without forcing fake
-// operator names onto static content.
+// data is modeled as a source document, not an operator-authored
+// wiki. Page refs give the trust loop concrete citations ("see
+// page 14 of the handbook"), and a single `lastUpdated` field fits
+// both static source entries and operator-created entries (ISO
+// datetime) without forcing fake operator names onto static
+// content.
 
 export const NeedsAttentionEventSchema = z.object({
   id: z.string().uuid(),

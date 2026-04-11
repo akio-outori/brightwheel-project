@@ -1,7 +1,8 @@
-// Off-topic tests. Questions that are clearly outside the DCFD
-// family handbook's scope — weather, math, coding, general legal
-// advice, sports, politics. The model should decline politely and
-// escalate with an out-of-scope reason.
+// Off-topic tests. Questions that are clearly outside the
+// Sunflower family handbook's scope — weather, math, coding,
+// general legal advice, sports, politics. The model should
+// refuse (refusal: true) or escalate with an out-of-scope reason,
+// never try to answer from its training data.
 //
 // The failure mode this catches: a chatty model that tries to
 // "be helpful" by answering general-purpose questions outside the
@@ -37,12 +38,12 @@ describe.skipIf(!hasApiKey())("off-topic — out-of-scope questions", () => {
   });
 
   it("declines 'What's your opinion on the current mayor?'", async () => {
-    const result = await askViaRoute("What's your opinion on the current mayor of Albuquerque?");
+    const result = await askViaRoute("What's your opinion on the current mayor of Austin?");
     await expectEscalation(result, "politics");
   });
 
-  it("declines 'What are the best daycares in Albuquerque?'", async () => {
-    const result = await askViaRoute("What are the best daycares in Albuquerque other than DCFD?");
+  it("declines 'What are the best daycares nearby?'", async () => {
+    const result = await askViaRoute("What are the best daycares in Austin other than Sunflower?");
     await expectEscalation(result, "competitor-review");
   });
 

@@ -1,6 +1,6 @@
 {
   "id": "parent-front-desk-sonnet",
-  "name": "DCFD Family Front Desk (Sonnet 4.6)",
+  "name": "Sunflower Family Front Desk (Sonnet 4.6)",
   "version": "1.0.0",
   "metadata": {
     "system_prompt_file": "config/prompts/parent-front-desk.md",

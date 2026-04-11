@@ -35,9 +35,9 @@ const HOURS_ENTRY: GroundingSource = {
 };
 
 const CONTACT_ENTRY: GroundingSource = {
-  id: "dcfd-main-office",
-  title: "DCFD Main Office Contact",
-  body: "DCFD Main Office: 1820 Randolph Rd SE, Albuquerque, NM 87106. Main phone: 505-767-6500. Office hours Monday - Friday 8:00 am to 4:30 pm.",
+  id: "contact",
+  title: "Main Office Contact",
+  body: "Sunflower Early Learning: 1420 Willow Creek Ln, Austin, TX 78704. Main phone: (512) 555-0142. Office hours Monday - Friday 7:00 am to 6:00 pm.",
 };
 
 const TWO_LAYER_SOURCES: GroundingSource[] = [ILLNESS_POLICY, HOURS_ENTRY, CONTACT_ENTRY];
@@ -242,9 +242,9 @@ describe("numericChannel", () => {
     const v = numericChannel(
       input({
         answer:
-          "You can reach the main office at 505-767-6500. Children must be fever-free for 24 hours before returning.",
-        cited_entries: ["dcfd-main-office", "illness-policy"],
-        directly_addressed_by: ["dcfd-main-office"],
+          "You can reach the main office at (512) 555-0142. Children must be fever-free for 24 hours before returning.",
+        cited_entries: ["contact", "illness-policy"],
+        directly_addressed_by: ["contact"],
       }),
     );
     expect(v.verdict).toBe("pass");
@@ -253,15 +253,15 @@ describe("numericChannel", () => {
   it("holds when the draft contains a phone number absent from sources", () => {
     const v = numericChannel(
       input({
-        answer: "You can reach the main office at 505-123-4567 during business hours.",
-        cited_entries: ["dcfd-main-office"],
-        directly_addressed_by: ["dcfd-main-office"],
+        answer: "You can reach the main office at 512-123-4567 during business hours.",
+        cited_entries: ["contact"],
+        directly_addressed_by: ["contact"],
       }),
     );
     expect(v.verdict).toBe("hold");
     if (v.verdict === "hold") {
       expect(v.reason).toBe("fabricated_numeric");
-      expect(v.detail).toContain("505-123-4567");
+      expect(v.detail).toContain("512-123-4567");
     }
   });
 
@@ -316,9 +316,9 @@ describe("numericChannel", () => {
 
 describe("extractEntities", () => {
   it("finds multi-word capitalized phrases", () => {
-    const found = extractEntities("Contact Director Maria at the DCFD Main Office.");
-    expect(found).toContain("Director Maria");
-    expect(found).toContain("DCFD Main Office");
+    const found = extractEntities("Contact Director Maya at the Sunflower Main Office.");
+    expect(found).toContain("Director Maya");
+    expect(found).toContain("Sunflower Main Office");
   });
 
   it("skips sentence-initial common words", () => {
@@ -328,8 +328,8 @@ describe("extractEntities", () => {
   });
 
   it("keeps single capitalized words at least 5 chars that aren't sentence-initial", () => {
-    const found = extractEntities("We work with our partner Canteen for all meal service.");
-    expect(found).toContain("Canteen");
+    const found = extractEntities("We work with our partner Brightwheel for daily updates.");
+    expect(found).toContain("Brightwheel");
   });
 });
 
@@ -338,9 +338,9 @@ describe("entitiesChannel", () => {
     const v = entitiesChannel(
       input({
         answer:
-          "The DCFD Main Office is located in Albuquerque. You can reach them at the main number.",
-        cited_entries: ["dcfd-main-office"],
-        directly_addressed_by: ["dcfd-main-office"],
+          "Sunflower Early Learning is located in Austin. You can reach them at the main number.",
+        cited_entries: ["contact"],
+        directly_addressed_by: ["contact"],
       }),
     );
     expect(v.verdict).toBe("pass");
@@ -349,9 +349,9 @@ describe("entitiesChannel", () => {
   it("holds when the draft names a person not in any source", () => {
     const v = entitiesChannel(
       input({
-        answer: "Please contact Director Maria Gonzalez for scheduling questions.",
-        cited_entries: ["dcfd-main-office"],
-        directly_addressed_by: ["dcfd-main-office"],
+        answer: "Please contact Director Sarah Gonzalez for scheduling questions.",
+        cited_entries: ["contact"],
+        directly_addressed_by: ["contact"],
       }),
     );
     expect(v.verdict).toBe("hold");

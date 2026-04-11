@@ -34,7 +34,7 @@ The operator console shows a feed of held questions, each labeled with why it wa
 
 ## What this is built on
 
-The source data is 73 entries from the Albuquerque DCFD Family Handbook (2019), a real public document with real staff names, phone numbers, and center addresses. The trust loop isn't a story — it runs against real content where a wrong phone number is verifiably wrong.
+The source data is a fictional 37-entry Family Handbook for "Sunflower Early Learning," a made-up family-owned preschool in Austin. The content is modelled after real public daycare documentation — named staff, specific phone numbers, specific dollar amounts, specific holiday closures — but kept fictional so the demo can run against real-looking facts without putting an actual center's name on a prototype. The trust loop isn't a story: every phone number in an answer is checked against the source bytes, every proper name is traced back to the handbook, and a wrong number or invented staff person is held for review exactly the way it would be against a real document.
 
 The security boundary is a type system. Four branded TypeScript types make user text physically incapable of reaching the model's system role. Prompt injection prevention is a compile error, not a convention.
 
@@ -44,7 +44,7 @@ The test suite is 304 unit tests with an 80%+ coverage threshold and 114 integra
 
 ## What comes next
 
-Authentication and per-staff identity. Per-user document routing (the seam exists; a session layer fills it). SSE push so the parent who saw "being reviewed" gets the staff answer in real time instead of on re-ask. A handbook ingestion pipeline so the next annual update isn't a manual extraction.
+Authentication and per-staff identity. Per-user document routing (the seam exists; a session layer fills it). A handbook ingestion pipeline so the next annual update isn't a manual extraction. The real-time staff reply loop already ships: when a parent's question escalates, the operator's reply lands in the parent's chat as a green "Reply from staff" bubble within seconds, without the parent having to re-ask.
 
 ## The demo
 

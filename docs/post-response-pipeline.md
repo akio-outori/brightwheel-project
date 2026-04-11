@@ -97,7 +97,7 @@ Canonicalization strips `$`, `°F`, dashes, and commas so
 
 Capitalized multi-word phrases and long single capitalized words
 must trace to the document. Handles hyphens (Pre-K), all-caps
-acronyms (DCFD, NAEYC), and sentence/bullet-initial words. Falls
+acronyms (IEP, ASQ, EpiPen), and sentence/bullet-initial words. Falls
 back to token-level matching when the exact phrase doesn't appear
 verbatim but all component words do.
 

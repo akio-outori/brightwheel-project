@@ -74,7 +74,7 @@ four pattern groups plus a negative (policy-question) set. Review each:
   must not match)
 - Is the NAME_ALLOWLIST complete? (Sentence starters, days, months,
   program-specific words like "Early", "Head", "Start", "Pre",
-  "Preschool", "DCFD")
+  "Preschool", center name "Sunflower", director "Maya Okonkwo")
 - Is the proximity window (80 chars) reasonable?
 
 **Group 3: Pronoun + health context**
@@ -156,7 +156,7 @@ The preflight classifier has ~1200+ unit tests. Review:
 
 - Does it search the FULL document, not just cited?
 - Does the multi-word regex handle hyphens (Pre-K) and all-caps
-  acronyms (DCFD, NAEYC)?
+  acronyms (IEP, ASQ)?
 - Does the token-level fallback accept rearranged word order?
 - Does the sentence/bullet-initial check handle `•`, `-`, `*`,
   `:`, `;`, `\n`?
