@@ -13,7 +13,7 @@ import { AnswerContractSchema, type AnswerContract } from "@/lib/llm/contract";
 
 const GREETING: ChatMessageData = {
   role: "assistant",
-  text: `Hi, I'm the ${CENTER.name} front desk.\n\nI can answer questions about our hours, tuition, health policies, meals, enrollment, and more \u2014 any time of day.\n\nWhat can I help you with?`,
+  text: `Hi — I'm ${CENTER.name}'s front desk.\n\nI can answer questions about our hours, tuition, health policies, meals, enrollment, and more \u2014 any time of day.\n\nWhat can I help you with?`,
   type: "answer",
 };
 

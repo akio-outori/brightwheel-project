@@ -30,7 +30,11 @@ const SeedFileSchema = z.object({
   entries: z.array(z.record(z.unknown())),
 });
 
-const SENTINEL_KEY = ".seed-complete-v2";
+// Bumped to v3 when the seed handbook was replaced with the
+// Sunflower Early Learning fictional content. A fresh deploy with
+// an existing MinIO volume will re-seed once; after that the
+// sentinel gates future init runs.
+const SENTINEL_KEY = ".seed-complete-v3";
 const SEED_FILE_PATH = path.join(process.cwd(), "data/seed-handbook.json");
 
 let initialized = false;

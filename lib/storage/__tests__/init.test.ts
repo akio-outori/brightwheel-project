@@ -60,7 +60,7 @@ describe("ensureStorageReady", () => {
     expect(client.setBucketVersioning).toHaveBeenCalled();
 
     // Sentinel checked
-    expect(readJson).toHaveBeenCalledWith("handbook-test", ".seed-complete-v2");
+    expect(readJson).toHaveBeenCalledWith("handbook-test", ".seed-complete-v3");
 
     // Metadata + 2 entries + sentinel = 4 writes
     expect(writeJson).toHaveBeenCalledTimes(4);
@@ -72,7 +72,7 @@ describe("ensureStorageReady", () => {
 
     // Last write is sentinel
     const sentinelCall = vi.mocked(writeJson).mock.calls[3];
-    expect(sentinelCall![1]).toBe(".seed-complete-v2");
+    expect(sentinelCall![1]).toBe(".seed-complete-v3");
   });
 
   it("skips seeding when sentinel exists", async () => {
