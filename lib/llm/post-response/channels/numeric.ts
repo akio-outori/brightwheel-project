@@ -46,7 +46,7 @@ function canonicalizeNumeric(literal: string): string {
     .replace(/%$/, "");
 }
 
-export const numericChannel: Channel = ({ draft, allSources }) => {
+export const numericChannel: Channel = ({ question, draft, allSources }) => {
   // Collect all numeric literals from the draft answer.
   const rawLiterals: string[] = [];
   for (const pat of NUMERIC_PATTERNS) {
@@ -66,10 +66,15 @@ export const numericChannel: Channel = ({ draft, allSources }) => {
   // citing the staff directory). The hallucination channel already
   // catches citation-level fabrication; this channel's job is to
   // catch fabricated numbers, not to audit citation discipline.
-  const corpus = allSources
-    .map((s) => s.body)
-    .join("\n")
-    .toLowerCase();
+  //
+  // The parent's question is also part of the corpus for the same
+  // reason as the entities channel: a number in the question
+  // (e.g. "Am I on the hook for the $15 late fee you charged me?")
+  // that the model echoes isn't a fabrication. The model should
+  // reject unverified user-supplied facts at the LLM layer via the
+  // system prompt — the numeric channel is a fabrication-detection
+  // safety net, not a "never confirm anything the user said" gate.
+  const corpus = [question, ...allSources.map((s) => s.body)].join("\n").toLowerCase();
   if (corpus.length === 0) {
     return {
       verdict: "hold",

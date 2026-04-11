@@ -17,6 +17,13 @@ const GREETING: ChatMessageData = {
   type: "answer",
 };
 
+// localStorage key used to persist pending needs-attention event
+// ids across page reloads. The parent tab might be refreshed
+// between asking a question that escalates and the operator
+// resolving it — without persistence, the reply would be
+// written to the backend but never surface in the parent's chat.
+const PENDING_IDS_STORAGE_KEY = "brightdesk:pending-event-ids";
+
 /** Resolve cited entry IDs to full objects for clickable pills. */
 function resolveCitations(
   ids: string[],
@@ -85,7 +92,23 @@ export function ParentChat() {
   // staff reply for. /api/ask returns one whenever it logs an
   // event; we stash it here and poll /api/parent-replies for the
   // staff's response. Once a reply arrives, the id is removed.
-  const [pendingEventIds, setPendingEventIds] = useState<string[]>([]);
+  //
+  // Persisted to localStorage so a page refresh between the
+  // escalation and the operator's reply doesn't strand the
+  // parent — the next mount picks up polling where we left off
+  // and the reply still shows up in the chat.
+  const [pendingEventIds, setPendingEventIds] = useState<string[]>(() => {
+    if (typeof window === "undefined") return [];
+    try {
+      const raw = window.localStorage.getItem(PENDING_IDS_STORAGE_KEY);
+      if (!raw) return [];
+      const parsed: unknown = JSON.parse(raw);
+      if (!Array.isArray(parsed)) return [];
+      return parsed.filter((x): x is string => typeof x === "string" && x.length > 0);
+    } catch {
+      return [];
+    }
+  });
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -114,6 +137,23 @@ export function ParentChat() {
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isTyping]);
+
+  // Mirror pendingEventIds to localStorage on every change so a
+  // refresh doesn't strand a still-in-flight escalation. The
+  // polling effect reads this state, and the lazy-init reader
+  // above restores from localStorage on mount.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      if (pendingEventIds.length === 0) {
+        window.localStorage.removeItem(PENDING_IDS_STORAGE_KEY);
+      } else {
+        window.localStorage.setItem(PENDING_IDS_STORAGE_KEY, JSON.stringify(pendingEventIds));
+      }
+    } catch {
+      // quota exceeded / private mode / disabled storage — best-effort.
+    }
+  }, [pendingEventIds]);
 
   // Poll /api/parent-replies while we have pending escalations.
   // When a reply lands, inject it as a new assistant bubble and

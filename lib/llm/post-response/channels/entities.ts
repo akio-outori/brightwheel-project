@@ -177,7 +177,7 @@ export function extractEntities(text: string): string[] {
   return found;
 }
 
-export const entitiesChannel: Channel = ({ draft, allSources }) => {
+export const entitiesChannel: Channel = ({ question, draft, allSources }) => {
   const entities = extractEntities(draft.answer);
   if (entities.length === 0) return { verdict: "pass" };
 
@@ -189,6 +189,18 @@ export const entitiesChannel: Channel = ({ draft, allSources }) => {
   // produced false positives on legitimate cross-entry references.
   // The hallucination channel already catches citation-level
   // fabrication; this channel's job is to catch fabricated entities.
+  //
+  // The parent's question is also included in the corpus. If a
+  // parent asks "Are you open on Veterans Day?" and the model
+  // echoes "Veterans Day" in the answer, that's not a fabrication
+  // — it came from the question, which is part of the grounded
+  // context the model was given. The classifier should only flag
+  // entities the model INVENTED, not entities it ECHOED from the
+  // user's own words. Stopping model invention of unverified
+  // user-supplied facts is the model's job, enforced by the
+  // system prompt; the entities channel is the fabrication-
+  // detection safety net, not the factuality-against-parent-input
+  // gate.
   if (allSources.length === 0) {
     return {
       verdict: "hold",
@@ -197,8 +209,7 @@ export const entitiesChannel: Channel = ({ draft, allSources }) => {
     };
   }
 
-  const corpus = allSources
-    .map((s) => `${s.title}\n${s.body}`)
+  const corpus = [question, ...allSources.map((s) => `${s.title}\n${s.body}`)]
     .join("\n")
     .toLowerCase();
 
