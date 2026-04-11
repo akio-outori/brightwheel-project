@@ -12,8 +12,16 @@ import {
   Send,
   X,
 } from "lucide-react";
+import { z } from "zod";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
+
+// Shape of error responses returned by our API routes. Matches the
+// { error: string } envelope the boundary handlers produce. We parse
+// the fetch response body through this schema instead of asserting
+// the shape, so a malformed body falls through to a generic error
+// message without runtime surprises.
+const ErrorResponseSchema = z.object({ error: z.string() });
 
 interface AnswerContract {
   answer: string;
@@ -298,15 +306,9 @@ function ReplyForm({ eventId }: { eventId: string; question?: string }) {
         body: JSON.stringify(payload),
       });
       if (!res.ok) {
-        const detail: unknown = await res.json().catch(() => ({}));
-        const message =
-          typeof detail === "object" &&
-          detail !== null &&
-          "error" in detail &&
-          typeof (detail as { error: unknown }).error === "string"
-            ? (detail as { error: string }).error
-            : `Failed (HTTP ${res.status})`;
-        throw new Error(message);
+        const rawDetail: unknown = await res.json().catch(() => ({}));
+        const parsed = ErrorResponseSchema.safeParse(rawDetail);
+        throw new Error(parsed.success ? parsed.data.error : `Failed (HTTP ${res.status})`);
       }
       await Promise.all([mutate("/api/needs-attention"), mutate("/api/handbook")]);
       setOpen(false);
