@@ -153,7 +153,20 @@ const NAME_ALLOWLIST: ReadonlySet<string> = new Set([
   "Start",
   "Pre",
   "Preschool",
-  "DCFD",
+  // Center name and common proper nouns in the Sunflower handbook
+  // content — these shouldn't be treated as a child's first name
+  // when parents ask about the program.
+  "Sunflower",
+  "Willow",
+  "Creek",
+  "Austin",
+  "Texas",
+  "Maya",
+  "Okonkwo",
+  "Reggio",
+  "Emilia",
+  "Creative",
+  "Curriculum",
 ]);
 
 // Proper name extraction is case-SENSITIVE (must start with an actual

@@ -8,15 +8,21 @@
 //   2. Resolve the active document and load both layers
 //      (seed entries + operator overrides)
 //   3. Call askLLM with branded inputs carrying mcpData.document
-//   4. Run the deterministic post-response classifier pipeline
+//   4. If the model returned `refusal: true` (out-of-scope /
+//      off-topic / meta), return the draft directly to the parent.
+//      Refusals bypass the post-response pipeline AND the
+//      needs-attention log — there is nothing for the operator to
+//      follow up on, and the pipeline's grounding channels don't
+//      apply to a polite "I can't help with that."
+//   5. Run the deterministic post-response classifier pipeline
 //      over the draft (hallucination, self-escalation, coverage,
 //      lexical grounding, numeric absence, entity absence, medical
 //      instruction shape)
-//   5. If any channel holds, return a stock "being reviewed"
+//   6. If any channel holds, return a stock "being reviewed"
 //      response to the parent and log the MODEL'S DRAFT to
 //      needs-attention for operator review (the operator sees what
 //      the model would have said, the parent doesn't)
-//   6. Otherwise return the model's draft as-is; if the model's
+//   7. Otherwise return the model's draft as-is; if the model's
 //      draft happened to self-escalate, log it to needs-attention
 //      but still return it (the self-escalation channel already
 //      caught it above so this path is dead — kept defensively)
@@ -51,9 +57,11 @@ import {
 
 export const runtime = "nodejs";
 
-const AskRequestSchema = z.object({
-  question: z.string().min(1).max(2000),
-});
+const AskRequestSchema = z
+  .object({
+    question: z.string().min(1).max(2000),
+  })
+  .strict();
 
 // Intent is static. It's the app's instruction to the model about
 // what *kind* of task this is. Never includes user data.
@@ -106,7 +114,7 @@ export async function POST(req: Request): Promise<Response> {
     const preflight = classifySpecificChild(question);
     if (preflight.verdict === "hold") {
       const stockResponse = buildStockResponse(preflight.reason);
-      await logNeedsAttention({
+      const event = await logNeedsAttention({
         docId,
         question,
         result: {
@@ -120,7 +128,9 @@ export async function POST(req: Request): Promise<Response> {
       console.warn(
         `[/api/ask] preflight hold (${preflight.reason}): ${preflight.detail ?? "(no detail)"}`,
       );
-      return Response.json(stockResponse);
+      // Surface the event id so the parent client can poll
+      // /api/parent-replies for the operator's follow-up.
+      return Response.json({ ...stockResponse, needs_attention_event_id: event.id });
     }
 
     // 4. Build MCPData and call the LLM.
@@ -157,7 +167,26 @@ export async function POST(req: Request): Promise<Response> {
       UserInput(question),
     );
 
-    // 4. Run the deterministic post-response classifier pipeline.
+    // 4. Refusal short-circuit. If the model flagged this as
+    // out-of-scope / off-topic (refusal: true), return the draft
+    // directly. Refusals bypass the pipeline and needs-attention
+    // both — there is nothing for an operator to follow up on, and
+    // the grounding channels (coverage, numeric, entity) would
+    // otherwise hold on an empty citation list. We do normalize the
+    // shape defensively: a refusal must not also claim to escalate,
+    // and must carry an empty citation set.
+    if (draft.refusal === true) {
+      const refusal: AnswerContract = {
+        ...draft,
+        escalate: false,
+        cited_entries: [],
+        directly_addressed_by: [],
+        escalation_reason: draft.escalation_reason ?? "out_of_scope",
+      };
+      return Response.json(refusal);
+    }
+
+    // 5. Run the deterministic post-response classifier pipeline.
     // The pipeline flattens entries + overrides into a single list
     // of GroundingSource objects so channels don't care which layer
     // a source came from.
@@ -180,14 +209,14 @@ export async function POST(req: Request): Promise<Response> {
       allSources,
     });
 
-    // 5. On hold: the parent sees a stock response; the operator
+    // 6. On hold: the parent sees a stock response; the operator
     // sees the model's ORIGINAL draft in the needs-attention event.
     if (pipeline.verdict === "hold") {
       const stockResponse = buildStockResponse(pipeline.reason);
 
       // Log the MODEL'S DRAFT (not the stock) so the operator has
       // full context about what the model wanted to say.
-      await logNeedsAttention({
+      const event = await logNeedsAttention({
         docId,
         question,
         result: {
@@ -201,10 +230,10 @@ export async function POST(req: Request): Promise<Response> {
       console.warn(
         `[/api/ask] held by ${pipeline.channel} (${pipeline.reason}): ${pipeline.detail ?? "(no detail)"}`,
       );
-      return Response.json(stockResponse);
+      return Response.json({ ...stockResponse, needs_attention_event_id: event.id });
     }
 
-    // 6. Passing path. If the model's draft happened to be low
+    // 7. Passing path. If the model's draft happened to be low
     // confidence without escalating, log it anyway so the operator
     // Enforce the trust-loop invariant at the API boundary: a
     // low-confidence response must always escalate. The client
@@ -215,8 +244,8 @@ export async function POST(req: Request): Promise<Response> {
         escalate: true,
         escalation_reason: draft.escalation_reason ?? "low_confidence",
       };
-      await logNeedsAttention({ docId, question, result: enforced });
-      return Response.json(enforced);
+      const event = await logNeedsAttention({ docId, question, result: enforced });
+      return Response.json({ ...enforced, needs_attention_event_id: event.id });
     }
 
     return Response.json(draft);

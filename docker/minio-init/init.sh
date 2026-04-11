@@ -1,12 +1,12 @@
 #!/bin/sh
 # MinIO bootstrap. Idempotent — running this twice against a populated MinIO
 # is a no-op. Idempotency is enforced via a sentinel object,
-# `${HANDBOOK_BUCKET}/.seed-complete-v2`, which is written as the final step
+# `${HANDBOOK_BUCKET}/.seed-complete-v3`, which is written as the final step
 # of the seed loop. The first thing this script does is check for it; if
 # found, the script exits successfully without rewriting anything.
 #
 # Force a re-seed during dev with:
-#   mc rm local/handbook/.seed-complete-v2
+#   mc rm local/handbook/.seed-complete-v3
 #
 # Layout
 # ------
@@ -32,7 +32,7 @@ set -eu
 HANDBOOK_BUCKET="${STORAGE_HANDBOOK_BUCKET:-handbook}"
 EVENTS_BUCKET="${STORAGE_EVENTS_BUCKET:-events}"
 SEED_FILE="/seed/seed-handbook.json"
-SENTINEL_KEY=".seed-complete-v2"
+SENTINEL_KEY=".seed-complete-v3"
 
 echo "[minio-init] starting"
 echo "[minio-init] handbook bucket: ${HANDBOOK_BUCKET}"

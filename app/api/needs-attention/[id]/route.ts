@@ -13,13 +13,15 @@ import { resolveNeedsAttention, StorageError } from "@/lib/storage";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const ResolveRequestSchema = z.object({
-  resolvedByOverrideId: z
-    .string()
-    .min(1)
-    .max(120)
-    .regex(/^[a-z0-9-]+$/),
-});
+const ResolveRequestSchema = z
+  .object({
+    resolvedByOverrideId: z
+      .string()
+      .min(1)
+      .max(120)
+      .regex(/^[a-z0-9-]+$/),
+  })
+  .strict();
 
 export async function POST(
   req: Request,
@@ -40,7 +42,9 @@ export async function POST(
   }
 
   try {
-    const event = await resolveNeedsAttention(id, parsed.data.resolvedByOverrideId);
+    const event = await resolveNeedsAttention(id, {
+      resolvedByOverrideId: parsed.data.resolvedByOverrideId,
+    });
     return Response.json(event);
   } catch (err) {
     if (err instanceof StorageError && err.code === "not_found") {

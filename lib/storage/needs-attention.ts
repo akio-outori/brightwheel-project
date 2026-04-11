@@ -127,9 +127,28 @@ export async function listOpenNeedsAttention(options?: {
   return events;
 }
 
+/**
+ * Resolve a needs-attention event. The primary action is the
+ * operator's parent-facing reply; adding a handbook override is
+ * optional and only happens when the operator explicitly opts in
+ * (via the "Also add to handbook" checkbox in the UI). This matches
+ * the human-in-the-loop reality: many escalations are one-off
+ * child-specific questions that should never become handbook
+ * content, and forcing an override on every resolve would be wrong.
+ *
+ * Both options are technically optional at the function level so
+ * older callers (and the non-atomic resolve endpoint) can still
+ * call with just the override id. Callers should supply at least
+ * one — a resolve that stored neither a reply nor an override is
+ * a silent dead-end. We allow it for schema flexibility but expect
+ * the route layer to enforce the "reply is required" invariant.
+ */
 export async function resolveNeedsAttention(
   id: string,
-  resolvedByOverrideId: string,
+  options: {
+    operatorReply?: string;
+    resolvedByOverrideId?: string;
+  },
 ): Promise<NeedsAttentionEvent> {
   // We don't store a by-id index, so finding the event means scanning
   // recent partitions for an object whose name contains the id. Same
@@ -155,10 +174,16 @@ export async function resolveNeedsAttention(
     }
 
     const migrated = migrateEvent(parsed.data);
+    // Trim the reply at the boundary so whitespace-only inputs
+    // don't sneak through the min(1) schema check.
+    const trimmedReply = options.operatorReply?.trim();
     const resolved: NeedsAttentionEvent = NeedsAttentionEventSchema.parse({
       ...migrated,
       resolvedAt: new Date().toISOString(),
-      resolvedByOverrideId,
+      ...(options.resolvedByOverrideId
+        ? { resolvedByOverrideId: options.resolvedByOverrideId }
+        : {}),
+      ...(trimmedReply ? { operatorReply: trimmedReply } : {}),
     });
     await writeJson(EVENTS_BUCKET(), match, resolved);
     return resolved;
@@ -168,4 +193,53 @@ export async function resolveNeedsAttention(
     `Needs-attention event not found within ${OPEN_WINDOW_DAYS} days: ${id}`,
     "not_found",
   );
+}
+
+/**
+ * Look up a batch of needs-attention events by id and return only
+ * the ones that have been resolved AND carry an operatorReply. This
+ * is the parent client's polling target: the parent chat remembers
+ * the ids of events it escalated and calls this to see if an
+ * operator answered. Events that are still open, events that don't
+ * exist, and events without a reply are all omitted from the result
+ * (empty array is a valid answer). Scans the same OPEN_WINDOW_DAYS
+ * partitions as the list-open path.
+ */
+export async function getResolvedEventsWithReplies(
+  ids: ReadonlyArray<string>,
+): Promise<NeedsAttentionEvent[]> {
+  if (ids.length === 0) return [];
+  const idSet = new Set(ids);
+
+  const now = new Date();
+  const prefixes: string[] = [];
+  for (let i = 0; i < OPEN_WINDOW_DAYS; i++) {
+    const d = new Date(now);
+    d.setUTCDate(d.getUTCDate() - i);
+    prefixes.push(`${ROOT_PREFIX}${datePartition(d)}/`);
+  }
+
+  const allKeys = (
+    await Promise.all(prefixes.map((p) => listObjectKeys(EVENTS_BUCKET(), p)))
+  ).flat();
+
+  // Pre-filter by filename so we don't read events we don't care
+  // about. Keys end with `-{uuid}.json`.
+  const wantedKeys = allKeys.filter((k) => {
+    const match = k.match(/-([0-9a-f-]{36})\.json$/);
+    return match !== null && match[1] !== undefined && idSet.has(match[1]);
+  });
+
+  const events: NeedsAttentionEvent[] = [];
+  for (const key of wantedKeys) {
+    const raw = await readJson(EVENTS_BUCKET(), key);
+    if (raw === null) continue;
+    const parsed = NeedsAttentionEventSchema.safeParse(raw);
+    if (!parsed.success) continue;
+    const migrated = migrateEvent(parsed.data);
+    if (!migrated.resolvedAt || !migrated.operatorReply) continue;
+    events.push(migrated);
+  }
+
+  return events;
 }

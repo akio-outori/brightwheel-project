@@ -77,7 +77,7 @@ export interface CitedEntry {
 export interface ChatMessageData {
   role: "user" | "assistant";
   text: string;
-  type?: "answer" | "uncertain" | "escalated";
+  type?: "answer" | "uncertain" | "escalated" | "refusal" | "staff_reply";
   source?: string | null;
   citedEntries?: CitedEntry[];
   initials?: string;
@@ -109,7 +109,9 @@ export default function ChatMessage({ message }: { message: ChatMessageData }) {
                 ? "bg-[#5B4FCF] text-white rounded-br-sm"
                 : message.type === "escalated"
                   ? "bg-amber-50 border border-amber-200 text-amber-900 rounded-bl-sm"
-                  : "bg-white border border-gray-100 text-gray-800 rounded-bl-sm shadow-sm",
+                  : message.type === "staff_reply"
+                    ? "bg-emerald-50 border border-emerald-200 text-emerald-900 rounded-bl-sm"
+                    : "bg-white border border-gray-100 text-gray-800 rounded-bl-sm shadow-sm",
             )}
           >
             {message.type === "escalated" && (
@@ -118,8 +120,16 @@ export default function ChatMessage({ message }: { message: ChatMessageData }) {
                 Forwarded to staff
               </div>
             )}
+            {message.type === "staff_reply" && (
+              <div className="flex items-center gap-1.5 mb-2 text-emerald-700 font-semibold text-xs">
+                <CheckCircle className="w-3.5 h-3.5" />
+                Reply from staff
+              </div>
+            )}
             <p className="whitespace-pre-line">
-              {!isUser && message.type === "answer" ? linkifyText(message.text) : message.text}
+              {!isUser && (message.type === "answer" || message.type === "staff_reply")
+                ? linkifyText(message.text)
+                : message.text}
             </p>
             {message.type === "escalated" && (
               <p className="text-[11px] text-amber-600/70 mt-1.5">

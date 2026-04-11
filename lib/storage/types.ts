@@ -158,6 +158,14 @@ export type { AnswerContract } from "../llm/contract";
 // defaulting to the currently active document. `resolvedByOverrideId`
 // replaces the old `resolvedByEntryId` name since every resolver is
 // now an override.
+//
+// `operatorReply` is the parent-facing message the operator wrote
+// when resolving the event. It is distinct from the override body
+// (which populates the handbook for future questions): the reply is
+// what the specific parent who asked this question sees when they
+// come back to the chat. The parent client polls /api/parent-replies
+// with the event id it got from /api/ask to surface this. Absent on
+// events resolved before this field existed.
 export const NeedsAttentionEventSchema = z.object({
   id: z.string().uuid(),
   docId: z.string().min(1).max(120).optional(),
@@ -166,6 +174,7 @@ export const NeedsAttentionEventSchema = z.object({
   createdAt: z.string().datetime(),
   resolvedAt: z.string().datetime().optional(),
   resolvedByOverrideId: z.string().optional(),
+  operatorReply: z.string().min(1).max(4000).optional(),
 });
 export type NeedsAttentionEvent = z.infer<typeof NeedsAttentionEventSchema>;
 

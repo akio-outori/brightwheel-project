@@ -29,7 +29,7 @@ import { listObjectKeys, readJson } from "./minio-json";
 // session loads the same document; a future session/auth layer will
 // replace the body of this function to pick based on user metadata.
 // Nothing else in the codebase should hardcode a document id.
-const DEFAULT_DOCUMENT_ID = "dcfd-family-handbook";
+const DEFAULT_DOCUMENT_ID = "sunflower-handbook";
 
 export function getActiveDocumentId(): string {
   return DEFAULT_DOCUMENT_ID;

@@ -12,8 +12,16 @@ import {
   Send,
   X,
 } from "lucide-react";
+import { z } from "zod";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
+
+// Shape of error responses returned by our API routes. Matches the
+// { error: string } envelope the boundary handlers produce. We parse
+// the fetch response body through this schema instead of asserting
+// the shape, so a malformed body falls through to a generic error
+// message without runtime surprises.
+const ErrorResponseSchema = z.object({ error: z.string() });
 
 interface AnswerContract {
   answer: string;
@@ -211,7 +219,7 @@ export default function QuestionLogPanel() {
                   {item.result.answer && (
                     <div>
                       <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5">
-                        AI Draft
+                        Suggested response
                       </p>
                       <p className="text-xs text-gray-600 leading-relaxed bg-gray-50 rounded-xl p-3 border border-gray-100">
                         {item.result.answer}
@@ -240,38 +248,73 @@ export default function QuestionLogPanel() {
 }
 
 // -----------------------------------------------------------------------
-// Inline reply form — creates an override + resolves the event
+// Inline reply form — the operator's "answer the parent" action.
+//
+// Primary action: write a reply the specific parent who asked will
+// see in their chat. That reply is always stored on the event and
+// delivered via /api/parent-replies polling.
+//
+// Optional action: "also add to handbook" checkbox. Many
+// escalations are one-off child-specific questions that should NOT
+// become reusable handbook entries — "my son fell at pickup, is he
+// okay?" is a human moment, not a policy update. The operator
+// opts in explicitly when the answer generalizes ("Yes, we offer
+// summer camp — 8am to 4pm, $240/week"). When checked, the SAME
+// reply text is used as the override body — one message, two
+// surfaces — and a title input appears for the handbook entry.
 // -----------------------------------------------------------------------
 
 function ReplyForm({ eventId }: { eventId: string; question?: string }) {
   const [open, setOpen] = useState(false);
+  const [reply, setReply] = useState("");
+  const [addToHandbook, setAddToHandbook] = useState(false);
   const [title, setTitle] = useState("");
-  const [body, setBody] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const canSubmit =
+    !saving && reply.trim().length > 0 && (!addToHandbook || title.trim().length > 0);
+
   async function handleSubmit() {
-    if (saving || !title.trim() || !body.trim()) return;
+    if (!canSubmit) return;
     setSaving(true);
     setError(null);
     try {
+      const payload: {
+        replyToParent: string;
+        handbookOverride?: {
+          title: string;
+          category: "general";
+          sourcePages: number[];
+          replacesEntryId: null;
+        };
+      } = {
+        replyToParent: reply.trim(),
+      };
+      if (addToHandbook) {
+        payload.handbookOverride = {
+          title: title.trim(),
+          category: "general",
+          sourcePages: [],
+          replacesEntryId: null,
+        };
+      }
+
       const res = await fetch(`/api/needs-attention/${eventId}/resolve-with-entry`, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          title: title.trim(),
-          category: "general",
-          body: body.trim(),
-          sourcePages: [],
-          replacesEntryId: null,
-        }),
+        body: JSON.stringify(payload),
       });
       if (!res.ok) {
-        const detail = await res.json().catch(() => ({}));
-        throw new Error((detail as { error?: string }).error ?? `Failed (HTTP ${res.status})`);
+        const rawDetail: unknown = await res.json().catch(() => ({}));
+        const parsed = ErrorResponseSchema.safeParse(rawDetail);
+        throw new Error(parsed.success ? parsed.data.error : `Failed (HTTP ${res.status})`);
       }
       await Promise.all([mutate("/api/needs-attention"), mutate("/api/handbook")]);
       setOpen(false);
+      setReply("");
+      setTitle("");
+      setAddToHandbook(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
@@ -286,37 +329,57 @@ function ReplyForm({ eventId }: { eventId: string; question?: string }) {
         className="w-full py-2 bg-[#5B4FCF] hover:bg-[#4A3FB8] text-white text-xs font-semibold rounded-xl transition-colors flex items-center justify-center gap-2"
       >
         <MessageSquare className="w-3.5 h-3.5" />
-        Answer this
+        Answer this parent
       </button>
     );
   }
 
   return (
-    <div className="space-y-2 border border-[#5B4FCF]/20 rounded-xl p-3 bg-[#5B4FCF]/5">
+    <div className="space-y-2.5 border border-[#5B4FCF]/20 rounded-xl p-3 bg-[#5B4FCF]/5">
       <div className="flex items-center justify-between">
-        <p className="text-xs font-semibold text-[#5B4FCF]">Create an override</p>
+        <p className="text-xs font-semibold text-[#5B4FCF]">Your reply to the parent</p>
         <button onClick={() => setOpen(false)} className="text-gray-400 hover:text-gray-600">
           <X className="w-3.5 h-3.5" />
         </button>
       </div>
-      <input
-        type="text"
-        value={title}
-        onChange={(e) => setTitle(e.target.value)}
-        placeholder="Title (e.g. Scheduling a tour)"
-        className="w-full px-3 py-1.5 text-xs border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5B4FCF]/30"
-      />
       <textarea
-        value={body}
-        onChange={(e) => setBody(e.target.value)}
-        placeholder="Write the answer the parent should have gotten..."
-        rows={3}
-        className="w-full px-3 py-1.5 text-xs border border-gray-200 rounded-lg resize-y focus:outline-none focus:ring-2 focus:ring-[#5B4FCF]/30"
+        value={reply}
+        onChange={(e) => setReply(e.target.value)}
+        placeholder="Write what you'd say to this parent..."
+        rows={4}
+        autoFocus
+        className="w-full px-3 py-2 text-xs border border-gray-200 rounded-lg resize-y focus:outline-none focus:ring-2 focus:ring-[#5B4FCF]/30"
       />
+
+      <label className="flex items-start gap-2 cursor-pointer select-none">
+        <input
+          type="checkbox"
+          checked={addToHandbook}
+          onChange={(e) => setAddToHandbook(e.target.checked)}
+          className="mt-0.5 accent-[#5B4FCF]"
+        />
+        <span className="text-xs text-gray-600 leading-snug">
+          Also add to handbook so future parents get this answer automatically
+          <span className="block text-[10px] text-gray-400 mt-0.5">
+            Skip for one-off questions about a specific child.
+          </span>
+        </span>
+      </label>
+
+      {addToHandbook && (
+        <input
+          type="text"
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          placeholder="Handbook entry title (e.g. Summer camp availability)"
+          className="w-full px-3 py-1.5 text-xs border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5B4FCF]/30"
+        />
+      )}
+
       {error && <p className="text-xs text-red-600">{error}</p>}
       <button
         onClick={handleSubmit}
-        disabled={saving || !title.trim() || !body.trim()}
+        disabled={!canSubmit}
         className="w-full py-2 bg-[#5B4FCF] hover:bg-[#4A3FB8] text-white text-xs font-semibold rounded-xl transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
       >
         {saving ? (
@@ -324,7 +387,7 @@ function ReplyForm({ eventId }: { eventId: string; question?: string }) {
         ) : (
           <Send className="w-3.5 h-3.5" />
         )}
-        {saving ? "Saving..." : "Save & close the loop"}
+        {saving ? "Sending..." : addToHandbook ? "Send reply & save to handbook" : "Send reply"}
       </button>
     </div>
   );
