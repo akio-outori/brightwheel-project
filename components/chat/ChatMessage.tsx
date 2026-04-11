@@ -93,7 +93,7 @@ export default function ChatMessage({ message }: { message: ChatMessageData }) {
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.25 }}
-        className={cn("flex gap-2.5 mb-4", isUser ? "justify-end" : "justify-start")}
+        className={cn("flex gap-2.5 mb-6", isUser ? "justify-end" : "justify-start")}
       >
         {!isUser && (
           <div className="w-8 h-8 rounded-full bg-[#5B4FCF] flex items-center justify-center flex-shrink-0 mt-0.5 shadow-md">

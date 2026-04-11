@@ -24,6 +24,13 @@ const GREETING: ChatMessageData = {
 // written to the backend but never surface in the parent's chat.
 const PENDING_IDS_STORAGE_KEY = "brightdesk:pending-event-ids";
 
+// localStorage key used to persist the chat history so the
+// conversation doesn't disappear when the parent navigates between
+// this view and the staff console. Cap stored history so a long
+// session can't blow past localStorage quota.
+const MESSAGES_STORAGE_KEY = "brightdesk:messages";
+const MAX_STORED_MESSAGES = 200;
+
 /** Resolve cited entry IDs to full objects for clickable pills. */
 function resolveCitations(
   ids: string[],
@@ -80,14 +87,50 @@ function contractToMessage(
   };
 }
 
+/** Lazy-init reader for persisted chat history. Returns the
+ *  greeting if nothing is stored, the stored array otherwise. */
+function loadPersistedMessages(): ChatMessageData[] {
+  if (typeof window === "undefined") return [GREETING];
+  try {
+    const raw = window.localStorage.getItem(MESSAGES_STORAGE_KEY);
+    if (!raw) return [GREETING];
+    const parsed: unknown = JSON.parse(raw);
+    if (!Array.isArray(parsed) || parsed.length === 0) return [GREETING];
+    // Shallow-validate: every item must be an object with a role
+    // and text. We're not enforcing the full ChatMessageData shape
+    // here — a future refactor could run this through zod, but
+    // the data producer is us and the worst case of a malformed
+    // entry is a single broken bubble.
+    const valid = parsed.filter(
+      (m): m is ChatMessageData =>
+        typeof m === "object" &&
+        m !== null &&
+        "role" in m &&
+        "text" in m &&
+        typeof (m as { text: unknown }).text === "string",
+    );
+    return valid.length > 0 ? valid : [GREETING];
+  } catch {
+    return [GREETING];
+  }
+}
+
 export function ParentChat() {
-  const [messages, setMessages] = useState<ChatMessageData[]>([GREETING]);
+  const [messages, setMessages] = useState<ChatMessageData[]>(loadPersistedMessages);
   const [input, setInput] = useState("");
   const [isTyping, setIsTyping] = useState(false);
-  const [showSuggestions, setShowSuggestions] = useState(true);
   const [entryLookup, setEntryLookup] = useState<Map<string, { title: string; body: string }>>(
     new Map(),
   );
+  // `showSuggestions` used to be a separate boolean flag that got
+  // flipped off on first user send. After adding localStorage
+  // persistence for `messages`, a restored conversation needs the
+  // suggestions panel to already be "hidden" on mount — otherwise
+  // the initial panel flashes back on top of a conversation the
+  // parent already had. Deriving from messages.length avoids that
+  // bug entirely: "has the user interacted at all" is already
+  // recorded in the messages array.
+  const hasConversation = messages.length > 1;
   // Ids of needs-attention events this client is waiting on a
   // staff reply for. /api/ask returns one whenever it logs an
   // event; we stash it here and poll /api/parent-replies for the
@@ -155,6 +198,23 @@ export function ParentChat() {
     }
   }, [pendingEventIds]);
 
+  // Mirror the chat history to localStorage so navigating between
+  // the parent and staff views doesn't wipe the conversation.
+  // We cap at the most recent MAX_STORED_MESSAGES entries so a
+  // long demo session can't exceed the storage quota.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      const toStore =
+        messages.length > MAX_STORED_MESSAGES
+          ? messages.slice(messages.length - MAX_STORED_MESSAGES)
+          : messages;
+      window.localStorage.setItem(MESSAGES_STORAGE_KEY, JSON.stringify(toStore));
+    } catch {
+      // best-effort — quota exceeded / private mode / disabled storage
+    }
+  }, [messages]);
+
   // Poll /api/parent-replies while we have pending escalations.
   // When a reply lands, inject it as a new assistant bubble and
   // drop the id from the pending set. The loop stops when there's
@@ -204,7 +264,6 @@ export function ParentChat() {
     const query = text || input.trim();
     if (!query) return;
     setInput("");
-    setShowSuggestions(false);
     setMessages((prev) => [...prev, { role: "user", text: query, initials: "P" }]);
     setIsTyping(true);
 
@@ -332,7 +391,7 @@ export function ParentChat() {
 
         {/* Suggested questions — initial set or follow-up after escalation */}
         <AnimatePresence>
-          {showSuggestions && messages.length <= 1 && (
+          {!hasConversation && (
             <motion.div
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: "auto" }}
@@ -342,22 +401,19 @@ export function ParentChat() {
               <SuggestedQuestions questions={SUGGESTED_QUESTIONS} onSelect={sendMessage} />
             </motion.div>
           )}
-          {!showSuggestions &&
-            !isTyping &&
-            messages.length > 1 &&
-            messages[messages.length - 1]?.type === "escalated" && (
-              <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: "auto" }}
-                exit={{ opacity: 0, height: 0 }}
-                className="flex-shrink-0 px-4 pb-3"
-              >
-                <p className="text-xs text-gray-500 mb-2 ml-1">
-                  While you wait, I can help with these:
-                </p>
-                <SuggestedQuestions questions={FOLLOWUP_SUGGESTIONS} onSelect={sendMessage} />
-              </motion.div>
-            )}
+          {hasConversation && !isTyping && messages[messages.length - 1]?.type === "escalated" && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+              className="flex-shrink-0 px-4 pb-3"
+            >
+              <p className="text-xs text-gray-500 mb-2 ml-1">
+                While you wait, I can help with these:
+              </p>
+              <SuggestedQuestions questions={FOLLOWUP_SUGGESTIONS} onSelect={sendMessage} />
+            </motion.div>
+          )}
         </AnimatePresence>
 
         {/* Input */}
