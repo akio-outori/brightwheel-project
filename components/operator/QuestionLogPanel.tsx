@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import useSWR, { mutate } from "swr";
+import { useEffect, useRef, useState } from "react";
+import { mutate } from "swr";
 import {
   AlertTriangle,
   Clock,
@@ -15,6 +15,7 @@ import {
 import { z } from "zod";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
+import { EVENTS_SWR_KEY, type EventFilter } from "./OperatorDashboard";
 
 // Shape of error responses returned by our API routes. Matches the
 // { error: string } envelope the boundary handlers produce. We parse
@@ -39,9 +40,26 @@ interface NeedsAttentionEvent {
   createdAt: string;
   resolvedAt?: string;
   resolvedByOverrideId?: string;
+  operatorReply?: string;
 }
 
-const fetcher = (url: string) => fetch(url).then((r) => r.json());
+export interface QuestionLogPanelProps {
+  /** Filtered event list chosen by the parent based on the
+   *  active stat-card filter. Already sorted newest-first. */
+  events: NeedsAttentionEvent[];
+  /** Which filter is active. Drives the empty-state copy and
+   *  the header alert — the panel shouldn't need to re-derive
+   *  this from events. */
+  filter: EventFilter;
+  /** Controlled expanded-card id. The bell dropdown in the
+   *  dashboard sets this when the operator clicks a
+   *  notification, which both opens the card and scrolls it
+   *  into view. */
+  expandedId: string | null;
+  /** Called when the operator toggles a card open or closed
+   *  from inside the panel itself. */
+  onExpandChange: (id: string | null) => void;
+}
 
 function ConfidenceBadge({ confidence }: { confidence: "high" | "low" }) {
   return confidence === "high" ? (
@@ -74,42 +92,38 @@ function formatHoldReason(reason: string | undefined): string | null {
   return HOLD_REASON_LABELS[key] ?? key.replace(/_/g, " ");
 }
 
-export default function QuestionLogPanel() {
-  const { data, error, isLoading } = useSWR<{ events: NeedsAttentionEvent[] }>(
-    "/api/needs-attention",
-    fetcher,
-    { refreshInterval: 10000 },
-  );
-  const [expanded, setExpanded] = useState<string | null>(null);
+export default function QuestionLogPanel({
+  events,
+  filter,
+  expandedId,
+  onExpandChange,
+}: QuestionLogPanelProps) {
+  // Per-card refs keyed by event id so we can scroll the
+  // currently expanded card into view whenever `expandedId`
+  // changes — particularly after the bell dropdown jumps to a
+  // specific event.
+  const cardRefs = useRef<Map<string, HTMLDivElement | null>>(new Map());
+  useEffect(() => {
+    if (!expandedId) return;
+    const el = cardRefs.current.get(expandedId);
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  }, [expandedId]);
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
-      </div>
-    );
-  }
-
-  if (error || !data) {
-    return (
-      <div className="bg-red-50 border border-red-200 rounded-2xl p-4 text-sm text-red-700">
-        Failed to load questions. Make sure the backend is running.
-      </div>
-    );
-  }
-
-  const events = data.events;
-  const escalatedCount = events.filter((e) => e.result.escalate).length;
+  const unresolvedCount = events.filter((e) => !e.resolvedAt && e.result.escalate).length;
 
   return (
     <div>
-      {/* Escalation alert */}
-      {escalatedCount > 0 && (
+      {/* Escalation alert — only when the current filter actually
+          includes unresolved escalations. Suppress on the "By
+          staff" filter where everything is already resolved. */}
+      {unresolvedCount > 0 && filter !== "resolved" && (
         <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 mb-5 flex gap-3">
           <AlertTriangle className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
           <div>
             <p className="text-sm font-semibold text-amber-800">
-              {escalatedCount} question{escalatedCount !== 1 ? "s" : ""} need your attention
+              {unresolvedCount} question{unresolvedCount !== 1 ? "s" : ""} need your attention
             </p>
             <p className="text-xs text-amber-600 mt-0.5">
               A parent asked something we don&apos;t have an answer for yet. Your response closes
@@ -121,7 +135,11 @@ export default function QuestionLogPanel() {
 
       {events.length === 0 && (
         <div className="text-center py-12 text-sm text-gray-400">
-          All caught up — no parent questions waiting.
+          {filter === "unresolved"
+            ? "All caught up — nothing waiting for you."
+            : filter === "resolved"
+              ? "No staff replies yet in this window."
+              : "No parent questions in the feed."}
         </div>
       )}
 
@@ -134,6 +152,9 @@ export default function QuestionLogPanel() {
           return (
             <div
               key={item.id}
+              ref={(el) => {
+                cardRefs.current.set(item.id, el);
+              }}
               className={cn(
                 "bg-white rounded-2xl border overflow-hidden transition-all shadow-sm hover:shadow-md",
                 item.result.escalate ? "border-amber-200" : "border-gray-100",
@@ -141,7 +162,7 @@ export default function QuestionLogPanel() {
             >
               <button
                 className="w-full text-left px-4 py-4 flex items-start gap-3"
-                onClick={() => setExpanded(expanded === item.id ? null : item.id)}
+                onClick={() => onExpandChange(expandedId === item.id ? null : item.id)}
               >
                 {/* Status icon */}
                 <div
@@ -184,14 +205,14 @@ export default function QuestionLogPanel() {
                   </div>
                 </div>
 
-                {expanded === item.id ? (
+                {expandedId === item.id ? (
                   <ChevronUp className="w-4 h-4 text-gray-300 flex-shrink-0 mt-1" />
                 ) : (
                   <ChevronDown className="w-4 h-4 text-gray-300 flex-shrink-0 mt-1" />
                 )}
               </button>
 
-              {expanded === item.id && (
+              {expandedId === item.id && (
                 <div className="px-4 pb-4 border-t border-gray-50 pt-3 space-y-3">
                   <div>
                     <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5">
@@ -310,7 +331,7 @@ function ReplyForm({ eventId }: { eventId: string; question?: string }) {
         const parsed = ErrorResponseSchema.safeParse(rawDetail);
         throw new Error(parsed.success ? parsed.data.error : `Failed (HTTP ${res.status})`);
       }
-      await Promise.all([mutate("/api/needs-attention"), mutate("/api/handbook")]);
+      await Promise.all([mutate(EVENTS_SWR_KEY), mutate("/api/handbook")]);
       setOpen(false);
       setReply("");
       setTitle("");

@@ -43,6 +43,7 @@ export {
 export {
   logNeedsAttention,
   listOpenNeedsAttention,
+  listAllNeedsAttention,
   resolveNeedsAttention,
   getResolvedEventsWithReplies,
 } from "./needs-attention";
