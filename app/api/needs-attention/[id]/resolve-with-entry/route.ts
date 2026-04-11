@@ -1,22 +1,46 @@
 // POST /api/needs-attention/[id]/resolve-with-entry
 //
-// The atomic fix endpoint. Does both halves of the operator's
-// "answer this" action in one handler:
-//   1. Create a new operator override from the draft
-//   2. Resolve the needs-attention event, linking to that override
+// The primary "answer the parent" endpoint. Every call resolves the
+// event with the operator's parent-facing reply; creating a handbook
+// override is an OPTIONAL side effect when the operator explicitly
+// checks "also add this to the handbook."
+//
+// The split matters because escalations are not homogeneous. A
+// child-specific question ("my son fell at pickup, is he OK?") is a
+// one-off staff-to-parent reply that must never become a reusable
+// handbook entry. A generalizable question ("do you offer summer
+// camp?") is exactly the kind of answer the operator wants banked
+// in the handbook so the next parent gets it automatically. The
+// checkbox is the seam between those two cases — the operator
+// decides, because the operator is the one who knows.
+//
+// Request shape:
+//   {
+//     replyToParent: string,                // required, always
+//     handbookOverride?: {                  // optional opt-in
+//       title: string,
+//       category: HandbookCategory,
+//       sourcePages?: number[],
+//       replacesEntryId?: string | null,
+//     }
+//   }
+//
+// When `handbookOverride` is present, the override body is the same
+// text as `replyToParent` — the operator wrote one message, and both
+// surfaces receive it. The parent client polls /api/parent-replies
+// using event ids it collected from /api/ask to surface the reply.
+//
+// Error ordering: if the operator opted into a handbook override
+// and the override create fails, we return the error before
+// touching the event — the resolve should not happen if the
+// operator's stated intent (reply + override) cannot be fully
+// satisfied. If the override succeeds but the resolve fails, we
+// return a partial-success response so the operator can retry.
+// We do not delete the override — it's visible in the handbook
+// panel and the operator can clean it up if it's orphaned.
 //
 // The URL path keeps its historical `/resolve-with-entry` suffix to
-// avoid UI churn; internally the resolver is always an override
-// now, since the handbook layer is immutable after seed.
-//
-// If step 2 fails after step 1 succeeded, we return a partial-success
-// response so the operator can retry the resolve step from the feed.
-// We do not delete the override — the operator will see it in the
-// overrides list and can clean it up if it's truly orphaned.
-//
-// This atomicity matters because the original client-side two-call
-// flow could leave the override persisted and the event still open
-// if the network dropped between calls.
+// avoid UI churn.
 
 import { z } from "zod";
 import {
@@ -31,11 +55,15 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const FixRequestSchema = z.object({
-  title: z.string().min(1).max(200),
-  category: HandbookCategorySchema,
-  body: z.string().min(1).max(20_000),
-  sourcePages: z.array(z.number().int().nonnegative()).default([]),
-  replacesEntryId: z.string().min(1).max(120).nullable().default(null),
+  replyToParent: z.string().min(1).max(4000),
+  handbookOverride: z
+    .object({
+      title: z.string().min(1).max(200),
+      category: HandbookCategorySchema,
+      sourcePages: z.array(z.number().int().nonnegative()).default([]),
+      replacesEntryId: z.string().min(1).max(120).nullable().default(null),
+    })
+    .optional(),
 });
 
 export async function POST(
@@ -55,55 +83,73 @@ export async function POST(
   if (!parsed.success) {
     return Response.json({ error: "Invalid request." }, { status: 400 });
   }
+  const { replyToParent, handbookOverride } = parsed.data;
 
   const docId = getActiveDocumentId();
 
-  // Step 1: create the operator override.
-  let override;
-  try {
-    override = await createOperatorOverride(docId, {
-      ...parsed.data,
-      createdBy: null,
-    });
-  } catch (err) {
-    if (err instanceof StorageError && err.code === "already_exists") {
-      return Response.json(
-        { error: "An override with that title already exists." },
-        { status: 409 },
-      );
+  // Step 1 (conditional): create the operator override if the
+  // operator opted in. The override body is the same text as the
+  // parent-facing reply — one message, two surfaces.
+  let overrideId: string | undefined;
+  let override = undefined as Awaited<ReturnType<typeof createOperatorOverride>> | undefined;
+  if (handbookOverride) {
+    try {
+      override = await createOperatorOverride(docId, {
+        title: handbookOverride.title,
+        category: handbookOverride.category,
+        body: replyToParent,
+        sourcePages: handbookOverride.sourcePages,
+        replacesEntryId: handbookOverride.replacesEntryId,
+        createdBy: null,
+      });
+      overrideId = override.id;
+    } catch (err) {
+      if (err instanceof StorageError && err.code === "already_exists") {
+        return Response.json(
+          { error: "An override with that title already exists." },
+          { status: 409 },
+        );
+      }
+      console.error(`[/api/needs-attention/${eventId}/resolve-with-entry] create failed:`, err);
+      return Response.json({ error: "Could not create override." }, { status: 500 });
     }
-    console.error(`[/api/needs-attention/${eventId}/resolve-with-entry] create failed:`, err);
-    return Response.json({ error: "Could not create override." }, { status: 500 });
   }
 
-  // Step 2: resolve the event. If this fails, the override exists
-  // but the event is still open — return a partial-success error so
-  // the operator can retry the resolve step.
+  // Step 2: resolve the event, storing the parent reply AND the
+  // override id (if we created one). If this fails after the
+  // override was created, the override is orphaned until the
+  // operator retries — we return partial-success so the UI can
+  // message that clearly.
   try {
-    const resolved = await resolveNeedsAttention(eventId, override.id);
-    return Response.json({ override, event: resolved }, { status: 201 });
+    const resolved = await resolveNeedsAttention(eventId, {
+      operatorReply: replyToParent,
+      resolvedByOverrideId: overrideId,
+    });
+    return Response.json({ override: override ?? null, event: resolved }, { status: 201 });
   } catch (err) {
     console.error(
-      `[/api/needs-attention/${eventId}/resolve-with-entry] resolve failed after override created:`,
+      `[/api/needs-attention/${eventId}/resolve-with-entry] resolve failed:`,
       err,
     );
     if (err instanceof StorageError && err.code === "not_found") {
       return Response.json(
         {
-          error:
-            "Override was created but the needs-attention event could not be found. It may have been resolved already. The new override is live.",
-          override,
-          partialSuccess: true,
+          error: override
+            ? "The handbook entry was saved but the event could not be found. It may have been resolved already."
+            : "The event could not be found. It may have been resolved already.",
+          override: override ?? null,
+          partialSuccess: Boolean(override),
         },
         { status: 409 },
       );
     }
     return Response.json(
       {
-        error:
-          "Override was created but the event could not be resolved. The new override is live; retry resolving the event from the feed.",
-        override,
-        partialSuccess: true,
+        error: override
+          ? "The handbook entry was saved but the event could not be resolved. Retry from the feed."
+          : "Could not resolve the event. Please try again.",
+        override: override ?? null,
+        partialSuccess: Boolean(override),
       },
       { status: 500 },
     );

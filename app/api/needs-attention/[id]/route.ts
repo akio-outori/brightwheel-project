@@ -40,7 +40,9 @@ export async function POST(
   }
 
   try {
-    const event = await resolveNeedsAttention(id, parsed.data.resolvedByOverrideId);
+    const event = await resolveNeedsAttention(id, {
+      resolvedByOverrideId: parsed.data.resolvedByOverrideId,
+    });
     return Response.json(event);
   } catch (err) {
     if (err instanceof StorageError && err.code === "not_found") {

@@ -35,6 +35,20 @@ function contractToMessage(
   contract: AnswerContract,
   lookup: Map<string, { title: string; body: string }>,
 ): ChatMessageData {
+  // Refusal — the model declined an off-topic or out-of-scope
+  // question. Render the model's decline text directly; no
+  // "staff is looking at this" card, no follow-up queue. The
+  // parent asked something this desk isn't for, and the polite
+  // "I can't help with that" is the final answer.
+  if (contract.refusal === true) {
+    return {
+      role: "assistant",
+      text: contract.answer,
+      type: "refusal",
+      source: null,
+    };
+  }
+
   // Low confidence and escalated both render as escalation —
   // the parent should never see a hedged model answer. Use the
   // stock response text if available, otherwise a safe fallback.
@@ -67,6 +81,11 @@ export function ParentChat() {
   const [entryLookup, setEntryLookup] = useState<Map<string, { title: string; body: string }>>(
     new Map(),
   );
+  // Ids of needs-attention events this client is waiting on a
+  // staff reply for. /api/ask returns one whenever it logs an
+  // event; we stash it here and poll /api/parent-replies for the
+  // staff's response. Once a reply arrives, the id is removed.
+  const [pendingEventIds, setPendingEventIds] = useState<string[]>([]);
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -95,6 +114,51 @@ export function ParentChat() {
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isTyping]);
+
+  // Poll /api/parent-replies while we have pending escalations.
+  // When a reply lands, inject it as a new assistant bubble and
+  // drop the id from the pending set. The loop stops when there's
+  // nothing left to wait on — no pending ids, no polling.
+  useEffect(() => {
+    if (pendingEventIds.length === 0) return;
+
+    let cancelled = false;
+
+    async function poll() {
+      try {
+        const qs = pendingEventIds.join(",");
+        const res = await fetch(`/api/parent-replies?ids=${encodeURIComponent(qs)}`);
+        if (!res.ok || cancelled) return;
+        const data = (await res.json()) as {
+          replies?: Array<{ id: string; reply: string; resolvedAt: string }>;
+        };
+        if (cancelled || !data.replies || data.replies.length === 0) return;
+
+        const resolvedIds = new Set(data.replies.map((r) => r.id));
+        setMessages((prev) => [
+          ...prev,
+          ...data.replies!.map<ChatMessageData>((r) => ({
+            role: "assistant",
+            text: r.reply,
+            type: "staff_reply",
+            source: null,
+          })),
+        ]);
+        setPendingEventIds((prev) => prev.filter((id) => !resolvedIds.has(id)));
+      } catch {
+        // Network blip — try again on the next tick.
+      }
+    }
+
+    // Poll once immediately (catches the case where the operator
+    // replied before the effect ran), then every 5s.
+    void poll();
+    const handle = window.setInterval(poll, 5000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(handle);
+    };
+  }, [pendingEventIds]);
 
   const sendMessage = async (text?: string) => {
     const query = text || input.trim();
@@ -139,6 +203,18 @@ export function ParentChat() {
         return;
       }
       setMessages((prev) => [...prev, contractToMessage(parsed.data, entryLookup)]);
+
+      // If this question was logged as a needs-attention event,
+      // remember its id so the polling effect can pick up the
+      // staff reply when it arrives. The field lives alongside
+      // the contract at the top level of the response and is
+      // absent on grounded-answer paths.
+      if (typeof raw === "object" && raw !== null && "needs_attention_event_id" in raw) {
+        const eventId = (raw as { needs_attention_event_id?: unknown }).needs_attention_event_id;
+        if (typeof eventId === "string" && eventId.length > 0) {
+          setPendingEventIds((prev) => (prev.includes(eventId) ? prev : [...prev, eventId]));
+        }
+      }
     } catch {
       setIsTyping(false);
       setMessages((prev) => [

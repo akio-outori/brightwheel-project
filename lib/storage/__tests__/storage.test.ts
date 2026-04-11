@@ -303,9 +303,13 @@ describe("needs-attention adapter", () => {
     expect(open[0]!.question).toBe("How can I schedule a tour?");
     expect(open[0]!.docId).toBe(TEST_DOC_ID);
 
-    const resolved = await resolveNeedsAttention(logged.id, "scheduling-a-tour-override");
+    const resolved = await resolveNeedsAttention(logged.id, {
+      resolvedByOverrideId: "scheduling-a-tour-override",
+      operatorReply: "You can schedule a tour by calling the office.",
+    });
     expect(resolved.resolvedAt).toMatch(/^\d{4}-\d{2}-\d{2}T/);
     expect(resolved.resolvedByOverrideId).toBe("scheduling-a-tour-override");
+    expect(resolved.operatorReply).toBe("You can schedule a tour by calling the office.");
 
     const openAfter = await listOpenNeedsAttention();
     expect(openAfter).toHaveLength(0);
@@ -345,7 +349,9 @@ describe("needs-attention adapter", () => {
 
   it("resolveNeedsAttention on an unknown id throws not_found", async () => {
     await expect(
-      resolveNeedsAttention("00000000-0000-0000-0000-000000000000", "some-override"),
+      resolveNeedsAttention("00000000-0000-0000-0000-000000000000", {
+        resolvedByOverrideId: "some-override",
+      }),
     ).rejects.toMatchObject({
       name: "StorageError",
       code: "not_found",

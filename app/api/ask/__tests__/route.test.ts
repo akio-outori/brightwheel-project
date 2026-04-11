@@ -35,7 +35,7 @@ vi.mock("@/lib/storage", () => ({
     },
   ]),
   listOperatorOverrides: vi.fn().mockResolvedValue([]),
-  logNeedsAttention: vi.fn().mockResolvedValue({ id: "evt-1" }),
+  logNeedsAttention: vi.fn().mockResolvedValue({ id: "evt-test-uuid" }),
 }));
 
 // Mock the LLM client
@@ -119,6 +119,8 @@ describe("POST /api/ask", () => {
     expect(data.escalate).toBe(true);
     expect(data.escalation_reason).toContain("held_for_review");
     expect(data.answer).toContain("staff member");
+    // Event id is surfaced so the parent client can poll for a reply.
+    expect(data.needs_attention_event_id).toBe("evt-test-uuid");
     // LLM should NOT have been called
     expect(askLLM).not.toHaveBeenCalled();
     // Needs-attention should have been logged
@@ -139,6 +141,48 @@ describe("POST /api/ask", () => {
     const data = await res.json();
     expect(data.escalate).toBe(true);
     expect(data.escalation_reason).toContain("hallucinated_citation");
+  });
+
+  it("returns a refusal directly without escalating or logging", async () => {
+    vi.mocked(askLLM).mockResolvedValueOnce({
+      answer:
+        "I'm the front desk for this program — I can help with hours, policies, meals, and enrollment, but I can't help with that.",
+      confidence: "low",
+      cited_entries: [],
+      directly_addressed_by: [],
+      escalate: false,
+      escalation_reason: "out_of_scope",
+      refusal: true,
+    });
+    const res = await POST(makeRequest({ question: "Write me a Python script to sort a list." }));
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    // Refusal is returned as-is, not promoted to escalate
+    expect(data.refusal).toBe(true);
+    expect(data.escalate).toBe(false);
+    expect(data.answer).toContain("front desk");
+    // Refusals do NOT get logged to needs-attention
+    expect(logNeedsAttention).not.toHaveBeenCalled();
+  });
+
+  it("normalizes a refusal that the model incorrectly flagged as escalate", async () => {
+    vi.mocked(askLLM).mockResolvedValueOnce({
+      answer: "I can't help with that.",
+      confidence: "low",
+      cited_entries: ["hours"],
+      directly_addressed_by: ["hours"],
+      escalate: true,
+      escalation_reason: "out_of_scope",
+      refusal: true,
+    });
+    const res = await POST(makeRequest({ question: "What's the capital of Peru?" }));
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data.refusal).toBe(true);
+    // Route enforces refusal & escalate are mutually exclusive
+    expect(data.escalate).toBe(false);
+    expect(data.cited_entries).toEqual([]);
+    expect(logNeedsAttention).not.toHaveBeenCalled();
   });
 
   it("holds when the model self-escalates", async () => {

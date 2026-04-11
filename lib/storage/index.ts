@@ -44,4 +44,5 @@ export {
   logNeedsAttention,
   listOpenNeedsAttention,
   resolveNeedsAttention,
+  getResolvedEventsWithReplies,
 } from "./needs-attention";
