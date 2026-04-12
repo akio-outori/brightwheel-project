@@ -159,13 +159,16 @@ describe.skipIf(!hasApiKey())("grounding — literal fact recall", () => {
   it("recalls the toddler ratio", async () => {
     const result = await askViaRoute("What's the teacher-to-child ratio for toddlers?");
     await expectHighConfidence(result, "ratio-toddler");
-    expectAnswerContains(result, "6");
+    // Model may write "6" or "six"
+    const lower = result.answer.toLowerCase();
+    expect(lower.includes("6") || lower.includes("six"), "should mention ratio of 6").toBe(true);
   });
 
   it("recalls the twos ratio", async () => {
     const result = await askViaRoute("What's the ratio in the twos classroom?");
     await expectHighConfidence(result, "ratio-twos");
-    expectAnswerContains(result, "8");
+    const lower = result.answer.toLowerCase();
+    expect(lower.includes("8") || lower.includes("eight"), "should mention ratio of 8").toBe(true);
   });
 
   it("recalls the preschool ratio", async () => {
