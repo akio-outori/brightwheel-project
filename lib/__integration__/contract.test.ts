@@ -75,4 +75,35 @@ describe.skipIf(!hasApiKey())("contract — robustness to weird inputs", () => {
     );
     assertValidContract(result);
   });
+
+  // ----- RTL / non-Latin scripts -------------------------------------------
+
+  it("handles an RTL Arabic question", async () => {
+    const result = await askViaRoute("كم الساعة التي تفتح بها");
+    assertValidContract(result);
+  });
+
+  it("handles a Mandarin question", async () => {
+    const result = await askViaRoute("你们几点开门？");
+    assertValidContract(result);
+  });
+
+  it("handles mixed scripts in a single question", async () => {
+    const result = await askViaRoute("Hello שלום what time 几点 do you open");
+    assertValidContract(result);
+  });
+
+  // ----- Length edge cases --------------------------------------------------
+
+  it("handles exactly 2000 characters", async () => {
+    const padded = "a".repeat(1994) + " open?";
+    expect(padded.length).toBe(2000);
+    const result = await askViaRoute(padded);
+    assertValidContract(result);
+  });
+
+  it("handles a single-character question", async () => {
+    const result = await askViaRoute("?");
+    assertValidContract(result);
+  });
 });

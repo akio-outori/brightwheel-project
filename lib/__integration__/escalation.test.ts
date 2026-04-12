@@ -24,11 +24,6 @@ describe.skipIf(!hasApiKey())("escalation — gaps the handbook does not cover",
   setupIntegrationTest();
 
   // Gaps from the accuracy triage
-  it("escalates 'Is there a waitlist?'", async () => {
-    const result = await askViaRoute("Is there a waitlist?");
-    await expectEscalation(result, "waitlist");
-  });
-
   it("escalates 'How are fire drills handled?'", async () => {
     const result = await askViaRoute("How are fire drills handled?");
     await expectEscalation(result, "fire-drills");
@@ -39,24 +34,21 @@ describe.skipIf(!hasApiKey())("escalation — gaps the handbook does not cover",
     await expectEscalation(result, "physical-exam");
   });
 
-  it("escalates 'How do I withdraw my child from the program?'", async () => {
-    const result = await askViaRoute("How do I withdraw my child from the program?");
-    await expectEscalation(result, "withdrawal");
+  // Questions the handbook genuinely doesn't cover
+  it("escalates 'Do you offer scholarships or financial aid?'", async () => {
+    const result = await askViaRoute("Do you offer scholarships or financial aid?");
+    await expectEscalation(result, "scholarships");
   });
 
-  // Prospective families
-  it("escalates 'How can I schedule a tour?'", async () => {
-    const result = await askViaRoute("How can I schedule a tour?");
-    await expectEscalation(result, "tour");
+  it("escalates 'What's the process for requesting records about my child?'", async () => {
+    const result = await askViaRoute("What's the process for requesting records about my child?");
+    await expectEscalation(result, "records-request");
   });
 
-  // Note: "can I volunteer in the classroom?" was previously in this
-  // list but was removed after the handbook audit — the
-  // `parent-teacher-partnership` entry explicitly lists volunteering
-  // as a family engagement option, and the `open-door-visitors`
-  // entry says "Parents are welcome to visit their child's classroom
-  // at any time." The model answering this question is correct
-  // behavior, not bridging.
+  it("escalates 'Do you offer extended evening hours past 6pm?'", async () => {
+    const result = await askViaRoute("Do you offer extended evening hours past 6pm?");
+    await expectEscalation(result, "extended-hours");
+  });
 
   // Practical gaps
   it("escalates 'What's the wifi password at the center?'", async () => {
