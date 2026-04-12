@@ -2,7 +2,7 @@
 
 import { useState, type ReactNode } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { AlertCircle, CheckCircle, BookOpen, Sparkles, X } from "lucide-react";
+import { AlertCircle, CheckCircle, BookOpen, Sparkles, X, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const PHONE_RE = /\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}/g;
@@ -20,6 +20,8 @@ function linkifyText(text: string): ReactNode[] {
 
   for (const m of text.matchAll(PHONE_RE)) {
     const digits = m[0].replace(/\D/g, "");
+    // S5: cap digit length to prevent tel: links on arbitrary long numbers
+    if (digits.length > 15) continue;
     matches.push({
       start: m.index,
       end: m.index + m[0].length,
@@ -77,7 +79,7 @@ export interface CitedEntry {
 export interface ChatMessageData {
   role: "user" | "assistant";
   text: string;
-  type?: "answer" | "uncertain" | "escalated" | "refusal" | "staff_reply";
+  type?: "answer" | "escalated" | "refusal" | "staff_reply";
   source?: string | null;
   citedEntries?: CitedEntry[];
   initials?: string;
@@ -137,53 +139,48 @@ export default function ChatMessage({ message }: { message: ChatMessageData }) {
             </p>
             {message.type === "escalated" && (
               <p className="text-[11px] text-amber-600/70 mt-1.5">
-                We&rsquo;ll follow up by phone, or you can ask again later and your answer may be
-                ready.
+                Someone from our team will follow up with you.
               </p>
             )}
           </div>
 
-          {!isUser &&
-            ((message.citedEntries && message.citedEntries.length > 0) ||
-              message.type === "answer") && (
-              // Metadata cluster: citation pills + "Verified policy"
-              // badge. Grouped in a single container with its own
-              // internal spacing so the cluster reads as part of the
-              // preceding bubble, not a floating block between
-              // messages. `mt-1.5` keeps it snug against the bubble;
-              // the outer motion.div's `mb-8` is what separates this
-              // unit from the next message.
-              <div className="mt-1.5 ml-1 flex flex-col gap-1">
-                {message.citedEntries && message.citedEntries.length > 0 && (
-                  <div className="flex flex-wrap gap-1.5">
-                    {message.citedEntries.map((entry) => (
-                      <button
-                        key={entry.id}
-                        type="button"
-                        onClick={() => setOpenEntry(entry)}
-                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-indigo-50 text-[10px] font-medium text-indigo-700 ring-1 ring-inset ring-indigo-200 hover:bg-indigo-100 hover:ring-indigo-300 transition-colors cursor-pointer"
-                      >
-                        <BookOpen className="w-2.5 h-2.5" />
-                        {entry.title}
-                      </button>
-                    ))}
-                  </div>
-                )}
-                {message.type === "answer" && (
-                  <div className="flex items-center gap-1">
-                    <CheckCircle className="w-3 h-3 text-emerald-500" />
-                    <span className="text-[11px] text-emerald-600 font-medium">
-                      Verified policy
-                    </span>
-                  </div>
-                )}
-              </div>
-            )}
+          {!isUser && message.citedEntries && message.citedEntries.length > 0 && (
+            // Metadata cluster: citation pills + "Verified policy"
+            // badge. Grouped in a single container with its own
+            // internal spacing so the cluster reads as part of the
+            // preceding bubble, not a floating block between
+            // messages. `mt-1.5` keeps it snug against the bubble;
+            // the outer motion.div's `mb-8` is what separates this
+            // unit from the next message.
+            <div className="mt-1.5 ml-1 flex flex-col gap-1">
+              {message.citedEntries && message.citedEntries.length > 0 && (
+                <div className="flex flex-wrap gap-1.5">
+                  {message.citedEntries.map((entry) => (
+                    <button
+                      key={entry.id}
+                      type="button"
+                      onClick={() => setOpenEntry(entry)}
+                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-indigo-50 text-[10px] font-medium text-indigo-700 ring-1 ring-inset ring-indigo-200 hover:bg-indigo-100 hover:ring-indigo-300 transition-colors cursor-pointer"
+                    >
+                      <BookOpen className="w-2.5 h-2.5" />
+                      {entry.title}
+                    </button>
+                  ))}
+                </div>
+              )}
+              {message.type === "answer" && (
+                <div className="flex items-center gap-1">
+                  <CheckCircle className="w-3 h-3 text-emerald-500" />
+                  <span className="text-[11px] text-emerald-600 font-medium">Verified policy</span>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {isUser && (
-          <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center flex-shrink-0 mt-0.5 text-xs font-bold text-gray-600">
-            {message.initials || "P"}
+          <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center flex-shrink-0 mt-0.5">
+            <User className="w-4 h-4 text-gray-500" />
           </div>
         )}
       </motion.div>

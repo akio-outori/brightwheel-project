@@ -2,7 +2,7 @@
   "extends": ["next/core-web-vitals", "prettier"],
   "plugins": ["security"],
   "rules": {
-    "no-console": ["error", { "allow": ["warn", "error", "log"] }],
+    "no-console": ["error", { "allow": ["warn", "error", "debug"] }],
     "security/detect-eval-with-expression": "error",
     "security/detect-non-literal-regexp": "warn",
     "security/detect-non-literal-fs-filename": "warn",

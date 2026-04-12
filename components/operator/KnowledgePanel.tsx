@@ -102,6 +102,7 @@ export default function KnowledgePanel() {
   const [editText, setEditText] = useState("");
   const [activeCategory, setActiveCategory] = useState("all");
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   if (isLoading) {
     return (
@@ -114,7 +115,7 @@ export default function KnowledgePanel() {
   if (error || !data) {
     return (
       <div className="bg-red-50 border border-red-200 rounded-2xl p-4 text-sm text-red-700">
-        Failed to load knowledge base. Make sure the backend is running.
+        Unable to load the handbook right now. Please refresh the page or try again in a moment.
       </div>
     );
   }
@@ -153,6 +154,7 @@ export default function KnowledgePanel() {
   const saveEdit = async (item: DisplayItem) => {
     if (item.layer !== "override") return;
     setSaving(true);
+    setSaveError(null);
     try {
       const res = await fetch(`/api/overrides/${item.id}`, {
         method: "PUT",
@@ -164,7 +166,7 @@ export default function KnowledgePanel() {
       setEditing(null);
     } catch (err) {
       console.error("Failed to save override:", err);
-      alert(err instanceof Error ? err.message : "Failed to save. Please try again.");
+      setSaveError(err instanceof Error ? err.message : "Failed to save. Please try again.");
     } finally {
       setSaving(false);
     }
@@ -173,7 +175,7 @@ export default function KnowledgePanel() {
   return (
     <div>
       <div className="bg-[#5B4FCF]/5 border border-[#5B4FCF]/10 rounded-2xl p-4 mb-5">
-        <p className="text-sm font-semibold text-[#5B4FCF] mb-0.5">Knowledge Base</p>
+        <p className="text-sm font-semibold text-[#5B4FCF] mb-0.5">Handbook</p>
         <p className="text-xs text-gray-500 leading-relaxed">
           {entries.length} entries from the {data.document.metadata.title}
           {overrides.length > 0 &&
@@ -233,7 +235,7 @@ export default function KnowledgePanel() {
                           {item.layer === "override" && (
                             <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full border bg-amber-50 text-amber-600 border-amber-100 inline-flex items-center gap-0.5">
                               <FileEdit className="w-2.5 h-2.5" />
-                              override
+                              staff answer
                             </span>
                           )}
                         </div>
@@ -259,6 +261,7 @@ export default function KnowledgePanel() {
                             className="w-full text-sm rounded-xl border border-[#5B4FCF]/30 bg-violet-50/30 px-3 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-[#5B4FCF]/20 focus:border-[#5B4FCF] transition-all leading-relaxed"
                             autoFocus
                           />
+                          {saveError && <p className="text-xs text-red-600 mt-1">{saveError}</p>}
                           <div className="flex gap-2 mt-2">
                             <button
                               onClick={() => saveEdit(item)}
@@ -268,7 +271,10 @@ export default function KnowledgePanel() {
                               <Check className="w-3 h-3" /> {saving ? "Saving..." : "Save changes"}
                             </button>
                             <button
-                              onClick={() => setEditing(null)}
+                              onClick={() => {
+                                setEditing(null);
+                                setSaveError(null);
+                              }}
                               className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 text-gray-600 text-xs font-semibold rounded-lg hover:bg-gray-200 transition-colors"
                             >
                               <X className="w-3 h-3" /> Cancel
@@ -388,7 +394,7 @@ function AddOverrideForm() {
         className="w-full py-2.5 bg-[#5B4FCF] hover:bg-[#4A3FB8] text-white text-sm font-semibold rounded-xl transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
       >
         {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
-        {saving ? "Saving..." : "Create override"}
+        {saving ? "Saving..." : "Add to handbook"}
       </button>
     </div>
   );

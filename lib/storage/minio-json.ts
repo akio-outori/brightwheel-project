@@ -19,7 +19,7 @@ export async function readJson(bucket: string, key: string): Promise<unknown | n
     const stream = await client.getObject(bucket, key);
     const chunks: Buffer[] = [];
     for await (const chunk of stream) {
-      chunks.push(chunk as Buffer);
+      chunks.push(Buffer.from(chunk as Uint8Array));
     }
     const body = Buffer.concat(chunks).toString("utf-8");
     return JSON.parse(body);

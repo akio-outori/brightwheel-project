@@ -48,8 +48,11 @@ const HEALTH_WORDS =
   "|under\\s+the\\s+weather|threw\\s+up|throwing\\s+up|thrown\\s+up" +
   "|symptom|contagious|infection|lice|pink\\s*eye|conjunctivitis" +
   "|strep|eczema|scraped?|scratch(?:ed)?|swollen|swelling" +
+  "|hand-foot-and-mouth|chicken\\s*pox|norovirus|rsv|covid" +
   "|runny\\s+nose|sore\\s+throat|earache|ear\\s+infection|wheezing" +
   "|caught\\s+something|came\\s+down\\s+with" +
+  "|got\\s+sick|picked\\s+up\\s+a\\s+bug|has\\s+a\\s+bug" +
+  "|administer(?:ed|ing)?|inject(?:ed|ing|ion)?" +
   "|custody|restraining|unauthorized|not\\s+allowed" +
   "|abuse|neglect)";
 
@@ -70,7 +73,9 @@ const POSSESSIVE_CHILD_PATTERNS: ReadonlyArray<RegExp> = [
   // "my/our [family-noun] ..." with health words anywhere in question
   new RegExp(`\\b(?:my|our)\\s+${FAMILY_NOUNS}\\b`, "i"),
   // "my/our [name]'s" — possessive proper name: "my Tommy's fever"
-  new RegExp(`\\b(?:my|our)\\s+[A-Z][a-z]{2,}(?:'s)?\\b`, "i"),
+  new RegExp(`\\b(?:[Mm]y|[Oo]ur)\\s+[A-Z][a-z]{2,}(?:'s)?\\b`),
+  // "a child like mine" / "a kid like mine" — indirect possessive
+  new RegExp(`\\b(?:child|kid|son|daughter)\\s+like\\s+mine\\b`, "i"),
 ];
 
 // -----------------------------------------------------------------------
@@ -182,8 +187,8 @@ function findProperNameNearHealth(question: string): string | null {
   while ((m = PROPER_NAME_RE.exec(question)) !== null) {
     const name = m[1]!;
     if (NAME_ALLOWLIST.has(name)) continue;
-    // Check if any health word appears within 80 chars after the name
-    const after = question.slice(m.index, m.index + 80);
+    // Check if any health word appears within 120 chars after the name
+    const after = question.slice(m.index, m.index + 120);
     if (HEALTH_RE.test(after)) return name;
   }
   return null;
@@ -204,21 +209,21 @@ function findProperNameNearHealth(question: string): string | null {
 const PRONOUN_HEALTH_PATTERNS: ReadonlyArray<RegExp> = [
   // pronoun + condition verb (including contractions)
   new RegExp(
-    `\\b(?:he|she)\\s+(?:is|has|was|got|had|needs?|fell|seems?|looks?|feels?|can't|won't|doesn't|isn't|hasn't|hasn't)\\b`,
+    `\\b(?:he|she|they)\\s+(?:is|are|has|have|was|were|got|had|needs?|fell|seems?|looks?|feels?|can't|won't|doesn't|don't|isn't|aren't|hasn't|haven't)\\b`,
     "i",
   ),
-  // Contraction forms: he's/she's (= he is / she has)
-  /\b(?:he's|she's)\b/i,
-  // action requests with pronouns: "give him/her", "bring him/her",
-  // "pick him/her up"
-  new RegExp(`\\b(?:give|bring|take|keep)\\s+(?:him|her)\\b`, "i"),
-  /\bpick\s+(?:him|her)\s+up\b/i,
-  // "I need to pick him/her up" (health context required by caller)
-  /\bneed\s+to\s+pick\s+(?:him|her)\s+up\b/i,
-  // "should I bring him/her"
-  new RegExp(`\\bshould\\s+I\\s+(?:bring|take|keep)\\s+(?:him|her)\\b`, "i"),
-  // "can he/she (still)? (come|attend|return)"
-  new RegExp(`\\bcan\\s+(?:he|she)\\s+(?:still\\s+)?(?:come|attend|return|go)\\b`, "i"),
+  // Contraction forms: he's/she's/they've/they're (= he is / she has / they have / they are)
+  /\b(?:he's|she's|they've|they're)\b/i,
+  // action requests with pronouns: "give him/her/them", "bring him/her/them",
+  // "pick him/her/them up"
+  new RegExp(`\\b(?:give|bring|take|keep)\\s+(?:him|her|them)\\b`, "i"),
+  /\bpick\s+(?:him|her|them)\s+up\b/i,
+  // "I need to pick him/her/them up" (health context required by caller)
+  /\bneed\s+to\s+pick\s+(?:him|her|them)\s+up\b/i,
+  // "should I bring him/her/them"
+  new RegExp(`\\bshould\\s+I\\s+(?:bring|take|keep)\\s+(?:him|her|them)\\b`, "i"),
+  // "can he/she/they (still)? (come|attend|return)"
+  new RegExp(`\\bcan\\s+(?:he|she|they)\\s+(?:still\\s+)?(?:come|attend|return|go)\\b`, "i"),
 ];
 
 // -----------------------------------------------------------------------

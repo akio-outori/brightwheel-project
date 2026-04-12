@@ -24,8 +24,15 @@ import type { Channel } from "../types";
  *  draft is holding an instruction the operator should review
  *  before it reaches the parent. */
 const MEDICAL_INSTRUCTION_PATTERNS: ReadonlyArray<RegExp> = [
-  // Medication administration directed at the parent's child
-  /\bgive\s+(?:your\s+(?:child|son|daughter|kid|baby|toddler)|him|her)\b/i,
+  // Medication administration directed at the parent's child.
+  // The bare-pronoun arm (him/her) requires a second-person subject
+  // ("you should give him") so that staff-as-subject policy
+  // paraphrases ("staff will give him his EpiPen") pass through.
+  /\bgive\s+your\s+(?:child|son|daughter|kid|baby|toddler)\b/i,
+  /\byou\s+(?:should\s+|can\s+|need\s+to\s+|must\s+)?give\s+(?:him|her)\b/i,
+
+  // Medication verbs: administer, inject (always medical context)
+  /\b(?:you\s+(?:should\s+|can\s+|need\s+to\s+|must\s+)?)?(?:administer|inject)\s+(?:the\s+)?(?:\w+\s+){0,3}(?:to\s+)?(?:your\s+(?:child|son|daughter|kid|baby|toddler)|him|her)\b/i,
 
   // Home-exclusion directive with duration
   /\bkeep\s+(?:your\s+(?:child|son|daughter|kid)|him|her)\s+(?:at\s+)?home\s+(?:for\s+\d+|until|for\s+at\s+least)/i,
@@ -45,18 +52,6 @@ const MEDICAL_INSTRUCTION_PATTERNS: ReadonlyArray<RegExp> = [
   // Emergency routing / medical referral
   /\btake\s+(?:your\s+(?:child|son|daughter|kid)|him|her)\s+to\s+(?:the\s+)?(?:er|emergency\s+room|hospital|doctor|pediatrician|urgent\s+care)/i,
 
-  // Note: the bare "call 911" pattern was dropped. It fires on
-  // legitimate policy paraphrases like "staff will call 911 if
-  // needed" and "we administer first aid, call 911 if needed" where
-  // the subject is the program (we/staff), not an imperative
-  // directed at the parent. Distinguishing parent-directed imperatives
-  // from program-policy statements structurally is unreliable, and
-  // the self-escalation channel already catches the genuine
-  // "parent needs to call 911" cases where the model raises the flag
-  // itself. A correctly-grounded policy answer that mentions "call
-  // 911" as part of describing what staff do is not something we
-  // need to hold.
-
   // Dosage-shaped numeric literal — strong signal of medication
   // instruction regardless of context
   /\b\d+(?:\.\d+)?\s*(?:mg|ml|mcg|cc)\b/i,
@@ -65,6 +60,40 @@ const MEDICAL_INSTRUCTION_PATTERNS: ReadonlyArray<RegExp> = [
   /\b(?:every|each)\s+\d+\s+hours?\b(?=[\s\S]{0,120}(?:dose|medication|medicine|medicin|pill|tablet|syrup|drops?))/i,
   /(?:dose|medication|medicine|pill|tablet|syrup|drops?)\b(?=[\s\S]{0,120}\b(?:every|each)\s+\d+\s+hours?)/i,
 ];
+
+// C3: Scoped call-911 check. The bare "call 911" pattern was
+// previously removed because it over-fired on policy paraphrases
+// where the subject is the program ("staff will call 911"). This
+// scoped version fires only when "call 911" is directed at the
+// parent (second-person or bare imperative) and skips when preceded
+// by third-person subjects like "staff", "we", "they", "teachers",
+// "the center" within the same clause.
+const CALL_911_PATTERN = /\bcall\s+911\b/gi;
+const THIRD_PERSON_SUBJECTS =
+  /\b(?:staff|we|they|teachers?|the\s+center|the\s+school|our\s+team)\b/i;
+
+function isCall911DirectedAtParent(text: string): string | null {
+  let m: RegExpExecArray | null;
+  CALL_911_PATTERN.lastIndex = 0;
+  while ((m = CALL_911_PATTERN.exec(text)) !== null) {
+    // Look back up to 120 characters for the nearest sentence
+    // boundary (period, semicolon, or start of string), then check
+    // whether a third-person subject appears anywhere in that
+    // sentence fragment. Commas are NOT treated as boundaries
+    // because list items ("administer first aid, call 911, and
+    // contact you") share the sentence's subject.
+    const start = Math.max(0, m.index - 120);
+    const preceding = text.slice(start, m.index);
+
+    const lastBoundary = Math.max(preceding.lastIndexOf("."), preceding.lastIndexOf(";"));
+    const sentence = lastBoundary >= 0 ? preceding.slice(lastBoundary + 1) : preceding;
+
+    if (THIRD_PERSON_SUBJECTS.test(sentence)) continue;
+
+    return m[0];
+  }
+  return null;
+}
 
 export const medicalShapeChannel: Channel = ({ draft }) => {
   for (const pat of MEDICAL_INSTRUCTION_PATTERNS) {
@@ -77,5 +106,18 @@ export const medicalShapeChannel: Channel = ({ draft }) => {
       };
     }
   }
+
+  // C3: scoped call-911 check (function-based, not regex-only,
+  // because the third-person subject can be separated from "call 911"
+  // by arbitrary intervening text within the same clause).
+  const call911Match = isCall911DirectedAtParent(draft.answer);
+  if (call911Match) {
+    return {
+      verdict: "hold",
+      reason: "medical_instruction",
+      detail: `matched medical-shape pattern: "${call911Match}"`,
+    };
+  }
+
   return { verdict: "pass" };
 };

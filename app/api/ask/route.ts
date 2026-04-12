@@ -46,6 +46,7 @@ import {
   runPostResponsePipeline,
   type GroundingSource,
 } from "@/lib/llm/post-response";
+import { hallucinationChannel } from "@/lib/llm/post-response/channels/hallucination";
 import { ensureStorageReady } from "@/lib/storage/init";
 import {
   getActiveDocumentId,
@@ -62,6 +63,23 @@ const AskRequestSchema = z
     question: z.string().min(1).max(2000),
   })
   .strict();
+
+/** Typed response envelope for the /api/ask endpoint. The client
+ *  should reference this type instead of ad-hoc `"key" in raw` checks. */
+export type AskResponse = AnswerContract & {
+  needs_attention_event_id?: string;
+};
+
+// M1: Memoize the system prompt at module scope so it's constructed
+// once from the config, not rebuilt per-request. The first call
+// loads the config; subsequent calls reuse the branded value.
+let cachedSystemPrompt: ReturnType<typeof SystemPrompt> | null = null;
+async function getSystemPrompt(): Promise<ReturnType<typeof SystemPrompt>> {
+  if (cachedSystemPrompt) return cachedSystemPrompt;
+  const cfg = await getActiveAgentConfig();
+  cachedSystemPrompt = SystemPrompt(cfg.systemPrompt);
+  return cachedSystemPrompt;
+}
 
 // Intent is static. It's the app's instruction to the model about
 // what *kind* of task this is. Never includes user data.
@@ -134,8 +152,7 @@ export async function POST(req: Request): Promise<Response> {
     }
 
     // 4. Build MCPData and call the LLM.
-    const cfg = await getActiveAgentConfig();
-    const systemPromptText = cfg.systemPrompt;
+    const systemPrompt = await getSystemPrompt();
     const mcpData = MCPData({
       center_name: `${metadata.title} Front Desk`,
       document: {
@@ -160,12 +177,7 @@ export async function POST(req: Request): Promise<Response> {
       },
     });
 
-    const draft: AnswerContract = await askLLM(
-      SystemPrompt(systemPromptText),
-      INTENT,
-      mcpData,
-      UserInput(question),
-    );
+    const draft: AnswerContract = await askLLM(systemPrompt, INTENT, mcpData, UserInput(question));
 
     // 4. Refusal short-circuit. If the model flagged this as
     // out-of-scope / off-topic (refusal: true), return the draft
@@ -183,6 +195,49 @@ export async function POST(req: Request): Promise<Response> {
         directly_addressed_by: [],
         escalation_reason: draft.escalation_reason ?? "out_of_scope",
       };
+
+      // M2: Defense-in-depth — run the hallucination channel on the
+      // normalized refusal. The normalization above forces
+      // cited_entries: [] and directly_addressed_by: [], so this
+      // should always pass. But if future code relaxes that
+      // normalization, this guard catches a refusal that also cites
+      // fabricated entry ids. On hold, fall through to the stock
+      // response and log to needs-attention.
+      const refusalSources: GroundingSource[] = [
+        ...entries.map<GroundingSource>((e) => ({
+          id: e.id,
+          title: e.title,
+          body: e.body,
+        })),
+        ...overrides.map<GroundingSource>((o) => ({
+          id: o.id,
+          title: o.title,
+          body: o.body,
+        })),
+      ];
+      const hallucinationCheck = hallucinationChannel({
+        question,
+        draft: refusal,
+        cited: [],
+        allSources: refusalSources,
+      });
+      if (hallucinationCheck.verdict === "hold") {
+        console.warn(
+          `[/api/ask] refusal held by hallucination channel: ${hallucinationCheck.detail ?? "(no detail)"}`,
+        );
+        const stockResponse = buildStockResponse(hallucinationCheck.reason);
+        const event = await logNeedsAttention({
+          docId,
+          question,
+          result: {
+            ...refusal,
+            escalate: true,
+            escalation_reason: `held_for_review:${hallucinationCheck.reason}`,
+          },
+        });
+        return Response.json({ ...stockResponse, needs_attention_event_id: event.id });
+      }
+
       return Response.json(refusal);
     }
 

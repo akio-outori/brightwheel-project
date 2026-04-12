@@ -16,6 +16,7 @@ import { z } from "zod";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { EVENTS_SWR_KEY, type EventFilter } from "./OperatorDashboard";
+import type { NeedsAttentionEvent } from "@/lib/storage/types";
 
 // Shape of error responses returned by our API routes. Matches the
 // { error: string } envelope the boundary handlers produce. We parse
@@ -23,25 +24,6 @@ import { EVENTS_SWR_KEY, type EventFilter } from "./OperatorDashboard";
 // the shape, so a malformed body falls through to a generic error
 // message without runtime surprises.
 const ErrorResponseSchema = z.object({ error: z.string() });
-
-interface AnswerContract {
-  answer: string;
-  confidence: "high" | "low";
-  cited_entries: string[];
-  escalate: boolean;
-  escalation_reason?: string;
-}
-
-interface NeedsAttentionEvent {
-  id: string;
-  docId?: string;
-  question: string;
-  result: AnswerContract;
-  createdAt: string;
-  resolvedAt?: string;
-  resolvedByOverrideId?: string;
-  operatorReply?: string;
-}
 
 export interface QuestionLogPanelProps {
   /** Filtered event list chosen by the parent based on the
@@ -59,6 +41,9 @@ export interface QuestionLogPanelProps {
   /** Called when the operator toggles a card open or closed
    *  from inside the panel itself. */
   onExpandChange: (id: string | null) => void;
+  /** Map from entry/override id to human-readable title, used
+   *  to render citation pills with titles instead of raw IDs. */
+  entryTitleMap?: Map<string, string>;
 }
 
 function ConfidenceBadge({ confidence }: { confidence: "high" | "low" }) {
@@ -97,6 +82,7 @@ export default function QuestionLogPanel({
   filter,
   expandedId,
   onExpandChange,
+  entryTitleMap,
 }: QuestionLogPanelProps) {
   // Per-card refs keyed by event id so we can scroll the
   // currently expanded card into view whenever `expandedId`
@@ -241,8 +227,9 @@ export default function QuestionLogPanel({
                           <span
                             key={id}
                             className="text-xs bg-violet-50 border border-violet-100 text-[#5B4FCF] font-semibold rounded-full px-3 py-1"
+                            title={id}
                           >
-                            {id}
+                            {entryTitleMap?.get(id) ?? id}
                           </span>
                         ))}
                       </div>
