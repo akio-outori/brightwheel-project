@@ -141,6 +141,16 @@ describe("POST /api/ask", () => {
     const data = await res.json();
     expect(data.escalate).toBe(true);
     expect(data.escalation_reason).toContain("hallucinated_citation");
+
+    // Regression guard for the dashboard-count-mismatch bug:
+    // the logged event MUST have escalate: true even though the
+    // model's draft claimed escalate: false. The pipeline held it,
+    // which means a human needs to look at it, which means every
+    // count in the operator UI should treat it as "awaiting answer".
+    expect(logNeedsAttention).toHaveBeenCalledTimes(1);
+    const loggedDraft = vi.mocked(logNeedsAttention).mock.calls[0]![0];
+    expect(loggedDraft.result.escalate).toBe(true);
+    expect(loggedDraft.result.escalation_reason).toContain("hallucinated_citation");
   });
 
   it("returns a refusal directly without escalating or logging", async () => {

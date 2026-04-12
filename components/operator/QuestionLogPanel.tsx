@@ -111,7 +111,17 @@ export default function QuestionLogPanel({
     }
   }, [expandedId]);
 
-  const unresolvedCount = events.filter((e) => !e.resolvedAt && e.result.escalate).length;
+  // "Needs action" is any event that hasn't been resolved by a
+  // human yet — regardless of whether the model itself claimed
+  // `escalate: true`. The pipeline-hold path in /api/ask may log
+  // events where the model thought it was confident but a
+  // classifier caught a hallucinated citation / fabricated number
+  // / etc.; those events were historically excluded from this
+  // count by a `&& e.result.escalate` gate, producing a mismatch
+  // between the dashboard's counts (bell badge, stat card) and
+  // what this panel's alert said. Matching the dashboard's
+  // definition (`!resolvedAt`) keeps the numbers consistent.
+  const unresolvedCount = events.filter((e) => !e.resolvedAt).length;
 
   return (
     <div>
@@ -148,6 +158,13 @@ export default function QuestionLogPanel({
         {events.map((item) => {
           const confidence = item.result.confidence;
           const holdReason = formatHoldReason(item.result.escalation_reason);
+          // "Needs action" = any unresolved event. See the comment
+          // on `unresolvedCount` above for why we no longer gate
+          // on `item.result.escalate` — historically that let
+          // pipeline-held events (fabricated number, hallucinated
+          // cite, etc.) slip through this display layer even
+          // though the dashboard counted them.
+          const needsAction = !item.resolvedAt;
 
           return (
             <div
@@ -157,7 +174,7 @@ export default function QuestionLogPanel({
               }}
               className={cn(
                 "bg-white rounded-2xl border overflow-hidden transition-all shadow-sm hover:shadow-md",
-                item.result.escalate ? "border-amber-200" : "border-gray-100",
+                needsAction ? "border-amber-200" : "border-gray-100",
               )}
             >
               <button
@@ -168,19 +185,13 @@ export default function QuestionLogPanel({
                 <div
                   className={cn(
                     "w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0",
-                    item.resolvedAt
-                      ? "bg-emerald-50"
-                      : item.result.escalate
-                        ? "bg-amber-50"
-                        : "bg-gray-100",
+                    item.resolvedAt ? "bg-emerald-50" : "bg-amber-50",
                   )}
                 >
                   {item.resolvedAt ? (
                     <Clock className="w-4 h-4 text-emerald-500" />
-                  ) : item.result.escalate ? (
-                    <AlertTriangle className="w-4 h-4 text-amber-500" />
                   ) : (
-                    <Clock className="w-4 h-4 text-gray-400" />
+                    <AlertTriangle className="w-4 h-4 text-amber-500" />
                   )}
                 </div>
 
@@ -192,7 +203,7 @@ export default function QuestionLogPanel({
                     <span className="text-xs text-gray-400">
                       {format(new Date(item.createdAt), "h:mm a")}
                     </span>
-                    {item.result.escalate && !item.resolvedAt && (
+                    {needsAction && (
                       <span className="text-[10px] bg-amber-100 text-amber-700 font-semibold px-2 py-0.5 rounded-full">
                         Needs review
                       </span>
@@ -255,9 +266,7 @@ export default function QuestionLogPanel({
                       <p className="text-xs text-amber-700 leading-relaxed">{holdReason}</p>
                     </div>
                   )}
-                  {item.result.escalate && !item.resolvedAt && (
-                    <ReplyForm eventId={item.id} question={item.question} />
-                  )}
+                  {needsAction && <ReplyForm eventId={item.id} question={item.question} />}
                 </div>
               )}
             </div>

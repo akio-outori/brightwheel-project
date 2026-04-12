@@ -215,12 +215,24 @@ export async function POST(req: Request): Promise<Response> {
       const stockResponse = buildStockResponse(pipeline.reason);
 
       // Log the MODEL'S DRAFT (not the stock) so the operator has
-      // full context about what the model wanted to say.
+      // full context about what the model wanted to say. Force
+      // `escalate: true` regardless of what the model itself set —
+      // if the pipeline classified this as needing human review,
+      // that's authoritative. Without this override, a pipeline
+      // hold on a draft where the model claimed `escalate: false`
+      // would produce a stored event with `escalate: false`, which
+      // the operator dashboard's stat-card/bell counts and the
+      // panel alert would then disagree about (the dashboard
+      // counts all unresolved; the panel alert historically
+      // filtered on `escalate`). Forcing it here keeps the
+      // stored data honest about the fact that a human needs to
+      // look at this.
       const event = await logNeedsAttention({
         docId,
         question,
         result: {
           ...draft,
+          escalate: true,
           // Mirror the hold reason into escalation_reason so the
           // operator UI can render the badge off a single field.
           escalation_reason: `held_for_review:${pipeline.reason}`,
