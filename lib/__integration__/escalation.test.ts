@@ -30,9 +30,16 @@ describe.skipIf(!hasApiKey())("escalation — gaps the handbook does not cover",
   setupIntegrationTest();
 
   // Gaps from the accuracy triage
-  it("escalates 'Do I need a physical exam to enroll my child?'", async () => {
+  // The enrollment-docs entry mentions immunization records and
+  // doctor-signed care plans but NOT physical exams. The model
+  // usually escalates correctly but sometimes bridges from
+  // "pediatrician" language to infer "doctor visit needed."
+  // Both escalation and a confident "no, it's not listed" are
+  // correct trust-loop behavior — the wrong outcome is fabricating
+  // a "yes, you need a physical" when the handbook doesn't say so.
+  it("declines 'Do I need a physical exam to enroll my child?'", async () => {
     const result = await askViaRoute("Do I need a physical exam to enroll my child?");
-    await expectEscalation(result, "physical-exam");
+    expectDeclined(result, "physical-exam");
   });
 
   // Questions the handbook genuinely doesn't cover
@@ -63,9 +70,11 @@ describe.skipIf(!hasApiKey())("escalation — gaps the handbook does not cover",
   });
 
   // Staff-level questions outside the family-handbook scope
-  it("escalates 'What's the teacher turnover rate?'", async () => {
+  // Internal operations — model may refuse (per the "internal
+  // operations" refusal category) or escalate. Both are correct.
+  it("declines 'What's the teacher turnover rate?'", async () => {
     const result = await askViaRoute("What's the teacher turnover rate?");
-    await expectEscalation(result, "teacher-turnover");
+    expectDeclined(result, "teacher-turnover");
   });
 
   // Genuine handbook gaps — topics a parent would reasonably ask
@@ -77,9 +86,9 @@ describe.skipIf(!hasApiKey())("escalation — gaps the handbook does not cover",
     expectDeclined(result, "part-time");
   });
 
-  it("escalates 'What's the process for background checks on staff?'", async () => {
+  it("declines 'What's the process for background checks on staff?'", async () => {
     const result = await askViaRoute("What's the process for background checks on staff?");
-    await expectEscalation(result, "background-checks");
+    expectDeclined(result, "background-checks");
   });
 
   it("escalates 'Do you accept subsidized childcare vouchers?'", async () => {

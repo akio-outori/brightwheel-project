@@ -28,7 +28,14 @@ const MEDICAL_INSTRUCTION_PATTERNS: ReadonlyArray<RegExp> = [
   // The bare-pronoun arm (him/her) requires a second-person subject
   // ("you should give him") so that staff-as-subject policy
   // paraphrases ("staff will give him his EpiPen") pass through.
-  /\bgive\s+your\s+(?:child|son|daughter|kid|baby|toddler)\b/i,
+  //
+  // The possessive-bypass (?!'s) prevents false positives on
+  // phrases like "give your child's teacher a heads-up" — the
+  // possessive 's means the child is the POSSESSOR, not the
+  // RECIPIENT. Without it, every birthday answer that says
+  // "give your child's teacher advance notice" is held as a
+  // medication instruction.
+  /\bgive\s+your\s+(?:child|son|daughter|kid|baby|toddler)(?!'s)\b/i,
   /\byou\s+(?:should\s+|can\s+|need\s+to\s+|must\s+)?give\s+(?:him|her)\b/i,
 
   // Medication verbs: administer, inject (always medical context)

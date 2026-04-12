@@ -42,9 +42,11 @@ The storage is S3-compatible (MinIO locally, AWS in production). Versioning on t
 
 The test suite is 304 unit tests with an 80%+ coverage threshold and 114 integration tests against the real Anthropic API — including 20 prompt injection attacks, 19 sensitive-topic escalations, and a full ask-escalate-fix-reask-cite cycle. CI runs 12 automated checks per PR (typecheck, lint, SAST, secrets scanning, dependency audit, container image scanning) plus Claude Code review with 7 specialized agents.
 
-## What comes next
+## Where it goes
 
-Authentication and per-staff identity. Per-user document routing (the seam exists; a session layer fills it). A handbook ingestion pipeline so the next annual update isn't a manual extraction. The real-time staff reply loop already ships: when a parent's question escalates, the operator's reply lands in the parent's chat as a green "Reply from staff" bubble within seconds, without the parent having to re-ask.
+This prototype is Phase 0 of a five-phase scaling plan. The long-term product is **per-center intelligence** — each center's AI front desk gets smarter over time, built from that operator's own expertise, compounding with every answered question.
+
+The full product thesis and engineering plan is in [Product & scaling plan](scaling-plan.md).
 
 ## The demo
 
