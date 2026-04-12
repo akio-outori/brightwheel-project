@@ -46,6 +46,7 @@ import {
   runPostResponsePipeline,
   type GroundingSource,
 } from "@/lib/llm/post-response";
+import { hallucinationChannel } from "@/lib/llm/post-response/channels/hallucination";
 import { ensureStorageReady } from "@/lib/storage/init";
 import {
   getActiveDocumentId,
@@ -194,6 +195,49 @@ export async function POST(req: Request): Promise<Response> {
         directly_addressed_by: [],
         escalation_reason: draft.escalation_reason ?? "out_of_scope",
       };
+
+      // M2: Defense-in-depth — run the hallucination channel on the
+      // normalized refusal. The normalization above forces
+      // cited_entries: [] and directly_addressed_by: [], so this
+      // should always pass. But if future code relaxes that
+      // normalization, this guard catches a refusal that also cites
+      // fabricated entry ids. On hold, fall through to the stock
+      // response and log to needs-attention.
+      const refusalSources: GroundingSource[] = [
+        ...entries.map<GroundingSource>((e) => ({
+          id: e.id,
+          title: e.title,
+          body: e.body,
+        })),
+        ...overrides.map<GroundingSource>((o) => ({
+          id: o.id,
+          title: o.title,
+          body: o.body,
+        })),
+      ];
+      const hallucinationCheck = hallucinationChannel({
+        question,
+        draft: refusal,
+        cited: [],
+        allSources: refusalSources,
+      });
+      if (hallucinationCheck.verdict === "hold") {
+        console.warn(
+          `[/api/ask] refusal held by hallucination channel: ${hallucinationCheck.detail ?? "(no detail)"}`,
+        );
+        const stockResponse = buildStockResponse(hallucinationCheck.reason);
+        const event = await logNeedsAttention({
+          docId,
+          question,
+          result: {
+            ...refusal,
+            escalate: true,
+            escalation_reason: `held_for_review:${hallucinationCheck.reason}`,
+          },
+        });
+        return Response.json({ ...stockResponse, needs_attention_event_id: event.id });
+      }
+
       return Response.json(refusal);
     }
 

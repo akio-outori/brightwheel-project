@@ -327,9 +327,15 @@ describe("extractEntities", () => {
     expect(found).not.toContain("Please");
   });
 
-  it("keeps single capitalized words at least 5 chars that aren't sentence-initial", () => {
+  it("keeps single capitalized words at least 4 chars that aren't sentence-initial", () => {
     const found = extractEntities("We work with our partner Brightwheel for daily updates.");
     expect(found).toContain("Brightwheel");
+  });
+
+  // C8: standalone 4-letter proper name in a non-sentence-initial position
+  it("extracts a standalone 4-letter proper name mid-sentence", () => {
+    const found = extractEntities("Please contact Maya for enrollment questions.");
+    expect(found).toContain("Maya");
   });
 });
 
@@ -416,16 +422,69 @@ describe("medicalShapeChannel", () => {
     expect(v.verdict).toBe("hold");
   });
 
-  it("passes on a policy paraphrase that mentions calling 911", () => {
-    // The bare "call 911" pattern was removed because it over-fires
-    // on legitimate program-policy paraphrases. The self-escalation
-    // channel catches actual emergencies through the model's own
-    // signal; this channel stays narrowly scoped to parent-directed
-    // imperatives about medication, exclusion, and medical routing.
+  it("passes on a policy paraphrase that mentions calling 911 (staff subject)", () => {
     const v = medicalShapeChannel(
       input({
         answer:
           "If a child is injured, our staff administer first aid, call 911 if needed, and contact you.",
+      }),
+    );
+    expect(v.verdict).toBe("pass");
+  });
+
+  // C3: scoped call-911 — parent-directed should HOLD
+  it("holds when the draft tells the parent to call 911", () => {
+    const v = medicalShapeChannel(
+      input({
+        answer: "Call 911 if your child stops breathing.",
+      }),
+    );
+    expect(v.verdict).toBe("hold");
+    if (v.verdict === "hold") expect(v.reason).toBe("medical_instruction");
+  });
+
+  it("holds when the draft says 'you should call 911'", () => {
+    const v = medicalShapeChannel(
+      input({
+        answer: "If you notice swelling around the throat, you should call 911 immediately.",
+      }),
+    );
+    expect(v.verdict).toBe("hold");
+    if (v.verdict === "hold") expect(v.reason).toBe("medical_instruction");
+  });
+
+  // C3: scoped call-911 — third-person subjects should PASS
+  it("passes when 'staff will call 911'", () => {
+    const v = medicalShapeChannel(
+      input({
+        answer: "Staff will call 911 in an emergency.",
+      }),
+    );
+    expect(v.verdict).toBe("pass");
+  });
+
+  it("passes when 'we call 911'", () => {
+    const v = medicalShapeChannel(
+      input({
+        answer: "In case of a medical emergency, we call 911 and notify parents immediately.",
+      }),
+    );
+    expect(v.verdict).toBe("pass");
+  });
+
+  it("passes when 'teachers will call 911'", () => {
+    const v = medicalShapeChannel(
+      input({
+        answer: "Teachers will call 911 if a child has a seizure.",
+      }),
+    );
+    expect(v.verdict).toBe("pass");
+  });
+
+  it("passes when 'the center will call 911'", () => {
+    const v = medicalShapeChannel(
+      input({
+        answer: "The center will call 911 for any life-threatening situation.",
       }),
     );
     expect(v.verdict).toBe("pass");

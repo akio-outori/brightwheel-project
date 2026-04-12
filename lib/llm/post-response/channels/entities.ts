@@ -69,8 +69,10 @@ const CAPITALIZATION_ALLOWLIST: ReadonlySet<string> = new Set([
 ]);
 
 /** Minimum single-word length for the single-word case. Short
- *  capitalized words ("Be", "To", "It") are too noisy. */
-const MIN_SINGLE_WORD_LEN = 5;
+ *  capitalized words ("Be", "To", "It") are too noisy. Lowered from
+ *  5 to 4 (C8) so standalone 4-letter proper names like "Maya" or
+ *  "Lisa" are caught when they appear mid-sentence. */
+const MIN_SINGLE_WORD_LEN = 4;
 
 /** Strip a leading sentence-initial or allowlisted first word from
  *  a multi-word match. "Contact Director Maya" at sentence start
@@ -137,7 +139,7 @@ export function extractEntities(text: string): string[] {
   // nouns and are NOT sentence-initial. Sentence-initial detection:
   // if a word is preceded by `. ` or `! ` or `? ` or is at the very
   // start of the text, skip it.
-  const singleWord = /\b[A-Z][a-z]{4,}\b/g;
+  const singleWord = /\b[A-Z][a-z]{3,}\b/g;
   let match: RegExpExecArray | null;
   while ((match = singleWord.exec(text)) !== null) {
     const word = match[0];
