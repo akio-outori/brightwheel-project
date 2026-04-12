@@ -17,6 +17,7 @@ import {
   User as UserIcon,
 } from "lucide-react";
 import { CENTER } from "@/data/centerData";
+import { CURRENT_STAFF } from "@/data/staffUser";
 import QuestionLogPanel from "@/components/operator/QuestionLogPanel";
 import KnowledgePanel from "@/components/operator/KnowledgePanel";
 import { cn } from "@/lib/utils";
@@ -36,15 +37,9 @@ export const EVENTS_SWR_KEY = "/api/needs-attention?state=all";
 // Filter state type used by the stats-card sort buttons.
 export type EventFilter = "all" | "unresolved" | "resolved";
 
-// Mock logged-in staff user. No auth system in the demo yet, so
-// this is a local constant that the settings menu reads from.
-// In a real deployment the values would come from session state.
-const CURRENT_STAFF = {
-  name: "Maya Okonkwo",
-  role: "Director",
-  email: "maya@sunflower.care",
-  initials: "MO",
-};
+// CURRENT_STAFF lives in `@/data/staffUser` so the settings
+// dropdown here and the /admin/profile page render from the
+// same source.
 
 interface AnswerContract {
   answer: string;
@@ -231,14 +226,14 @@ export default function OperatorDashboard() {
                     </div>
                   </div>
                   <nav className="py-1 text-sm text-gray-700">
-                    <button
-                      type="button"
+                    <Link
+                      href="/admin/profile"
                       className="w-full flex items-center gap-2.5 px-4 py-2 hover:bg-gray-50 text-left"
                       onClick={() => setSettingsOpen(false)}
                     >
                       <UserIcon className="w-4 h-4 text-gray-400" />
                       Profile
-                    </button>
+                    </Link>
                     <button
                       type="button"
                       className="w-full flex items-center gap-2.5 px-4 py-2 hover:bg-gray-50 text-left"
