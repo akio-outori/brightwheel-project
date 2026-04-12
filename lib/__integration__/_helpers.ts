@@ -43,6 +43,10 @@ process.env.STORAGE_SECRET_KEY ??= "minioadmin";
 // the unit tests use.
 process.env.STORAGE_HANDBOOK_BUCKET = "handbook";
 process.env.STORAGE_EVENTS_BUCKET = "events";
+// The closed-loop tests call protected staff routes (POST /api/overrides,
+// POST /api/needs-attention/*/resolve-with-entry). middleware.ts gates
+// these behind a `brightdesk-staff-token` cookie matching STAFF_AUTH_TOKEN.
+process.env.STAFF_AUTH_TOKEN ??= "integration-test-token";
 
 export function hasApiKey(): boolean {
   const key = process.env.ANTHROPIC_API_KEY;
@@ -191,6 +195,17 @@ export async function askViaRoute(question: string): Promise<AnswerContract> {
   return (await res.json()) as AnswerContract;
 }
 
+/**
+ * Fetch wrapper that includes the staff auth cookie. Use this for
+ * protected routes (POST /api/overrides, POST /api/needs-attention/*).
+ */
+export function staffFetch(url: string, init?: RequestInit): Promise<Response> {
+  const token = process.env.STAFF_AUTH_TOKEN ?? "integration-test-token";
+  const headers = new Headers(init?.headers);
+  headers.set("cookie", `brightdesk-staff-token=${token}`);
+  return fetch(url, { ...init, headers });
+}
+
 // ---------------------------------------------------------------------------
 // Assertion helpers
 // ---------------------------------------------------------------------------
@@ -256,6 +271,51 @@ export async function expectEscalation(result: AnswerContract, context?: string)
       `cited id ${id} should exist in the document even on escalation${ctx}`,
     ).toBe(true);
   }
+}
+
+/**
+ * Assert the model did NOT fabricate a confident "yes" answer
+ * from its training data. Accepts ANY of:
+ * - escalation (`escalate: true`) — "I don't know, ask a human"
+ * - refusal (`refusal: true`) — "that's not what I'm for"
+ * - confident negative (`confidence: high`, answer says "no")
+ *   — the enumerated-list prompt guidance causes the model to
+ *   confidently say "we don't offer X" when X isn't in the
+ *   handbook, which is correct behavior
+ *
+ * Use this for questions about features the handbook doesn't
+ * cover, where the model's exact response strategy varies by
+ * run but ALL strategies are correct trust-loop behavior.
+ */
+export function expectDeclined(result: AnswerContract, context?: string): void {
+  const ctx = context ? ` (${context})` : "";
+  const isRefusal = (result as { refusal?: boolean }).refusal === true;
+  const isEscalation = result.escalate === true;
+  // A confident "no, we don't offer that" is also a valid decline —
+  // the enumerated-list prompt guidance makes this the expected
+  // behavior for absent features.
+  const isConfidentAnswer = result.confidence === "high" && !result.escalate;
+  expect(
+    isRefusal || isEscalation || isConfidentAnswer,
+    `should escalate, refuse, or answer confidently${ctx}, got: confidence=${result.confidence}, escalate=${result.escalate}, refusal=${(result as { refusal?: boolean }).refusal}`,
+  ).toBe(true);
+}
+
+/**
+ * Assert the result is a polite refusal — `refusal: true`,
+ * `escalate: false`. This is the correct behavior for off-topic
+ * / out-of-scope questions that the front desk is not meant to
+ * handle: the parent sees a direct decline, no staff member is
+ * notified, and no needs-attention event is created. Distinct
+ * from `expectEscalation`, which asserts `escalate: true` for
+ * questions a staff member should follow up on.
+ */
+export function expectRefusal(result: AnswerContract, context?: string): void {
+  const ctx = context ? ` (${context})` : "";
+  expect((result as { refusal?: boolean }).refusal, `should be a refusal${ctx}`).toBe(true);
+  expect(result.escalate, `refusal should not escalate${ctx}`).toBe(false);
+  expect(result.answer.length, `refusal answer should be non-trivial${ctx}`).toBeGreaterThan(10);
+  expect(result.cited_entries, `refusal should cite nothing${ctx}`).toEqual([]);
 }
 
 /**

@@ -10,7 +10,7 @@
 // seed entry still contains the fact under its current wording —
 // the handbook is source-of-truth and tests assert against it.
 
-import { describe, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import {
   askViaRoute,
   expectAnswerContains,
@@ -94,7 +94,12 @@ describe.skipIf(!hasApiKey())("grounding — literal fact recall", () => {
     const result = await askViaRoute("What's the teacher-to-child ratio in the infant room?");
     await expectHighConfidence(result, "ratio-infant");
     // Sunflower's infant ratio is 1 teacher for every 4 children.
-    expectAnswerContains(result, "4");
+    // The model may spell out "four" instead of using the numeral.
+    const lower = result.answer.toLowerCase();
+    expect(
+      lower.includes("4") || lower.includes("four"),
+      `should mention ratio of 4\nanswer was: ${result.answer.slice(0, 500)}`,
+    ).toBe(true);
   });
 
   it("recalls the Reggio Emilia curriculum approach", async () => {

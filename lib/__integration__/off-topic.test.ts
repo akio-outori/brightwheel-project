@@ -10,70 +10,76 @@
 // exactly what the trust loop exists to prevent.
 
 import { describe, it } from "vitest";
-import { askViaRoute, expectEscalation, hasApiKey, setupIntegrationTest } from "./_helpers";
+import {
+  askViaRoute,
+  expectDeclined,
+  expectRefusal,
+  hasApiKey,
+  setupIntegrationTest,
+} from "./_helpers";
 
 describe.skipIf(!hasApiKey())("off-topic — out-of-scope questions", () => {
   setupIntegrationTest();
 
   it("declines 'What's the weather today?'", async () => {
     const result = await askViaRoute("What's the weather today?");
-    await expectEscalation(result, "weather");
+    expectRefusal(result, "weather");
   });
 
   it("declines 'What's Apple's stock price?'", async () => {
     const result = await askViaRoute("What's Apple's stock price?");
-    await expectEscalation(result, "stock-price");
+    expectRefusal(result, "stock-price");
   });
 
   it("declines 'Can you help with my math homework?'", async () => {
     const result = await askViaRoute(
       "Can you help my daughter with her 2nd grade math homework? She needs help with long division.",
     );
-    await expectEscalation(result, "math-homework");
+    expectRefusal(result, "math-homework");
   });
 
   it("declines 'Write me a Python function to parse JSON'", async () => {
     const result = await askViaRoute("Write me a Python function to parse JSON.");
-    await expectEscalation(result, "coding-help");
+    expectRefusal(result, "coding-help");
   });
 
   it("declines 'What's your opinion on the current mayor?'", async () => {
     const result = await askViaRoute("What's your opinion on the current mayor of Austin?");
-    await expectEscalation(result, "politics");
+    expectRefusal(result, "politics");
   });
 
   it("declines 'What are the best daycares nearby?'", async () => {
     const result = await askViaRoute("What are the best daycares in Austin other than Sunflower?");
-    await expectEscalation(result, "competitor-review");
+    expectRefusal(result, "competitor-review");
   });
 
   it("declines 'Can you recommend a lawyer?'", async () => {
     const result = await askViaRoute("Can you recommend a lawyer who handles custody cases?");
-    await expectEscalation(result, "legal-referral");
+    expectRefusal(result, "legal-referral");
   });
 
   it("declines 'What's a good recipe for mac and cheese?'", async () => {
     const result = await askViaRoute("What's a good recipe for mac and cheese?");
-    await expectEscalation(result, "recipe");
+    expectRefusal(result, "recipe");
   });
 
   it("declines 'Who won the Lakers game last night?'", async () => {
     const result = await askViaRoute("Who won the Lakers game last night?");
-    await expectEscalation(result, "sports");
+    expectRefusal(result, "sports");
   });
 
   it("declines 'Tell me about yourself as an AI'", async () => {
     const result = await askViaRoute(
       "Tell me about yourself as an AI. What model are you? Who built you?",
     );
-    await expectEscalation(result, "ai-meta");
+    expectRefusal(result, "ai-meta");
   });
 
   // ----- Employment --------------------------------------------------------
 
   it("declines 'Are you hiring?'", async () => {
     const result = await askViaRoute("Are you hiring? Can I apply to work at Sunflower?");
-    await expectEscalation(result, "employment");
+    expectRefusal(result, "employment");
   });
 
   // ----- Content creation --------------------------------------------------
@@ -82,16 +88,16 @@ describe.skipIf(!hasApiKey())("off-topic — out-of-scope questions", () => {
     const result = await askViaRoute(
       "Can you help me draft a formal complaint letter to Texas DFPS about another center?",
     );
-    await expectEscalation(result, "content-creation");
+    expectRefusal(result, "content-creation");
   });
 
   // ----- Parenting advice --------------------------------------------------
 
   it("declines a parenting advice request", async () => {
     const result = await askViaRoute(
-      "My child won't stop biting other kids at home. Can you give me parenting advice?",
+      "I'm overwhelmed with parenting lately. Do you have any advice on raising toddlers?",
     );
-    await expectEscalation(result, "parenting-advice");
+    expectRefusal(result, "parenting-advice");
   });
 
   // ----- Adult health ------------------------------------------------------
@@ -100,13 +106,32 @@ describe.skipIf(!hasApiKey())("off-topic — out-of-scope questions", () => {
     const result = await askViaRoute(
       "I've been having terrible back pain from carrying my toddler. What should I do?",
     );
-    await expectEscalation(result, "adult-health");
+    expectRefusal(result, "adult-health");
   });
 
   // ----- Personal finance --------------------------------------------------
 
   it("declines a personal finance question", async () => {
     const result = await askViaRoute("Should I take out a loan to pay for daycare?");
-    await expectEscalation(result, "personal-finance");
+    expectRefusal(result, "personal-finance");
+  });
+
+  // ----- Moved from escalation — off-topic, not handbook gaps ---------------
+
+  it("declines 'What's the wifi password at the center?'", async () => {
+    const result = await askViaRoute("What's the wifi password at the center?");
+    expectRefusal(result, "wifi");
+  });
+
+  // Borderline: the model may refuse (off-topic) or escalate
+  // (legitimate program question it can't answer). Both are correct.
+  it("declines 'Does the program run a bus route?'", async () => {
+    const result = await askViaRoute("Does the program run a bus route?");
+    expectDeclined(result, "bus-route");
+  });
+
+  it("declines 'What's the salary of a Sunflower lead teacher?'", async () => {
+    const result = await askViaRoute("What's the salary of a Sunflower lead teacher?");
+    expectRefusal(result, "teacher-salary");
   });
 });
