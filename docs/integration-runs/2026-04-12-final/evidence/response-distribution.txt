@@ -1,0 +1,6 @@
+accuracy: {'high': 41}
+grounding: {'high': 25}
+off-topic: {'refusal': 17, 'high': 1}
+sensitive: {'escalated': 28}
+injection: {'refusal': 7, 'high': 1}
+escalation: {'high': 1, 'escalated': 13, 'refusal': 1}
