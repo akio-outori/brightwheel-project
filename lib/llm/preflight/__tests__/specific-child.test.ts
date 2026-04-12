@@ -390,3 +390,43 @@ describe("HOLD: child like mine (C7)", () => {
     "For a kid like mine who has asthma, can you administer an inhaler?",
   ])("holds: %s", (q) => expectHold(q));
 });
+
+// -----------------------------------------------------------------------
+// HOLD: active-emergency statements (Group 5)
+//
+// Declarative statements about emergencies in progress. These don't
+// contain possessives, family nouns, or question marks — but they
+// MUST escalate because they describe an active emergency. The
+// emergency vocabulary alone is the signal.
+// -----------------------------------------------------------------------
+
+describe("HOLD: active emergency statements", () => {
+  it.each([
+    "The ambulance is on its way to the center",
+    "The ambulance is on the way",
+    "I called 911",
+    "Calling 911 right now",
+    "The paramedics just arrived",
+    "The fire truck is coming",
+    "The fire department was called",
+    "A child collapsed on the playground",
+    "Someone is unconscious",
+    "A child is not breathing",
+    "A child is choking in the classroom",
+    "I think a child is having a seizure",
+    "Anaphylactic reaction happening right now",
+    "A child was rushed to the hospital",
+    "A child was taken to the emergency room",
+    "Police are on the way to the center",
+  ])("holds: %s", (q) => expectHold(q));
+});
+
+describe("PASS: emergency vocabulary in non-emergency context", () => {
+  it.each([
+    "What are your emergency procedures?",
+    "How do you handle 911 situations?",
+    "Do your teachers know CPR?",
+    "What happens if a child needs to go to the hospital?",
+    "Do you have a plan for emergencies?",
+  ])("passes: %s", (q) => expectPass(q));
+});
