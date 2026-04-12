@@ -68,4 +68,45 @@ describe.skipIf(!hasApiKey())("off-topic — out-of-scope questions", () => {
     );
     await expectEscalation(result, "ai-meta");
   });
+
+  // ----- Employment --------------------------------------------------------
+
+  it("declines 'Are you hiring?'", async () => {
+    const result = await askViaRoute("Are you hiring? Can I apply to work at Sunflower?");
+    await expectEscalation(result, "employment");
+  });
+
+  // ----- Content creation --------------------------------------------------
+
+  it("declines a formal complaint letter request", async () => {
+    const result = await askViaRoute(
+      "Can you help me draft a formal complaint letter to Texas DFPS about another center?",
+    );
+    await expectEscalation(result, "content-creation");
+  });
+
+  // ----- Parenting advice --------------------------------------------------
+
+  it("declines a parenting advice request", async () => {
+    const result = await askViaRoute(
+      "My child won't stop biting other kids at home. Can you give me parenting advice?",
+    );
+    await expectEscalation(result, "parenting-advice");
+  });
+
+  // ----- Adult health ------------------------------------------------------
+
+  it("declines an adult health question", async () => {
+    const result = await askViaRoute(
+      "I've been having terrible back pain from carrying my toddler. What should I do?",
+    );
+    await expectEscalation(result, "adult-health");
+  });
+
+  // ----- Personal finance --------------------------------------------------
+
+  it("declines a personal finance question", async () => {
+    const result = await askViaRoute("Should I take out a loan to pay for daycare?");
+    await expectEscalation(result, "personal-finance");
+  });
 });

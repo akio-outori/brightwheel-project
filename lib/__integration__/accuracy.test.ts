@@ -146,4 +146,102 @@ describe.skipIf(!hasApiKey())("accuracy — grounded high-confidence answers", (
     const result = await askViaRoute("What's the main office phone number?");
     await expectHighConfidence(result, "contact");
   });
+
+  // ----- Previously untested handbook entries --------------------------------
+
+  // welcome
+  it("answers 'Tell me about Sunflower Early Learning'", async () => {
+    const result = await askViaRoute("Tell me about Sunflower Early Learning");
+    await expectHighConfidence(result, "welcome");
+  });
+
+  // ages-served
+  it("answers 'What ages do you serve?'", async () => {
+    const result = await askViaRoute("What ages do you serve?");
+    await expectHighConfidence(result, "ages-served");
+  });
+
+  // ratios
+  it("answers 'What are the teacher-to-child ratios?'", async () => {
+    const result = await askViaRoute("What are the teacher-to-child ratios?");
+    await expectHighConfidence(result, "ratios");
+  });
+
+  // registration-fee
+  it("answers 'Is there a registration fee?'", async () => {
+    const result = await askViaRoute("Is there a registration fee?");
+    await expectHighConfidence(result, "registration-fee");
+  });
+
+  // waitlist (moved from escalation — handbook has waitlist entry)
+  it("answers 'Is there a waitlist?'", async () => {
+    const result = await askViaRoute("Is there a waitlist?");
+    await expectHighConfidence(result, "waitlist");
+  });
+
+  // tours (moved from escalation — handbook has tours entry)
+  it("answers 'How can I schedule a tour?'", async () => {
+    const result = await askViaRoute("How can I schedule a tour?");
+    await expectHighConfidence(result, "tours");
+  });
+
+  // birthdays
+  it("answers 'Can we celebrate birthdays at Sunflower?'", async () => {
+    const result = await askViaRoute("Can we celebrate birthdays at Sunflower?");
+    await expectHighConfidence(result, "birthdays");
+  });
+
+  // medication
+  it("answers 'What is your medication policy?'", async () => {
+    const result = await askViaRoute("What is your medication policy?");
+    await expectHighConfidence(result, "medication");
+  });
+
+  // arrival-departure
+  it("answers 'How does drop-off and pickup work?'", async () => {
+    const result = await askViaRoute("How does drop-off and pickup work?");
+    await expectHighConfidence(result, "arrival-departure");
+  });
+
+  // pickup-authorization
+  it("answers 'Who is authorized to pick up my child?'", async () => {
+    const result = await askViaRoute("Who is authorized to pick up my child?");
+    await expectHighConfidence(result, "pickup-authorization");
+  });
+
+  // weather-closures
+  it("answers 'Do you close for bad weather?'", async () => {
+    const result = await askViaRoute("Do you close for bad weather?");
+    await expectHighConfidence(result, "weather-closures");
+  });
+
+  // naps
+  it("answers 'What is the nap schedule?'", async () => {
+    const result = await askViaRoute("What is the nap schedule?");
+    await expectHighConfidence(result, "naps");
+  });
+
+  // open-door
+  it("answers 'Can I visit my child's classroom?'", async () => {
+    const result = await askViaRoute("Can I visit my child's classroom?");
+    await expectHighConfidence(result, "open-door");
+  });
+
+  // concerns-process
+  it("answers 'How do I share feedback or concerns?'", async () => {
+    const result = await askViaRoute("How do I share feedback or concerns?");
+    await expectHighConfidence(result, "concerns-process");
+  });
+
+  // withdrawal (moved from escalation — handbook has withdrawal entry)
+  it("answers 'How do I withdraw my child?'", async () => {
+    const result = await askViaRoute("How do I withdraw my child?");
+    await expectHighConfidence(result, "withdrawal");
+  });
+
+  // staff
+  it("answers 'Tell me about your teachers and staff'", async () => {
+    const result = await askViaRoute("Tell me about your teachers and staff");
+    await expectHighConfidence(result, "staff");
+  });
 });
