@@ -63,6 +63,23 @@ const AskRequestSchema = z
   })
   .strict();
 
+/** Typed response envelope for the /api/ask endpoint. The client
+ *  should reference this type instead of ad-hoc `"key" in raw` checks. */
+export type AskResponse = AnswerContract & {
+  needs_attention_event_id?: string;
+};
+
+// M1: Memoize the system prompt at module scope so it's constructed
+// once from the config, not rebuilt per-request. The first call
+// loads the config; subsequent calls reuse the branded value.
+let cachedSystemPrompt: ReturnType<typeof SystemPrompt> | null = null;
+async function getSystemPrompt(): Promise<ReturnType<typeof SystemPrompt>> {
+  if (cachedSystemPrompt) return cachedSystemPrompt;
+  const cfg = await getActiveAgentConfig();
+  cachedSystemPrompt = SystemPrompt(cfg.systemPrompt);
+  return cachedSystemPrompt;
+}
+
 // Intent is static. It's the app's instruction to the model about
 // what *kind* of task this is. Never includes user data.
 const INTENT = AppIntent(
@@ -134,8 +151,7 @@ export async function POST(req: Request): Promise<Response> {
     }
 
     // 4. Build MCPData and call the LLM.
-    const cfg = await getActiveAgentConfig();
-    const systemPromptText = cfg.systemPrompt;
+    const systemPrompt = await getSystemPrompt();
     const mcpData = MCPData({
       center_name: `${metadata.title} Front Desk`,
       document: {
@@ -160,12 +176,7 @@ export async function POST(req: Request): Promise<Response> {
       },
     });
 
-    const draft: AnswerContract = await askLLM(
-      SystemPrompt(systemPromptText),
-      INTENT,
-      mcpData,
-      UserInput(question),
-    );
+    const draft: AnswerContract = await askLLM(systemPrompt, INTENT, mcpData, UserInput(question));
 
     // 4. Refusal short-circuit. If the model flagged this as
     // out-of-scope / off-topic (refusal: true), return the draft

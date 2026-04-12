@@ -47,3 +47,4 @@ export {
   resolveNeedsAttention,
   getResolvedEventsWithReplies,
 } from "./needs-attention";
+export type { ResolvedEventWithReply } from "./needs-attention";

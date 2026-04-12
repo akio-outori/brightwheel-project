@@ -24,8 +24,15 @@ import type { Channel } from "../types";
  *  draft is holding an instruction the operator should review
  *  before it reaches the parent. */
 const MEDICAL_INSTRUCTION_PATTERNS: ReadonlyArray<RegExp> = [
-  // Medication administration directed at the parent's child
-  /\bgive\s+(?:your\s+(?:child|son|daughter|kid|baby|toddler)|him|her)\b/i,
+  // Medication administration directed at the parent's child.
+  // The bare-pronoun arm (him/her) requires a second-person subject
+  // ("you should give him") so that staff-as-subject policy
+  // paraphrases ("staff will give him his EpiPen") pass through.
+  /\bgive\s+your\s+(?:child|son|daughter|kid|baby|toddler)\b/i,
+  /\byou\s+(?:should\s+|can\s+|need\s+to\s+|must\s+)?give\s+(?:him|her)\b/i,
+
+  // Medication verbs: administer, inject (always medical context)
+  /\b(?:you\s+(?:should\s+|can\s+|need\s+to\s+|must\s+)?)?(?:administer|inject)\s+(?:the\s+)?(?:\w+\s+){0,3}(?:to\s+)?(?:your\s+(?:child|son|daughter|kid|baby|toddler)|him|her)\b/i,
 
   // Home-exclusion directive with duration
   /\bkeep\s+(?:your\s+(?:child|son|daughter|kid)|him|her)\s+(?:at\s+)?home\s+(?:for\s+\d+|until|for\s+at\s+least)/i,

@@ -1,5 +1,7 @@
 # AI Front Desk — Sunflower Early Learning
 
+An AI that earns parent trust by never guessing: every answer is grounded in a real handbook, every gap is routed to a real person, and every claim is verified before the parent sees it.
+
 A prototype AI front desk for a fictional family-owned preschool,
 Sunflower Early Learning in Austin, TX. Parents ask questions about
 the program. The assistant answers from the Family Handbook with
@@ -34,9 +36,9 @@ docker compose up
 First boot seeds the handbook into MinIO and builds the Next.js app.
 Subsequent boots take under 10 seconds.
 
-| Surface | URL |
-|---------|-----|
-| Parent chat | http://localhost:3000 |
+| Surface          | URL                         |
+| ---------------- | --------------------------- |
+| Parent chat      | http://localhost:3000       |
 | Operator console | http://localhost:3000/admin |
 
 ### Demo flow
@@ -89,14 +91,14 @@ Parent question
 
 Detailed engineering docs for each subsystem:
 
-| Document | Covers |
-|----------|--------|
-| [Trust mechanic & MCP boundary](docs/trust-mechanic.md) | Four branded input types, prompt assembly, the `AnswerContract`, prompt injection prevention |
-| [Preflight classifier](docs/preflight-classifier.md) | Specific-child detection, pattern groups, policy-question negatives, calibration |
-| [Post-response pipeline](docs/post-response-pipeline.md) | Six deterministic channels, short-circuit architecture, stock responses, hold reasons |
-| [Document model & storage](docs/document-model.md) | Two-layer architecture (seed entries + operator overrides), MinIO layout, storage adapters |
-| [Operator loop](docs/operator-loop.md) | Needs-attention feed, fix dialog, override CRUD, hold-reason badges |
-| [Testing strategy](docs/testing-strategy.md) | Unit tests, integration tests, coverage thresholds, CI pipeline |
-| [Deployment & infrastructure](docs/deployment.md) | Docker stack, distroless runner, MinIO init, CI workflows, security scanning |
-| [Design pitch](docs/writeup.md) | The product thesis for reviewers who won't read source code |
-| [Build journal](docs/build-journal.md) | Chronological development record — every decision, every reversal |
+| Document                                                 | Covers                                                                                       |
+| -------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| [Trust mechanic & MCP boundary](docs/trust-mechanic.md)  | Four branded input types, prompt assembly, the `AnswerContract`, prompt injection prevention |
+| [Preflight classifier](docs/preflight-classifier.md)     | Specific-child detection, pattern groups, policy-question negatives, calibration             |
+| [Post-response pipeline](docs/post-response-pipeline.md) | Six deterministic channels, short-circuit architecture, stock responses, hold reasons        |
+| [Document model & storage](docs/document-model.md)       | Two-layer architecture (seed entries + operator overrides), MinIO layout, storage adapters   |
+| [Operator loop](docs/operator-loop.md)                   | Needs-attention feed, fix dialog, override CRUD, hold-reason badges                          |
+| [Testing strategy](docs/testing-strategy.md)             | Unit tests, integration tests, coverage thresholds, CI pipeline                              |
+| [Deployment & infrastructure](docs/deployment.md)        | Docker stack, distroless runner, MinIO init, CI workflows, security scanning                 |
+| [Design pitch](docs/writeup.md)                          | The product thesis for reviewers who won't read source code                                  |
+| [Build journal](docs/build-journal.md)                   | Chronological development record — every decision, every reversal                            |

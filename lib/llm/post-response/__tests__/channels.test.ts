@@ -459,4 +459,26 @@ describe("medicalShapeChannel", () => {
     );
     expect(v.verdict).toBe("pass");
   });
+
+  // REGRESSION: C1 — staff-as-subject paraphrases should PASS
+  it("passes when staff is the subject of 'give him'", () => {
+    const v = medicalShapeChannel(
+      input({
+        answer: "Staff will give him his EpiPen from the classroom if he has an allergic reaction.",
+      }),
+    );
+    expect(v.verdict).toBe("pass");
+  });
+
+  // REGRESSION: C2 — administer/inject vocabulary should HOLD
+  it("holds when the draft tells the parent to administer medication", () => {
+    const v = medicalShapeChannel(
+      input({
+        answer:
+          "You should administer the EpiPen to him immediately if he shows signs of anaphylaxis.",
+      }),
+    );
+    expect(v.verdict).toBe("hold");
+    if (v.verdict === "hold") expect(v.reason).toBe("medical_instruction");
+  });
 });

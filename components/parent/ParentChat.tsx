@@ -78,11 +78,22 @@ function contractToMessage(
     };
   }
 
+  // T1: require at least one citation to render as a verified answer.
+  // Without citations the "Verified policy" badge is misleading.
+  if (contract.cited_entries.length === 0) {
+    return {
+      role: "assistant",
+      text: `I want to make sure you get the right answer here. A staff member is taking a look at your question and will follow up. You can also call us at ${CENTER.phone}.`,
+      type: "escalated",
+      source: null,
+    };
+  }
+
   return {
     role: "assistant",
     text: contract.answer,
     type: "answer",
-    source: contract.cited_entries.length > 0 ? "Family Handbook" : null,
+    source: "Family Handbook",
     citedEntries: resolveCitations(contract.cited_entries, lookup),
   };
 }
@@ -174,7 +185,7 @@ export function ParentChat() {
           setEntryLookup(map);
         },
       )
-      .catch(() => {}); // Non-critical — citations just won't resolve
+      .catch(console.warn); // Non-critical — citations just won't resolve
   }, []);
 
   useEffect(() => {
@@ -455,13 +466,17 @@ export function ParentChat() {
             </button>
           </div>
           <div className="flex items-center justify-between mt-2 px-1">
-            <p className="text-[10px] text-gray-400">Powered by BrightDesk AI</p>
-            <Link
-              href="/admin"
-              className="text-[10px] text-gray-400 hover:text-[#5B4FCF] flex items-center gap-0.5 transition-colors"
-            >
-              Staff portal <ChevronRight className="w-2.5 h-2.5" />
-            </Link>
+            <p className="text-[10px] text-gray-400">
+              Sunflower Early Learning &middot; AI Front Desk
+            </p>
+            {process.env.NODE_ENV !== "production" && (
+              <Link
+                href="/admin"
+                className="text-[10px] text-gray-400 hover:text-[#5B4FCF] flex items-center gap-0.5 transition-colors"
+              >
+                Staff portal <ChevronRight className="w-2.5 h-2.5" />
+              </Link>
+            )}
           </div>
         </div>
       </div>

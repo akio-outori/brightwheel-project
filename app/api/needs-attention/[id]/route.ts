@@ -1,11 +1,13 @@
 // POST /api/needs-attention/[id] — resolve an open event, linking
 // it to the operator override that answered the question.
 //
-// This is the non-atomic resolution path (create override first,
-// then resolve). The atomic path is
+// DEPRECATED: This is the non-atomic resolution path (create override
+// first, then resolve). The atomic path is
 // /api/needs-attention/[id]/resolve-with-entry — prefer that from
 // the UI. This endpoint exists for tests and for flows where an
-// override already exists.
+// override already exists. It resolves without an operatorReply,
+// which means the parent will never see a staff response via the
+// polling channel. New callers should use resolve-with-entry instead.
 
 import { z } from "zod";
 import { resolveNeedsAttention, StorageError } from "@/lib/storage";
@@ -20,6 +22,7 @@ const ResolveRequestSchema = z
       .min(1)
       .max(120)
       .regex(/^[a-z0-9-]+$/),
+    operatorReply: z.string().min(1).max(4000).optional(),
   })
   .strict();
 
@@ -44,6 +47,7 @@ export async function POST(
   try {
     const event = await resolveNeedsAttention(id, {
       resolvedByOverrideId: parsed.data.resolvedByOverrideId,
+      ...(parsed.data.operatorReply ? { operatorReply: parsed.data.operatorReply } : {}),
     });
     return Response.json(event);
   } catch (err) {

@@ -20,6 +20,15 @@ import { z } from "zod";
 import { getClient, HANDBOOK_BUCKET, EVENTS_BUCKET } from "./client";
 import { writeJson, readJson } from "./minio-json";
 
+const SeedEntrySchema = z
+  .object({
+    id: z
+      .string()
+      .min(1)
+      .regex(/^[a-z0-9-]+$/, "entry id must be lowercase kebab-case"),
+  })
+  .passthrough();
+
 const SeedFileSchema = z.object({
   document: z.object({
     id: z.string().min(1),
@@ -27,7 +36,7 @@ const SeedFileSchema = z.object({
     version: z.string().min(1),
     source: z.string().min(1),
   }),
-  entries: z.array(z.record(z.unknown())),
+  entries: z.array(SeedEntrySchema),
 });
 
 // Bumped to v3 when the seed handbook was replaced with the
@@ -71,7 +80,7 @@ async function waitForMinio(maxRetries = 30): Promise<void> {
 }
 
 async function doInit(): Promise<void> {
-  console.log("[storage-init] starting");
+  console.debug("[storage-init] starting");
 
   await waitForMinio();
 
@@ -84,7 +93,7 @@ async function doInit(): Promise<void> {
     const exists = await client.bucketExists(bucket);
     if (!exists) {
       await client.makeBucket(bucket, "us-east-1");
-      console.log(`[storage-init] created bucket: ${bucket}`);
+      console.debug(`[storage-init] created bucket: ${bucket}`);
     }
   }
 
@@ -98,7 +107,7 @@ async function doInit(): Promise<void> {
   // Check sentinel — skip if already seeded
   const sentinel = await readJson(hbBucket, SENTINEL_KEY);
   if (sentinel) {
-    console.log("[storage-init] sentinel found — already seeded");
+    console.debug("[storage-init] sentinel found — already seeded");
     return;
   }
 
@@ -120,7 +129,7 @@ async function doInit(): Promise<void> {
   const docId = seed.document.id;
 
   const docPrefix = `documents/${docId}`;
-  console.log(`[storage-init] seeding document ${docId} (${seed.entries.length} entries)`);
+  console.debug(`[storage-init] seeding document ${docId} (${seed.entries.length} entries)`);
 
   // Write document metadata
   const metadata = {
@@ -131,15 +140,14 @@ async function doInit(): Promise<void> {
 
   // Write each entry
   for (const entry of seed.entries) {
-    const id = entry.id as string;
-    if (!id) throw new Error("Seed entry missing id");
+    const { id } = entry;
     await writeJson(hbBucket, `${docPrefix}/entries/${id}.json`, {
       ...entry,
       docId,
     });
   }
 
-  console.log(`[storage-init] seeded ${seed.entries.length} entries`);
+  console.debug(`[storage-init] seeded ${seed.entries.length} entries`);
   await writeSentinel(hbBucket);
 }
 
@@ -148,5 +156,5 @@ async function writeSentinel(bucket: string): Promise<void> {
     seeded_at: new Date().toISOString(),
     layout: "v2",
   });
-  console.log("[storage-init] complete");
+  console.debug("[storage-init] complete");
 }

@@ -38,6 +38,9 @@ async function getClient(): Promise<Anthropic> {
 // When a fake is injected, askLLM skips the config load entirely
 // so unit tests don't need to set up a real config + API key.
 export function __setClientForTests(client: unknown): void {
+  if (process.env.NODE_ENV === "production") {
+    throw new Error("__setClientForTests must not be called in production");
+  }
   cachedClient = client as Anthropic;
 }
 
@@ -95,7 +98,7 @@ export async function askLLM(
   // and why a response escalated or fell through to PARSE_FAILURE_RESULT.
   // This is not dev-only — it's part of the honest demo story ("show me
   // what you asked and what it said").
-  console.log("[askLLM] model response:", JSON.stringify({ text: unfenced.slice(0, 4000) }));
+  console.debug("[askLLM] model response:", JSON.stringify({ text: unfenced.slice(0, 4000) }));
 
   let parsed: unknown;
   try {
@@ -117,7 +120,7 @@ export async function askLLM(
     return PARSE_FAILURE_RESULT;
   }
 
-  console.log(
+  console.debug(
     "[askLLM] parsed contract:",
     JSON.stringify({
       confidence: result.data.confidence,

@@ -325,3 +325,68 @@ describe("PASS: possessive + family noun WITHOUT health", () => {
     "How can I help my child transition to kindergarten?",
   ])("passes: %s", (q) => expectPass(q));
 });
+
+// -----------------------------------------------------------------------
+// REGRESSION: T2 false-positive fix — enrollment questions with
+// "my pediatrician" / "my doctor" should PASS because these are
+// about enrollment paperwork, not a specific child's health.
+// -----------------------------------------------------------------------
+
+describe("PASS: enrollment questions with medical professional nouns", () => {
+  it.each([
+    "What does my pediatrician need to sign?",
+    "Do I need my doctor to sign the form?",
+    "Does my pediatrician need to fill out a health form?",
+    "Can my doctor fax the immunization records?",
+  ])("passes: %s", (q) => expectPass(q));
+});
+
+// -----------------------------------------------------------------------
+// REGRESSION: C4 — seed-referenced conditions should HOLD
+// -----------------------------------------------------------------------
+
+describe("HOLD: named conditions (C4)", () => {
+  it.each([
+    "My child has hand-foot-and-mouth",
+    "My son was diagnosed with chicken pox",
+    "My daughter tested positive for RSV",
+    "My kid has covid, can he come in?",
+    "My child was exposed to norovirus at school",
+  ])("holds: %s", (q) => expectHold(q));
+});
+
+// -----------------------------------------------------------------------
+// REGRESSION: C5 — colloquial illness phrases should HOLD
+// -----------------------------------------------------------------------
+
+describe("HOLD: colloquial illness phrases (C5)", () => {
+  it.each([
+    "My child got sick at school yesterday",
+    "My son picked up a bug from the other kids",
+    "My daughter has a bug, should she stay home?",
+  ])("holds: %s", (q) => expectHold(q));
+});
+
+// -----------------------------------------------------------------------
+// REGRESSION: C6 — they/them pronouns should HOLD in health context
+// -----------------------------------------------------------------------
+
+describe("HOLD: they/them pronouns (C6)", () => {
+  it.each([
+    "They have a fever, can they come in?",
+    "They've been vomiting all night",
+    "They're really sick today",
+    "Can they still attend if they have a cough?",
+  ])("holds: %s", (q) => expectHold(q));
+});
+
+// -----------------------------------------------------------------------
+// REGRESSION: C7 — "a child like mine" should HOLD in health context
+// -----------------------------------------------------------------------
+
+describe("HOLD: child like mine (C7)", () => {
+  it.each([
+    "A child like mine with allergies, what precautions do you take?",
+    "For a kid like mine who has asthma, can you administer an inhaler?",
+  ])("holds: %s", (q) => expectHold(q));
+});

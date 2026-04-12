@@ -118,7 +118,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Trivy vulnerability scan (filesystem)
-        uses: aquasecurity/trivy-action@master
+        uses: aquasecurity/trivy-action@6e7b7d1fd3e4fef0c5fa8cce1229c54b2c9a7ca4 # v0.24.0
         with:
           scan-type: fs
           scan-ref: .
@@ -139,7 +139,7 @@ jobs:
         with:
           fetch-depth: 0
       - name: TruffleHog secrets scan
-        uses: trufflesecurity/trufflehog@main
+        uses: trufflesecurity/trufflehog@8a44db4cd0e8bb7faf0a2e56e8e25ac9e5c5e3e7 # v3.82.13
         with:
           extra_args: --only-verified
 
@@ -149,7 +149,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Semgrep scan
-        uses: semgrep/semgrep-action@v1
+        uses: semgrep/semgrep-action@713efdd6a09d4c187a4cd0e6e6f8d3b9e0e5b3c0 # v1
         with:
           config: >-
             p/typescript
@@ -163,7 +163,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Bearer security scan
-        uses: bearer/bearer-action@v2
+        uses: bearer/bearer-action@b3a0f40ef4db443c8c5a4beb3db4553e4c2b4e3b # v2
         with:
           severity: critical,high,warning
           exit-code: 1
@@ -200,7 +200,7 @@ jobs:
       - name: Build Docker image
         run: docker build -t brightwheel-app:scan .
       - name: Trivy vulnerability scan (image)
-        uses: aquasecurity/trivy-action@master
+        uses: aquasecurity/trivy-action@6e7b7d1fd3e4fef0c5fa8cce1229c54b2c9a7ca4 # v0.24.0
         with:
           image-ref: brightwheel-app:scan
           format: table

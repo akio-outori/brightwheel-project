@@ -11,7 +11,6 @@ export default function SuggestedQuestions({
 }) {
   return (
     <div>
-      <p className="text-xs text-gray-400 mb-2 font-medium">Try asking...</p>
       <div className="flex flex-wrap gap-2">
         {questions.map((q, i) => (
           <motion.button

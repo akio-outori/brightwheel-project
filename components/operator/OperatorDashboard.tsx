@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import useSWR from "swr";
 import {
@@ -22,10 +22,11 @@ import QuestionLogPanel from "@/components/operator/QuestionLogPanel";
 import KnowledgePanel from "@/components/operator/KnowledgePanel";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
+import type { NeedsAttentionEvent } from "@/lib/storage/types";
 
 const TABS = [
   { id: "questions", label: "Questions", icon: MessageSquare },
-  { id: "knowledge", label: "Knowledge Base", icon: BookOpen },
+  { id: "knowledge", label: "Handbook", icon: BookOpen },
 ] as const;
 
 // SWR key for the full needs-attention list (open + resolved).
@@ -41,23 +42,7 @@ export type EventFilter = "all" | "unresolved" | "resolved";
 // dropdown here and the /admin/profile page render from the
 // same source.
 
-interface AnswerContract {
-  answer: string;
-  confidence: "high" | "low";
-  cited_entries: string[];
-  escalate: boolean;
-  escalation_reason?: string;
-  refusal?: boolean;
-}
-
-interface NeedsAttentionEvent {
-  id: string;
-  question: string;
-  result: AnswerContract;
-  createdAt: string;
-  resolvedAt?: string;
-  operatorReply?: string;
-}
+// NeedsAttentionEvent imported from canonical source above.
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
@@ -105,6 +90,22 @@ export default function OperatorDashboard() {
     refreshInterval: 10000,
   });
 
+  // Fetch the handbook once so we can resolve cited-entry IDs to
+  // human-readable titles in QuestionLogPanel.
+  const { data: handbookData } = useSWR<{
+    document?: {
+      entries?: Array<{ id: string; title: string }>;
+      overrides?: Array<{ id: string; title: string }>;
+    };
+  }>("/api/handbook", fetcher);
+
+  const entryTitleMap = React.useMemo(() => {
+    const map = new Map<string, string>();
+    for (const e of handbookData?.document?.entries ?? []) map.set(e.id, e.title);
+    for (const o of handbookData?.document?.overrides ?? []) map.set(o.id, o.title);
+    return map;
+  }, [handbookData]);
+
   const events = naData?.events ?? [];
   const unresolved = events.filter((e) => !e.resolvedAt);
   const resolved = events.filter((e) => e.resolvedAt);
@@ -134,9 +135,9 @@ export default function OperatorDashboard() {
     },
     {
       id: "resolved",
-      label: "By staff",
+      label: "Staff answered",
       count: resolved.length,
-      sublabel: "answered",
+      sublabel: "this session",
       icon: Clock,
     },
   ];
@@ -282,12 +283,12 @@ export default function OperatorDashboard() {
                     <div className="px-4 py-3 border-b border-gray-100">
                       <p className="text-sm font-semibold text-gray-900">
                         {unresolved.length === 0
-                          ? "All caught up"
+                          ? "You're all caught up!"
                           : `${unresolved.length} unanswered question${unresolved.length === 1 ? "" : "s"}`}
                       </p>
                       <p className="text-xs text-gray-500 mt-0.5">
                         {unresolved.length === 0
-                          ? "No parent questions waiting."
+                          ? "No parents waiting — the AI handled everything so far."
                           : "Click one to jump in."}
                       </p>
                     </div>
@@ -300,7 +301,7 @@ export default function OperatorDashboard() {
                     <div>
                       {unresolved.length === 0 ? (
                         <div className="px-4 py-6 text-center text-xs text-gray-400">
-                          Nothing to review.
+                          Nothing to review — nice work!
                         </div>
                       ) : (
                         unresolved.map((evt) => (
@@ -398,6 +399,7 @@ export default function OperatorDashboard() {
             filter={filter}
             expandedId={expandedId}
             onExpandChange={setExpandedId}
+            entryTitleMap={entryTitleMap}
           />
         )}
         {tab === "knowledge" && <KnowledgePanel />}

@@ -19,10 +19,11 @@ let cached: MinioClient | null = null;
 function requireEnv(name: string): string {
   const value = process.env[name];
   if (!value) {
-    throw new Error(
-      `Storage configuration error: ${name} is not set. ` +
-        `Expected to be provided by docker-compose or a local .env file.`,
-    );
+    // Log the specific variable name server-side for debugging, but
+    // throw a generic message that won't leak env var names if it
+    // propagates to an HTTP response.
+    console.error(`[storage] required environment variable not set: ${name}`);
+    throw new Error("Storage configuration error: a required environment variable is not set.");
   }
   return value;
 }
