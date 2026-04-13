@@ -1,4 +1,4 @@
-# AI Front Desk
+# BrightDesk
 
 ## The problem
 
@@ -8,7 +8,7 @@ The question isn't "can we get the model to answer?" It's **"when the model gets
 
 ## What this is
 
-An AI front desk for a family services organization. A parent asks a question. Three things can happen, and only three:
+BrightDesk for a family services organization. A parent asks a question. Three things can happen, and only three:
 
 1. **The system knows the answer.** The parent gets a grounded response with a citation to the specific handbook entry or staff clarification it came from. The answer is auditable — you can click the source and read it.
 
@@ -44,7 +44,7 @@ The test suite is 408 unit tests with an 80%+ coverage threshold and 174 integra
 
 ## Where it goes
 
-This prototype is Phase 0 of a five-phase scaling plan. The long-term product is **per-center intelligence** — each center's AI front desk gets smarter over time, built from that operator's own expertise, compounding with every answered question.
+This prototype is Phase 0 of a five-phase scaling plan. The long-term product is **per-center intelligence** — each center's BrightDesk gets smarter over time, built from that operator's own expertise, compounding with every answered question.
 
 The full product thesis and engineering plan is in [Product & scaling plan](scaling-plan.md).
 

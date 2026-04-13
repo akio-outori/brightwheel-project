@@ -1,10 +1,10 @@
-# Build Journal — AI Front Desk
+# Build Journal — BrightDesk
 
 A step-by-step record of how this prototype was built. The goal of keeping this
 journal is to make the _engineering process_ visible alongside the final
 artifact: which decisions were made, what was considered and rejected, and why.
 
-The project itself is a take-home for Brightwheel: an "AI Front Desk" that
+The project itself is a take-home for Brightwheel: a "BrightDesk" that
 answers parent questions about a daycare, with operator tooling to keep the
 system honest and improve it over time.
 

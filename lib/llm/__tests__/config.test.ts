@@ -29,7 +29,7 @@ describe("loadAgentConfig", () => {
       expect(cfg.model).toBe("claude-sonnet-4-6");
       expect(cfg.temperature).toBe(0);
       expect(cfg.maxTokens).toBeGreaterThan(0);
-      expect(cfg.systemPrompt).toContain("AI Front Desk");
+      expect(cfg.systemPrompt).toContain("BrightDesk");
       expect(cfg.apiKey).toBe("test-key-for-config-loading");
     } finally {
       process.env.ANTHROPIC_API_KEY = original;

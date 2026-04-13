@@ -1,4 +1,4 @@
-# AI Front Desk — Parent Ask Flow
+# BrightDesk — Parent Ask Flow
 
 ## Voice
 

@@ -139,7 +139,7 @@ describe("ParentChat polling → staff reply surfaced", () => {
     renderParentChat();
 
     // Greeting is visible (disambiguated from the header brand
-    // line and the "AI Front Desk" subtitle).
+    // line and the "BrightDesk" subtitle).
     expect(screen.getByText(/What's on your mind/i)).toBeTruthy();
 
     // Fill in the textarea via the native React value setter so the

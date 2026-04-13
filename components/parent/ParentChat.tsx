@@ -378,7 +378,7 @@ export function ParentChat() {
               </div>
               <div>
                 <div className="flex items-center gap-2 mb-1">
-                  <p className="text-white font-semibold text-sm">AI Front Desk</p>
+                  <p className="text-white font-semibold text-sm">BrightDesk</p>
                   <span className="bg-emerald-400 text-white text-[10px] font-semibold px-2 py-0.5 rounded-full">
                     ● Live
                   </span>
@@ -465,7 +465,7 @@ export function ParentChat() {
           </div>
           <div className="flex items-center justify-between mt-2 px-1">
             <p className="text-[10px] text-gray-400">
-              Sunflower Early Learning &middot; AI Front Desk
+              Sunflower Early Learning &middot; BrightDesk
             </p>
             {process.env.NODE_ENV !== "production" && (
               <Link

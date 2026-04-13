@@ -1,8 +1,8 @@
-# AI Front Desk — Sunflower Early Learning
+# BrightDesk — Sunflower Early Learning
 
 An AI that earns parent trust by never guessing: every answer is grounded in a real handbook, every gap is routed to a real person, and every claim is verified before the parent sees it.
 
-A prototype AI front desk for a fictional family-owned preschool,
+A prototype BrightDesk for a fictional family-owned preschool,
 Sunflower Early Learning in Austin, TX. Parents ask questions about
 the program. The assistant answers from the Family Handbook with
 citations, or hands the question to a staff member who closes the

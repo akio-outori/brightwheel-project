@@ -2,9 +2,9 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "BrightDesk — AI Front Desk",
+  title: "BrightDesk — Sunflower Early Learning",
   description:
-    "An AI front desk assistant for Sunflower Early Learning. Answers parent questions instantly from the Family Handbook and escalates to staff when uncertain.",
+    "BrightDesk for Sunflower Early Learning. Answers parent questions instantly from the Family Handbook and escalates to staff when uncertain.",
   // Prototype deployed to a public URL for demo purposes only —
   // explicitly opt out of search indexing. robots.txt under
   // /public says the same thing for crawlers that read it first.
