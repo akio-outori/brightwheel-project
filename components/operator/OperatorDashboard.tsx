@@ -286,7 +286,7 @@ export default function OperatorDashboard() {
                   )}
                 </button>
                 {bellOpen && (
-                  <div className="absolute right-0 mt-2 w-80 bg-white rounded-2xl shadow-xl ring-1 ring-black/5 overflow-hidden z-40">
+                  <div className="absolute right-0 mt-2 w-80 max-w-[calc(100vw-2rem)] bg-white rounded-2xl shadow-xl ring-1 ring-black/5 overflow-hidden z-40">
                     <div className="px-4 py-3 border-b border-gray-100">
                       <p className="text-sm font-semibold text-gray-900">
                         {unresolved.length === 0
