@@ -127,10 +127,15 @@ export const TEST_CREATED_BY = "integration-test-suite";
 // Kept for backward compat with any test that still references it
 export const TEST_TAG_PREFIX = TEST_CREATED_BY;
 
+// Overrides that are part of the expected baseline state and
+// should NOT be deleted during cleanup. Everything else gets
+// wiped before and after each suite run.
+const EXPECTED_OVERRIDES = new Set(["birthday-celebration-policy"]);
+
 async function cleanupTestOverrides(): Promise<void> {
   try {
     const overrides = await listOperatorOverrides(DOC_ID);
-    const toDelete = overrides.filter((o) => o.createdBy === TEST_CREATED_BY);
+    const toDelete = overrides.filter((o) => !EXPECTED_OVERRIDES.has(o.id));
     for (const o of toDelete) {
       await deleteOperatorOverride(DOC_ID, o.id);
     }
