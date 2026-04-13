@@ -457,14 +457,12 @@ export function ParentChat() {
             <p className="text-[10px] text-gray-400">
               Sunflower Early Learning &middot; BrightDesk
             </p>
-            {process.env.NODE_ENV !== "production" && (
-              <Link
-                href="/admin"
-                className="text-[10px] text-gray-400 hover:text-[#5B4FCF] flex items-center gap-0.5 transition-colors"
-              >
-                Staff portal <ChevronRight className="w-2.5 h-2.5" />
-              </Link>
-            )}
+            <Link
+              href="/admin"
+              className="text-[10px] text-gray-400 hover:text-[#5B4FCF] flex items-center gap-0.5 transition-colors"
+            >
+              Staff portal <ChevronRight className="w-2.5 h-2.5" />
+            </Link>
           </div>
         </div>
       </div>
