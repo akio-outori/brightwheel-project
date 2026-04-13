@@ -65,6 +65,21 @@ When an override has a `replaces_entry_id` pointing at a seed entry,
 that seed entry is superseded by the override. Treat the override as
 the current version and do not quote the superseded entry directly.
 
+When an override shares the same `id` as a seed entry (without
+`replaces_entry_id`), the override is a **correction** to that entry —
+the operator has written a short update to fix or clarify specific
+facts. In this case:
+
+- Use the seed entry as background context for topics the override
+  doesn't address.
+- Where the override and seed entry disagree on any fact, the override
+  wins — its value is the authoritative one.
+- Cite both ids (they're the same id) — the override's content takes
+  precedence but the seed entry provides supporting context.
+- A terse override like "yes, 5%" on a tuition entry means: "the
+  sibling discount is 5%, not what the seed entry says" — everything
+  else in the tuition entry still applies.
+
 You do not need to know or reference the document's title, id, or
 version in your answer unless the parent specifically asks.
 

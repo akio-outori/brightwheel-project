@@ -153,19 +153,22 @@ export async function POST(req: Request): Promise<Response> {
 
     // 4. Build MCPData and call the LLM.
     //
-    // Filter out seed entries that have been superseded by an
+    // Filter out seed entries that have been fully superseded by an
     // override with `replacesEntryId`. The model should only see
-    // the override — having both in context causes the model to
-    // cite both, which violates the trust-loop expectation that
-    // a replacement override is the authoritative version.
-    // An override supersedes a seed entry when:
-    //  - it explicitly declares `replacesEntryId`, OR
-    //  - its id collides with a seed entry id (same slug)
-    const overrideIds = new Set(overrides.map((o) => o.id));
+    // the override in that case — having both in context causes the
+    // model to cite both, which violates the trust-loop expectation
+    // that a replacement override is the authoritative version.
+    //
+    // Overrides that share an id with a seed entry (without explicit
+    // `replacesEntryId`) are treated as CORRECTIONS, not replacements:
+    // both go into the prompt, and the system prompt tells the model
+    // to apply the override's facts on top of the seed entry's body.
+    // This lets operators write terse corrections ("yes, 5%") without
+    // having to duplicate all the context from the original entry.
     const replacedIds = new Set(
       overrides.filter((o) => o.replacesEntryId).map((o) => o.replacesEntryId!),
     );
-    const activeEntries = entries.filter((e) => !replacedIds.has(e.id) && !overrideIds.has(e.id));
+    const activeEntries = entries.filter((e) => !replacedIds.has(e.id));
 
     const systemPrompt = await getSystemPrompt();
     const mcpData = MCPData({
