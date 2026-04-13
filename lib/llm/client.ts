@@ -93,12 +93,12 @@ export async function askLLM(
   // shapes before parsing.
   const unfenced = stripCodeFence(text);
 
-  // Demo/operator visibility: log every model call so the interviewer
-  // and the operator can see exactly what the model said, what parsed,
-  // and why a response escalated or fell through to PARSE_FAILURE_RESULT.
-  // This is not dev-only — it's part of the honest demo story ("show me
-  // what you asked and what it said").
-  console.debug("[askLLM] model response:", JSON.stringify({ text: unfenced.slice(0, 4000) }));
+  // Log model responses in non-production for demo/debugging visibility.
+  // Gated to prevent handbook content and operator replies from leaking
+  // into production log aggregation.
+  if (process.env.NODE_ENV !== "production") {
+    console.debug("[askLLM] model response:", JSON.stringify({ text: unfenced.slice(0, 4000) }));
+  }
 
   let parsed: unknown;
   try {

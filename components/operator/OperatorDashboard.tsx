@@ -94,8 +94,8 @@ export default function OperatorDashboard() {
   // human-readable titles in QuestionLogPanel.
   const { data: handbookData } = useSWR<{
     document?: {
-      entries?: Array<{ id: string; title: string }>;
-      overrides?: Array<{ id: string; title: string }>;
+      entries?: Array<{ id: string; title: string; body: string }>;
+      overrides?: Array<{ id: string; title: string; body: string }>;
     };
   }>("/api/handbook", fetcher);
 
@@ -103,6 +103,13 @@ export default function OperatorDashboard() {
     const map = new Map<string, string>();
     for (const e of handbookData?.document?.entries ?? []) map.set(e.id, e.title);
     for (const o of handbookData?.document?.overrides ?? []) map.set(o.id, o.title);
+    return map;
+  }, [handbookData]);
+
+  const entryBodyMap = React.useMemo(() => {
+    const map = new Map<string, string>();
+    for (const e of handbookData?.document?.entries ?? []) map.set(e.id, e.body);
+    for (const o of handbookData?.document?.overrides ?? []) map.set(o.id, o.body);
     return map;
   }, [handbookData]);
 
@@ -130,14 +137,14 @@ export default function OperatorDashboard() {
       id: "unresolved",
       label: "Awaiting your answer",
       count: unresolved.length,
-      sublabel: "needs staff",
+      sublabel: "waiting on you",
       icon: AlertTriangle,
     },
     {
       id: "resolved",
       label: "Staff answered",
       count: resolved.length,
-      sublabel: "this session",
+      sublabel: "answered by staff",
       icon: Clock,
     },
   ];
@@ -288,7 +295,7 @@ export default function OperatorDashboard() {
                       </p>
                       <p className="text-xs text-gray-500 mt-0.5">
                         {unresolved.length === 0
-                          ? "No parents waiting — the AI handled everything so far."
+                          ? "No parents waiting — your handbook answered everything so far."
                           : "Click one to jump in."}
                       </p>
                     </div>
@@ -400,6 +407,7 @@ export default function OperatorDashboard() {
             expandedId={expandedId}
             onExpandChange={setExpandedId}
             entryTitleMap={entryTitleMap}
+            entryBodyMap={entryBodyMap}
           />
         )}
         {tab === "knowledge" && <KnowledgePanel />}

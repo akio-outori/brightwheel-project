@@ -57,15 +57,15 @@ export function MCPData(value: Record<string, unknown>): MCPData {
 }
 
 // UserInput enforces a length cap at construction time so there is no
-// way to bypass it further down the pipeline. A 4000-character cap
-// fits any reasonable parent question and keeps the prompt budget
+// way to bypass it further down the pipeline. A 2000-character cap
+// matches the route-level Zod schema and keeps the prompt budget
 // bounded regardless of what a caller forgets to check.
 export function UserInput(value: string): UserInput {
   if (value.length === 0) {
     throw new Error("UserInput may not be empty");
   }
-  if (value.length > 4000) {
-    throw new Error(`UserInput exceeds max length: ${value.length} > 4000`);
+  if (value.length > 2000) {
+    throw new Error(`UserInput exceeds max length: ${value.length} > 2000`);
   }
   return value as UserInput;
 }

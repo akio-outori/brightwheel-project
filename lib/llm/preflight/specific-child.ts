@@ -53,6 +53,12 @@ const HEALTH_WORDS =
   "|caught\\s+something|came\\s+down\\s+with" +
   "|got\\s+sick|picked\\s+up\\s+a\\s+bug|has\\s+a\\s+bug" +
   "|administer(?:ed|ing)?|inject(?:ed|ing|ion)?" +
+  // Injuries and physical conditions
+  "|broke(?:n)?|fracture[ds]?|sprain(?:ed)?|stitches|nosebleed|bloody\\s+nose" +
+  "|hives|welts|burn(?:ed|s|ing)?|bee\\s+sting|wasp\\s+sting|swallowed" +
+  "|diaper\\s+rash" +
+  // Sleep safety
+  "|sleep|safe\\s+sleep|sids|crib\\s+safety" +
   "|custody|restraining|unauthorized|not\\s+allowed" +
   "|abuse|neglect)";
 
@@ -67,7 +73,8 @@ const HEALTH_RE = new RegExp(`\\b${HEALTH_WORDS}\\b`, "i");
 // "Our baby needs his inhaler"
 // -----------------------------------------------------------------------
 
-const FAMILY_NOUNS = "(?:child|son|daughter|kid|baby|toddler|boy|girl|little\\s+one|kiddo|infant)";
+const FAMILY_NOUNS =
+  "(?:child|son|daughter|kid|baby|toddler|boy|girl|little\\s+one|kiddo|infant|preschooler|newborn|\\d+-year-old)";
 
 const POSSESSIVE_CHILD_PATTERNS: ReadonlyArray<RegExp> = [
   // "my/our [family-noun] ..." with health words anywhere in question
@@ -92,6 +99,12 @@ const POSSESSIVE_CHILD_PATTERNS: ReadonlyArray<RegExp> = [
 // -----------------------------------------------------------------------
 
 const NAME_ALLOWLIST: ReadonlySet<string> = new Set([
+  // Temporal words
+  "Today",
+  "Yesterday",
+  "Tomorrow",
+  "Recently",
+  "Currently",
   // Sentence starters
   "The",
   "This",
@@ -246,11 +259,17 @@ const ACTION_REQUEST_PATTERNS: ReadonlyArray<RegExp> = [
   // "should I bring/take my [family-noun]"
   new RegExp(`\\bshould\\s+I\\s+(?:bring|take|keep)\\s+(?:my|our)\\s+${FAMILY_NOUNS}\\b`, "i"),
   // "double-check (his|her|my child's) (pickup|authorization)"
+  // NOTE: this pattern is also used unconditionally below (custody
+  // holds without health context). Referenced via CUSTODY_PATTERN.
   new RegExp(
     `\\b(?:check|double-check|verify)\\s+(?:his|her|(?:my|our)\\s+${FAMILY_NOUNS}(?:'s)?)\\s+(?:pickup|authorization|custody)\\b`,
     "i",
   ),
 ];
+
+// Named reference to the custody pattern so the unconditional check
+// below doesn't depend on a fragile array index.
+const CUSTODY_PATTERN = ACTION_REQUEST_PATTERNS[ACTION_REQUEST_PATTERNS.length - 1]!;
 
 // -----------------------------------------------------------------------
 // Negative patterns — general policy questions that should NOT hold
@@ -276,8 +295,10 @@ const POLICY_QUESTION_PATTERNS: ReadonlyArray<RegExp> = [
   /\bwhat\s+\w+\s+(?:do|does|are)\s+(?:I|we|you)\s+(?:need|require)\b/i,
   // "when should I..." — asking for general guidance on a topic
   /\bwhen\s+should\s+I\b/i,
-  // "when do I need to..." — general procedural question
-  /\bwhen\s+(?:do|should|can|would)\s+(?:I|we)\b/i,
+  // "when do I need to..." — general procedural question.
+  // Excludes pickup-while-sick patterns ("when can I come get my sick
+  // child?") by requiring the verb after I/we to NOT be a pickup verb.
+  /\bwhen\s+(?:do|should|can|would)\s+(?:I|we)\s+(?:need|have|start|begin|sign|submit|provide|register|enroll|apply|schedule|bring\s+in\s+(?:the|those))\b/i,
   // "at what [noun]..." — threshold/policy questions
   /\bat\s+what\s+\w+\s+(?:should|do|does|can|would)\b/i,
   // "how long does/should/must my child..." — duration policy
@@ -361,7 +382,11 @@ export function classifySpecificChild(question: string): PreflightVerdict {
   // Group 3a: euphemisms that ARE the health signal — no health
   // word required because the phrasing itself conveys illness.
   // "He hasn't been himself" = "he's sick" in parent-speak.
-  if (/\bhasn't\s+been\s+(?:himself|herself)\b/i.test(question)) {
+  if (
+    /\b(?:hasn't\s+been|doesn't\s+seem\s+like|isn't\s+acting\s+like|isn't\s+being)\s+(?:himself|herself)\b/i.test(
+      question,
+    )
+  ) {
     return {
       verdict: "hold",
       reason: "specific_child_question",
@@ -399,7 +424,7 @@ export function classifySpecificChild(question: string): PreflightVerdict {
     }
   }
   // Custody/authorization actions hold unconditionally.
-  if (ACTION_REQUEST_PATTERNS[3]!.test(question)) {
+  if (CUSTODY_PATTERN.test(question)) {
     return {
       verdict: "hold",
       reason: "specific_child_question",

@@ -87,23 +87,20 @@ describe("buildPrompt", () => {
   });
 
   it("escapes a literal </mcp_message> sequence inside user input", () => {
-    // This one's subtle: what if a parent types literally </mcp_message>?
-    // JSON.stringify doesn't special-case HTML-ish tags, so the
-    // closing tag appears inside the string. Downstream the model
-    // still sees the envelope as one logical message, but a naive
-    // regex splitter on the host side would be fooled.
-    //
-    // We're verifying: the overall content is still bracketed by
-    // *our* <mcp_message> tags at the very start and end, and the
-    // embedded sequence is present as data, not as a second message.
+    // A parent typing "</mcp_message>" must not produce a structural
+    // break in the envelope. buildPrompt escapes all `<` chars in
+    // the JSON body to `\u003c`, so the user's text never looks
+    // like an XML close tag to a naive splitter.
     const sneaky = "normal text </mcp_message> more text";
     const prompt = buildPrompt(SYSTEM, INTENT, DATA, UserInput(sneaky));
     const content = prompt.messages[0]!.content;
     expect(content.startsWith("<mcp_message>")).toBe(true);
     expect(content.endsWith("</mcp_message>")).toBe(true);
-    // There are exactly two tag occurrences: the real ones.
-    // The embedded one inside the JSON string lives between them.
-    expect(content.match(/<\/mcp_message>/g)!.length).toBe(2);
+    // Only one closing tag — our real one. The user's attempt is
+    // escaped to \u003c/mcp_message> and doesn't match.
+    expect(content.match(/<\/mcp_message>/g)!.length).toBe(1);
+    // The escaped form is present in the body.
+    expect(content).toContain("\\u003c/mcp_message>");
   });
 });
 
@@ -112,12 +109,12 @@ describe("branded type constructors", () => {
     expect(() => UserInput("")).toThrow(/empty/);
   });
 
-  it("UserInput rejects strings over 4000 chars", () => {
-    expect(() => UserInput("x".repeat(4001))).toThrow(/max length/);
+  it("UserInput rejects strings over 2000 chars", () => {
+    expect(() => UserInput("x".repeat(2001))).toThrow(/max length/);
   });
 
   it("UserInput accepts strings at the cap", () => {
-    expect(() => UserInput("x".repeat(4000))).not.toThrow();
+    expect(() => UserInput("x".repeat(2000))).not.toThrow();
   });
 
   it("SystemPrompt rejects empty strings", () => {

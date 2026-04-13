@@ -67,7 +67,7 @@ describe("loadAgentConfig", () => {
     const original = process.env.ANTHROPIC_API_KEY;
     delete process.env.ANTHROPIC_API_KEY;
     try {
-      await expect(loadAgentConfig(VALID_CONFIG)).rejects.toThrow(/ANTHROPIC_API_KEY/);
+      await expect(loadAgentConfig(VALID_CONFIG)).rejects.toThrow(/API key environment variable/);
     } finally {
       process.env.ANTHROPIC_API_KEY = original;
     }

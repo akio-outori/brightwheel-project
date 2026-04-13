@@ -44,7 +44,7 @@ Every phase of the scaling plan preserves these:
 
 ## Current state (prototype)
 
-- **Model provider:** Anthropic direct API (Haiku 4.5)
+- **Model provider:** Anthropic direct API (Sonnet 4.6)
 - **Context strategy:** Full handbook + all overrides loaded per
   request (~15-20K tokens)
 - **Storage:** MinIO (S3-compatible), per-document prefix layout
@@ -67,8 +67,6 @@ phases below describe the path to production at scale.
 No architectural changes to the trust loop.
 
 **Trigger:** Day one.
-**Duration:** 2-3 months.
-**Team:** 1-2 engineers (Sr. Principal + one Staff eng).
 
 ### Bedrock migration
 
@@ -134,8 +132,6 @@ calls, S3 storage. No embedding, no retrieval.
 handbooks without introducing retrieval.
 
 **Trigger:** First center exceeds ~200 entries.
-**Duration:** 1 month.
-**Team:** 1 engineer.
 
 ### Structured fact representation
 
@@ -175,13 +171,12 @@ ceiling.
 
 **Trigger:** Multi-site operators onboard, or single-center
 knowledge bases grow past ~500 entries.
-**Duration:** 2-3 months.
-**Team:** 2-3 engineers.
 
 ### pgvector
 
-Brightwheel is on Postgres via RDS. pgvector is an extension
-install, not a new service.
+If the production stack includes Postgres, pgvector is an
+extension install, not a new service. Otherwise, a managed
+vector store (e.g., OpenSearch Serverless) serves the same role.
 
 Embed each entry and override at write time. At query time:
 
@@ -234,8 +229,6 @@ verified deterministically.
 **Goal:** Each center's AI becomes an expert on that center.
 
 **Trigger:** 1,000+ centers active.
-**Duration:** 3-6 months.
-**Team:** 3-4 engineers.
 
 The infrastructure phases above exist to support this one. This
 is where the product value compounds.
@@ -296,10 +289,8 @@ surfaces.
 **Goal:** Extract the AI platform from the Next.js monolith into
 a standalone compiled service.
 
-**Trigger:** AI platform team reaches 4+ engineers and monolith
-coupling becomes friction.
-**Duration:** 2-3 months.
-**Team:** Full AI platform team.
+**Trigger:** Monolith coupling becomes friction as the AI
+surface area grows.
 
 ### Go service
 

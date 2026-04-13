@@ -22,12 +22,24 @@ export default function AdminLoginPage() {
       return;
     }
 
-    // Set the cookie client-side. The middleware validates it against
-    // STAFF_AUTH_TOKEN on each protected request. httpOnly is not set
-    // because this is a demo shared password, not a session token.
-    // SameSite=Lax prevents CSRF on cross-origin POST.
-    document.cookie = `brightdesk-staff-token=${encodeURIComponent(password.trim())}; path=/; SameSite=Lax; max-age=${60 * 60 * 24 * 7}`;
-    router.push("/admin");
+    // Validate the password server-side so the cookie can be set as
+    // httpOnly + Secure. The server route does a timing-safe comparison
+    // against STAFF_AUTH_TOKEN and sets the cookie via Set-Cookie header.
+    try {
+      const res = await fetch("/api/admin/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password: password.trim() }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setError((data as { error?: string }).error ?? "Invalid password.");
+        return;
+      }
+      router.push("/admin");
+    } catch {
+      setError("Unable to connect. Please try again.");
+    }
   }
 
   return (

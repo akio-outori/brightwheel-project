@@ -72,8 +72,10 @@ async function waitForMinio(maxRetries = 30): Promise<void> {
     try {
       await client.listBuckets();
       return;
-    } catch {
+    } catch (err) {
       if (i === maxRetries - 1) throw new Error("MinIO not reachable after 30 retries");
+      console.debug(`[storage-init] MinIO not ready (attempt ${i + 1}/${maxRetries}), retrying...`);
+      if (i === 4) console.warn("[storage-init] MinIO still not reachable after 5 attempts", err);
       await new Promise((r) => setTimeout(r, 1000));
     }
   }

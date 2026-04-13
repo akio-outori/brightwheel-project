@@ -1,10 +1,10 @@
 export const SUGGESTED_QUESTIONS = [
-  "Are you open on Veterans Day?",
-  "What immunizations does my child need?",
-  "Do you provide meals?",
-  "What are the late pickup fees?",
+  "What do kids eat for lunch?",
+  "What's your sick-child policy?",
+  "How does drop-off work?",
+  "What are your hours?",
   "How do I enroll my child?",
-  "What's the phone number for the main office?",
+  "What are the late pickup fees?",
 ];
 
 /** Safe follow-up suggestions shown after an escalated response.

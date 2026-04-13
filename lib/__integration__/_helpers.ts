@@ -20,6 +20,7 @@
 
 import { afterAll, beforeAll, expect } from "vitest";
 import type { AnswerContract } from "../llm";
+import { AnswerContractSchema } from "../llm/contract";
 import {
   deleteOperatorOverride,
   getActiveDocumentId,
@@ -141,7 +142,7 @@ async function cleanupTestOverrides(): Promise<void> {
     }
     if (toDelete.length > 0) {
       // eslint-disable-next-line no-console
-      console.log(`[integration] cleaned up ${toDelete.length} test override(s)`);
+      console.debug(`[integration] cleaned up ${toDelete.length} test override(s)`);
     }
   } catch (err) {
     // eslint-disable-next-line no-console
@@ -167,7 +168,7 @@ async function cleanupAllEvents(): Promise<void> {
     if (keys.length > 0) {
       await client.removeObjects(bucket, keys);
       // eslint-disable-next-line no-console
-      console.log(`[integration] cleaned up ${keys.length} needs-attention event(s)`);
+      console.debug(`[integration] cleaned up ${keys.length} needs-attention event(s)`);
     }
   } catch (err) {
     // eslint-disable-next-line no-console
@@ -203,7 +204,8 @@ export async function askViaRoute(question: string): Promise<AnswerContract> {
   if (!res.ok) {
     throw new Error(`askViaRoute HTTP ${res.status}: ${await res.text()}`);
   }
-  return (await res.json()) as AnswerContract;
+  const body: unknown = await res.json();
+  return AnswerContractSchema.parse(body);
 }
 
 /**

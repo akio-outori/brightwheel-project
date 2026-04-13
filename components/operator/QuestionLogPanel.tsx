@@ -44,6 +44,9 @@ export interface QuestionLogPanelProps {
   /** Map from entry/override id to human-readable title, used
    *  to render citation pills with titles instead of raw IDs. */
   entryTitleMap?: Map<string, string>;
+  /** Map from entry/override id to body text, used to show entry
+   *  content inline when the operator clicks a citation pill. */
+  entryBodyMap?: Map<string, string>;
 }
 
 function ConfidenceBadge({ confidence }: { confidence: "high" | "low" }) {
@@ -83,11 +86,13 @@ export default function QuestionLogPanel({
   expandedId,
   onExpandChange,
   entryTitleMap,
+  entryBodyMap,
 }: QuestionLogPanelProps) {
   // Per-card refs keyed by event id so we can scroll the
   // currently expanded card into view whenever `expandedId`
   // changes — particularly after the bell dropdown jumps to a
   // specific event.
+  const [viewingEntryId, setViewingEntryId] = useState<string | null>(null);
   const cardRefs = useRef<Map<string, HTMLDivElement | null>>(new Map());
   useEffect(() => {
     if (!expandedId) return;
@@ -132,10 +137,10 @@ export default function QuestionLogPanel({
       {events.length === 0 && (
         <div className="text-center py-12 text-sm text-gray-400">
           {filter === "unresolved"
-            ? "All caught up — nothing waiting for you."
+            ? "Everything answered — parents didn't have to wait for anything today."
             : filter === "resolved"
-              ? "No staff replies yet in this window."
-              : "No parent questions in the feed."}
+              ? "No replies yet — when you answer a parent's question it shows up here."
+              : "No parent questions in the feed yet."}
         </div>
       )}
 
@@ -224,15 +229,27 @@ export default function QuestionLogPanel({
                       </p>
                       <div className="flex flex-wrap gap-1.5">
                         {item.result.cited_entries.map((id) => (
-                          <span
+                          <button
                             key={id}
-                            className="text-xs bg-violet-50 border border-violet-100 text-[#5B4FCF] font-semibold rounded-full px-3 py-1"
+                            type="button"
+                            onClick={() => setViewingEntryId(viewingEntryId === id ? null : id)}
+                            className="text-xs bg-violet-50 border border-violet-100 text-[#5B4FCF] font-semibold rounded-full px-3 py-1 hover:bg-violet-100 hover:border-violet-200 transition-colors cursor-pointer"
                             title={id}
                           >
                             {entryTitleMap?.get(id) ?? id}
-                          </span>
+                          </button>
                         ))}
                       </div>
+                      {viewingEntryId && item.result.cited_entries.includes(viewingEntryId) && (
+                        <div className="mt-2 text-xs text-gray-600 bg-gray-50 rounded-xl p-3 border border-gray-100">
+                          <p className="font-semibold text-gray-500 mb-1">
+                            {entryTitleMap?.get(viewingEntryId) ?? viewingEntryId}
+                          </p>
+                          <p className="leading-relaxed whitespace-pre-line">
+                            {entryBodyMap?.get(viewingEntryId) ?? "Entry body not available."}
+                          </p>
+                        </div>
+                      )}
                     </div>
                   )}
                   {item.result.answer && (

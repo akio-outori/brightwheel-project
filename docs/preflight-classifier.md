@@ -51,7 +51,7 @@ Matches: "Tommy has a fever", "Sarah is allergic to tree nuts"
 
 Case-sensitive name extraction (won't match lowercase "children").
 Names are checked against an allowlist of sentence starters, days,
-months, and program-specific words. Proximity window: 80 chars.
+months, and program-specific words. Proximity window: 120 chars.
 
 ### Group 3a — Euphemisms
 
