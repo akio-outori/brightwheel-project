@@ -1,4 +1,4 @@
-# AI Front Desk — Product & Scaling Plan
+# BrightDesk — Product & Scaling Plan
 
 ## The product
 
@@ -7,7 +7,7 @@ fee exceptions, their approach to potty training transitions, their
 way of handling tour requests — none of this is in the handbook they
 printed last August. It lives in the director's head.
 
-The AI Front Desk turns that knowledge into a living, center-specific
+BrightDesk turns that knowledge into a living, center-specific
 intelligence layer. Every time a parent asks a question the handbook
 doesn't cover, the director answers it once, and every future parent
 gets that answer instantly — grounded, cited, verified. After six
@@ -379,7 +379,7 @@ nothing to breach, misconfigure, subpoena, or sell.
 
 | Phase | What the operator gets | What we build | Capacity |
 |-------|----------------------|---------------|----------|
-| 1 — Foundation | Their center has its own AI front desk, live on Brightwheel's infrastructure | Bedrock, S3, auth, multi-center routing | Hundreds of centers |
+| 1 — Foundation | Their center has its own BrightDesk, live on Brightwheel's infrastructure | Bedrock, S3, auth, multi-center routing | Hundreds of centers |
 | 2 — Compression | The knowledge base handles more topics without slowing down | Structured fact representation at authoring time | ~500 entries/center |
 | 3 — Retrieval | The knowledge base can grow without limits | pgvector, hybrid search, deterministic pre-filtering | Unlimited entries/center |
 | 4 — Intelligence | The system tells them what to teach it next, drafts answers for them, and proves its own ROI | Gap analysis, suggested drafts, seasonal prompts, coverage dashboard | 50,000 centers, each getting smarter |

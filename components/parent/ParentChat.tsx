@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Send, Sun, Phone, ChevronRight, Sparkles } from "lucide-react";
+import { Send, Sun, Phone, ChevronRight } from "lucide-react";
 import Link from "next/link";
 import ChatMessage, { type ChatMessageData, type CitedEntry } from "@/components/chat/ChatMessage";
 import TypingIndicator from "@/components/chat/TypingIndicator";
@@ -352,15 +352,20 @@ export function ParentChat() {
           <div className="absolute bottom-0 left-0 w-32 h-32 rounded-full bg-white/5 translate-y-12 -translate-x-8" />
 
           <div className="relative z-10">
-            <div className="flex items-center justify-between mb-5">
+            <div className="flex items-center justify-between">
               <div className="flex items-center gap-2.5">
                 <div className="w-9 h-9 rounded-xl bg-white/20 backdrop-blur flex items-center justify-center">
                   <Sun className="w-5 h-5 text-white" />
                 </div>
                 <div>
-                  <p className="text-white/70 text-[10px] font-medium tracking-wide uppercase">
-                    brightdesk
-                  </p>
+                  <div className="flex items-center gap-2">
+                    <p className="text-white/70 text-[10px] font-medium tracking-wide uppercase">
+                      brightdesk
+                    </p>
+                    <span className="bg-emerald-400 text-white text-[10px] font-semibold px-2 py-0.5 rounded-full">
+                      ● Live
+                    </span>
+                  </div>
                   <h1 className="text-white font-bold text-sm leading-tight">{CENTER.name}</h1>
                 </div>
               </div>
@@ -370,21 +375,6 @@ export function ParentChat() {
               >
                 <Phone className="w-4 h-4 text-white" />
               </a>
-            </div>
-
-            <div className="flex items-start gap-3">
-              <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0">
-                <Sparkles className="w-5 h-5 text-white" />
-              </div>
-              <div>
-                <div className="flex items-center gap-2 mb-1">
-                  <p className="text-white font-semibold text-sm">AI Front Desk</p>
-                  <span className="bg-emerald-400 text-white text-[10px] font-semibold px-2 py-0.5 rounded-full">
-                    ● Live
-                  </span>
-                </div>
-                <p className="text-white/70 text-xs">Always available · Instant answers</p>
-              </div>
             </div>
           </div>
         </div>
@@ -465,7 +455,7 @@ export function ParentChat() {
           </div>
           <div className="flex items-center justify-between mt-2 px-1">
             <p className="text-[10px] text-gray-400">
-              Sunflower Early Learning &middot; AI Front Desk
+              Sunflower Early Learning &middot; BrightDesk
             </p>
             {process.env.NODE_ENV !== "production" && (
               <Link
