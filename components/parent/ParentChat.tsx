@@ -362,7 +362,7 @@ export function ParentChat() {
                     <p className="text-white/70 text-[10px] font-medium tracking-wide uppercase">
                       brightdesk
                     </p>
-                    <span className="bg-emerald-400 text-white text-[10px] font-semibold px-2 py-0.5 rounded-full">
+                    <span className="bg-emerald-400 text-white text-[10px] font-semibold px-1.5 py-px rounded-full">
                       ● Live
                     </span>
                   </div>
