@@ -17,7 +17,7 @@ import { randomUUID } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import { listOpenNeedsAttention } from "../storage";
 import {
-  TEST_TAG_PREFIX,
+  TEST_CREATED_BY,
   __resetHandbookCache,
   askViaRoute,
   expectEscalation,
@@ -27,50 +27,40 @@ import {
   staffFetch,
 } from "./_helpers";
 
-// The unique suffix makes each test's question unique so test
-// runs don't collide with each other or with the seed handbook.
-// The title includes the suite-wide TEST_TAG_PREFIX so the suite's
-// afterAll sweep will delete any override this test created.
+// Each test asks a unique question that no handbook entry covers.
+// The question text itself is the identifier — no synthetic tags
+// or `[test]` prefixes that make overrides look synthetic to the
+// model and degrade re-ask confidence. Cleanup uses `createdBy:
+// TEST_CREATED_BY` which is NOT sent to the model in MCPData.
 function uniq(base: string): {
   question: string;
-  tag: string;
   overrideTitle: (topic: string) => string;
 } {
-  const tag = randomUUID().slice(0, 8);
   return {
-    question: `${base} (test tag ${tag})`,
-    tag,
-    overrideTitle: (topic) => `${TEST_TAG_PREFIX} ${topic} ${tag}`,
+    question: base,
+    overrideTitle: (topic) => topic,
   };
 }
 
-// Helper: find the most recent open event whose question text
-// contains a given tag.
-async function findEventByTag(tag: string) {
+// Find the most recent open event matching a question exactly.
+async function findEventByQuestion(question: string) {
   const open = await listOpenNeedsAttention();
-  return open.find((e) => e.question.includes(tag));
+  return open.find((e) => e.question === question);
 }
 
 describe.skipIf(!hasApiKey())("closed-loop — full ask-fix-reask cycle", () => {
   setupIntegrationTest();
 
   it("closes the loop via the overrides API + resolveNeedsAttention", async () => {
-    // The question must be something the model CANNOT answer from
-    // handbook absence (the enumerated-list prompt guidance causes
-    // "we don't have a policy on X" answers for simple absent
-    // features). A question requiring runtime scheduling data the
-    // handbook can't cover is the most reliable escalation trigger.
-    const { question, tag, overrideTitle } = uniq(
-      "Which specific classroom will my three-year-old be assigned to next semester?",
-    );
+    const { question, overrideTitle } = uniq("What's the official policy on classroom xylophones?");
 
     // 1. Ask the unknown question — expect escalation.
     const initial = await askViaRoute(question);
     await expectEscalation(initial, "initial-ask");
 
     // 2. Find the event in the open feed.
-    const event = await findEventByTag(tag);
-    expect(event, `event should be in open feed for tag ${tag}`).toBeDefined();
+    const event = await findEventByQuestion(question);
+    expect(event, "event should be in open feed").toBeDefined();
 
     // 3. Answer it by creating an operator override via the
     // /api/overrides endpoint, then resolving the event through the
@@ -81,12 +71,12 @@ describe.skipIf(!hasApiKey())("closed-loop — full ask-fix-reask cycle", () => 
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
-        title: overrideTitle("Classroom assignment"),
-        category: "general",
-        body: `Three-year-olds are assigned to the Sunflower Room with Ms. Rivera. Tag: ${tag}`,
+        title: overrideTitle("Classroom xylophones"),
+        category: "policies",
+        body: `Classroom xylophones are welcome for music time.`,
         sourcePages: [],
         replacesEntryId: null,
-        createdBy: null,
+        createdBy: TEST_CREATED_BY,
       }),
     });
     expect(createRes.ok, "overrides POST should succeed").toBe(true);
@@ -111,8 +101,8 @@ describe.skipIf(!hasApiKey())("closed-loop — full ask-fix-reask cycle", () => 
   });
 
   it("closes the loop via POST /api/needs-attention/[id]/resolve-with-entry", async () => {
-    const { question, tag, overrideTitle } = uniq(
-      "Who is the lead teacher in the toddler room this semester?",
+    const { question, overrideTitle } = uniq(
+      "Do you have a policy on decorating a child's water bottle?",
     );
 
     // 1. Ask unknown → escalate
@@ -120,7 +110,7 @@ describe.skipIf(!hasApiKey())("closed-loop — full ask-fix-reask cycle", () => 
     await expectEscalation(initial, "initial-ask");
 
     // 2. Find the event
-    const event = await findEventByTag(tag);
+    const event = await findEventByQuestion(question);
     expect(event).toBeDefined();
 
     // 3. Use the ATOMIC endpoint — same code path as the ReplyForm.
@@ -133,9 +123,9 @@ describe.skipIf(!hasApiKey())("closed-loop — full ask-fix-reask cycle", () => 
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
-          replyToParent: `The toddler room lead teacher this semester is Ms. Rivera. Tag: ${tag}`,
+          replyToParent: `Children are welcome to decorate their water bottles with stickers.`,
           handbookOverride: {
-            title: overrideTitle("Toddler room lead teacher"),
+            title: overrideTitle("Water bottle decoration"),
             category: "staff",
             sourcePages: [],
             replacesEntryId: null,
@@ -160,7 +150,7 @@ describe.skipIf(!hasApiKey())("closed-loop — full ask-fix-reask cycle", () => 
   });
 
   it("override with replacesEntryId cites the override, not the replaced entry", async () => {
-    const { question, tag, overrideTitle } = uniq(
+    const { question, overrideTitle } = uniq(
       "What's the illness policy for fevers at this center?",
     );
 
@@ -171,10 +161,10 @@ describe.skipIf(!hasApiKey())("closed-loop — full ask-fix-reask cycle", () => 
       body: JSON.stringify({
         title: overrideTitle("Updated illness policy"),
         category: "health",
-        body: `Updated fever policy: children must be fever-free for 48 hours (not 24). Tag: ${tag}`,
+        body: `Updated fever policy: children must be fever-free for 48 hours (not 24) before returning to the center.`,
         sourcePages: [],
         replacesEntryId: "illness-policy",
-        createdBy: null,
+        createdBy: TEST_CREATED_BY,
       }),
     });
     expect(createRes.ok, "overrides POST should succeed").toBe(true);
@@ -226,16 +216,14 @@ describe.skipIf(!hasApiKey())("closed-loop — full ask-fix-reask cycle", () => 
   });
 
   it("allows re-resolving an already-resolved event (operator reply update)", async () => {
-    const { question, tag, overrideTitle } = uniq(
-      "What's the policy on classroom fish tanks for the test suite?",
-    );
+    const { question, overrideTitle } = uniq("Is there a policy on classroom fish tanks?");
 
     // 1. Ask unknown → escalate
     const initial = await askViaRoute(question);
     await expectEscalation(initial, "initial-ask");
 
     // 2. Find the event
-    const event = await findEventByTag(tag);
+    const event = await findEventByQuestion(question);
     expect(event).toBeDefined();
 
     // 3. Resolve it via the atomic endpoint
@@ -245,7 +233,7 @@ describe.skipIf(!hasApiKey())("closed-loop — full ask-fix-reask cycle", () => 
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
-          replyToParent: `Fish tanks are allowed in common areas. Tag: ${tag}`,
+          replyToParent: `Fish tanks are allowed in common areas only.`,
           handbookOverride: {
             title: overrideTitle("Fish tanks"),
             category: "policies",
@@ -266,7 +254,7 @@ describe.skipIf(!hasApiKey())("closed-loop — full ask-fix-reask cycle", () => 
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
-          replyToParent: `Updated: fish tanks are allowed only in the lobby. Tag: ${tag}`,
+          replyToParent: `Updated: fish tanks are allowed only in the lobby.`,
         }),
       },
     );
@@ -279,9 +267,7 @@ describe.skipIf(!hasApiKey())("closed-loop — full ask-fix-reask cycle", () => 
     // override that explicitly addresses it. This catches the class
     // of bug where a "helpful" fix would accidentally bypass the
     // sensitive-topic guard.
-    const { question, tag, overrideTitle } = uniq(
-      "My child has a fever of 101 (test suite question)",
-    );
+    const { question, overrideTitle } = uniq("My child has a fever of 101");
 
     // Add an override that (if the sensitive guard failed) would
     // let the model answer confidently.
@@ -291,10 +277,10 @@ describe.skipIf(!hasApiKey())("closed-loop — full ask-fix-reask cycle", () => 
       body: JSON.stringify({
         title: overrideTitle("Fever guidance"),
         category: "health",
-        body: `For fevers of 101 or higher, keep the child home until fever-free for 24 hours without medication. Tag: ${tag}`,
+        body: `For fevers of 101 or higher, keep the child home until fever-free for 24 hours without medication.`,
         sourcePages: [],
         replacesEntryId: null,
-        createdBy: null,
+        createdBy: TEST_CREATED_BY,
       }),
     });
     expect(createRes.ok).toBe(true);

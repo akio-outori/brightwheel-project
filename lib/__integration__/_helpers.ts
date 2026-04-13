@@ -113,18 +113,24 @@ export function __resetHandbookCache(): void {
 // Test-override cleanup
 // ---------------------------------------------------------------------------
 
-// Integration tests that create overrides via the closed-loop flow
-// tag their created titles with a test-tag substring. At suite end,
-// we sweep every override whose title contains `[test]` and delete
-// it. This is the mechanism that finally solves the cross-run
-// pollution problem — overrides live in a separate mutable layer
-// and can be freely deleted without affecting the seed.
-export const TEST_TAG_PREFIX = "[test]";
+// Integration tests that create overrides tag them via the
+// `createdBy` field (which is NOT sent to the model in MCPData)
+// rather than the title. Previous approach put `[test]` in the
+// title, which made the content look synthetic to the model and
+// reduced its confidence in citing the override on re-ask —
+// causing 30% variance on the closed-loop tests. Moving the tag
+// to `createdBy` keeps the title and body clean so the model
+// treats overrides the same way it would treat a real operator's
+// content.
+export const TEST_CREATED_BY = "integration-test-suite";
+
+// Kept for backward compat with any test that still references it
+export const TEST_TAG_PREFIX = TEST_CREATED_BY;
 
 async function cleanupTestOverrides(): Promise<void> {
   try {
     const overrides = await listOperatorOverrides(DOC_ID);
-    const toDelete = overrides.filter((o) => o.title.includes(TEST_TAG_PREFIX));
+    const toDelete = overrides.filter((o) => o.createdBy === TEST_CREATED_BY);
     for (const o of toDelete) {
       await deleteOperatorOverride(DOC_ID, o.id);
     }
