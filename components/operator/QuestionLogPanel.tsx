@@ -242,8 +242,12 @@ export default function QuestionLogPanel({
                       </div>
                       {viewingEntryId && item.result.cited_entries.includes(viewingEntryId) && (
                         <div className="mt-2 text-xs text-gray-600 bg-gray-50 rounded-xl p-3 border border-gray-100">
-                          <p className="font-semibold text-gray-500 mb-1">{entryTitleMap?.get(viewingEntryId) ?? viewingEntryId}</p>
-                          <p className="leading-relaxed whitespace-pre-line">{entryBodyMap?.get(viewingEntryId) ?? "Entry body not available."}</p>
+                          <p className="font-semibold text-gray-500 mb-1">
+                            {entryTitleMap?.get(viewingEntryId) ?? viewingEntryId}
+                          </p>
+                          <p className="leading-relaxed whitespace-pre-line">
+                            {entryBodyMap?.get(viewingEntryId) ?? "Entry body not available."}
+                          </p>
                         </div>
                       )}
                     </div>

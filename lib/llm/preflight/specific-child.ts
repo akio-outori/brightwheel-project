@@ -73,7 +73,8 @@ const HEALTH_RE = new RegExp(`\\b${HEALTH_WORDS}\\b`, "i");
 // "Our baby needs his inhaler"
 // -----------------------------------------------------------------------
 
-const FAMILY_NOUNS = "(?:child|son|daughter|kid|baby|toddler|boy|girl|little\\s+one|kiddo|infant|preschooler|newborn|\\d+-year-old)";
+const FAMILY_NOUNS =
+  "(?:child|son|daughter|kid|baby|toddler|boy|girl|little\\s+one|kiddo|infant|preschooler|newborn|\\d+-year-old)";
 
 const POSSESSIVE_CHILD_PATTERNS: ReadonlyArray<RegExp> = [
   // "my/our [family-noun] ..." with health words anywhere in question
@@ -381,7 +382,11 @@ export function classifySpecificChild(question: string): PreflightVerdict {
   // Group 3a: euphemisms that ARE the health signal — no health
   // word required because the phrasing itself conveys illness.
   // "He hasn't been himself" = "he's sick" in parent-speak.
-  if (/\b(?:hasn't\s+been|doesn't\s+seem\s+like|isn't\s+acting\s+like|isn't\s+being)\s+(?:himself|herself)\b/i.test(question)) {
+  if (
+    /\b(?:hasn't\s+been|doesn't\s+seem\s+like|isn't\s+acting\s+like|isn't\s+being)\s+(?:himself|herself)\b/i.test(
+      question,
+    )
+  ) {
     return {
       verdict: "hold",
       reason: "specific_child_question",

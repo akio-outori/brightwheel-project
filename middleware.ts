@@ -12,7 +12,6 @@
 // A real deployment would use next-auth or iron-session with per-user
 // credentials.
 
-import { timingSafeEqual } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 
 /** Routes that require operator authentication. Matched against the
@@ -29,7 +28,7 @@ const PROTECTED_ROUTE_PATTERNS: ReadonlyArray<{
   { pattern: /^\/api\/needs-attention\/[^/]+\/?$/, methods: ["POST"] },
 ];
 
-export function middleware(request: NextRequest): NextResponse | undefined {
+export async function middleware(request: NextRequest): Promise<NextResponse | undefined> {
   const { pathname } = request.nextUrl;
   const method = request.method.toUpperCase();
 
@@ -51,18 +50,31 @@ export function middleware(request: NextRequest): NextResponse | undefined {
   }
 
   const cookie = request.cookies.get("brightdesk-staff-token");
-  if (!cookie || !constantTimeEqual(cookie.value, expectedToken)) {
+  if (!cookie || !(await constantTimeEqual(cookie.value, expectedToken))) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }
 
   return undefined;
 }
 
-function constantTimeEqual(a: string, b: string): boolean {
-  const bufA = Buffer.from(a);
-  const bufB = Buffer.from(b);
-  if (bufA.length !== bufB.length) return false;
-  return timingSafeEqual(bufA, bufB);
+// Edge Runtime doesn't have node:crypto. Use Web Crypto's subtle
+// digest for a comparison that doesn't leak timing information:
+// both inputs are hashed, then compared byte-by-byte with XOR
+// accumulation so the comparison time is independent of content.
+async function constantTimeEqual(a: string, b: string): Promise<boolean> {
+  const enc = new TextEncoder();
+  const [hashA, hashB] = await Promise.all([
+    crypto.subtle.digest("SHA-256", enc.encode(a)),
+    crypto.subtle.digest("SHA-256", enc.encode(b)),
+  ]);
+  const viewA = new Uint8Array(hashA);
+  const viewB = new Uint8Array(hashB);
+  if (viewA.length !== viewB.length) return false;
+  let diff = 0;
+  for (let i = 0; i < viewA.length; i++) {
+    diff |= viewA[i]! ^ viewB[i]!;
+  }
+  return diff === 0;
 }
 
 export const config = {

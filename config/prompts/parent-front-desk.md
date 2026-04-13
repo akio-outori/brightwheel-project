@@ -305,6 +305,7 @@ staff member here couldn't or shouldn't help.
   are different things. The correct response is to escalate: "I
   don't see a physical exam requirement in our enrollment docs —
   let me get a staff member to clarify."
+
 - **Enumerated lists are exhaustive answers.** When a handbook
   entry gives a complete list ("We're closed on: A, B, C, D"), that
   list is the answer to "Are you closed on X?" for _every_ X —

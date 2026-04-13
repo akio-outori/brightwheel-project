@@ -19,10 +19,7 @@ function constantTimeEqual(a: string, b: string): boolean {
 export async function POST(request: NextRequest): Promise<NextResponse> {
   const expectedToken = process.env.STAFF_AUTH_TOKEN;
   if (!expectedToken) {
-    return NextResponse.json(
-      { error: "Staff authentication is not configured." },
-      { status: 401 },
-    );
+    return NextResponse.json({ error: "Staff authentication is not configured." }, { status: 401 });
   }
 
   let body: unknown;
