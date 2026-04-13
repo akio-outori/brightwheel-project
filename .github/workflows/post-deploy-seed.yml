@@ -1,0 +1,44 @@
+name: Post-deploy seed
+
+# After a merge to main, Railway autodeploys. This workflow polls
+# /api/health until it reports the commit SHA we just merged, then
+# runs the demo seed script so the live operator console has a
+# reliable set of events for every demo.
+
+on:
+  push:
+    branches: [main]
+
+concurrency:
+  group: post-deploy-seed-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  seed:
+    name: Wait for deploy + seed demo questions
+    runs-on: ubuntu-latest
+    env:
+      BASE_URL: https://app-production-6f11.up.railway.app
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Wait for deployed SHA to match this commit
+        run: |
+          set -euo pipefail
+          EXPECTED="${GITHUB_SHA}"
+          echo "Waiting for ${BASE_URL}/api/health to report sha=${EXPECTED}"
+          # Railway rebuilds take 2-3 minutes. Poll for up to 10 minutes.
+          for i in $(seq 1 60); do
+            LIVE=$(curl -fsS "${BASE_URL}/api/health" | python3 -c "import json,sys; print(json.load(sys.stdin).get('sha','unknown'))" || echo "unreachable")
+            echo "[${i}/60] live sha=${LIVE}"
+            if [ "${LIVE}" = "${EXPECTED}" ]; then
+              echo "Match — deploy is live."
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "Timed out waiting for deploy to match ${EXPECTED}."
+          exit 1
+
+      - name: Seed demo questions
+        run: ./scripts/seed-demo-questions.sh
