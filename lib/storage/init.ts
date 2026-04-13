@@ -3,7 +3,7 @@
 // service_completed_successfully isn't available.
 //
 // Runs once on first request via ensureStorageReady(). Idempotent:
-// checks for the .seed-complete-v2 sentinel and skips if present.
+// checks for the .seed-complete-v3 sentinel and skips if present.
 // Retries the MinIO connection with exponential backoff so the app
 // can start before MinIO is fully ready.
 //

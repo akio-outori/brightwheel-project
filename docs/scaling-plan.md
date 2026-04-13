@@ -53,7 +53,7 @@ Every phase of the scaling plan preserves these:
 - **Language:** TypeScript (Next.js monolith — frontend + API routes)
 - **Auth:** Shared-password cookie middleware
 - **Deployment:** Docker Compose (local), Railway (demo)
-- **Tests:** 357 unit tests (80%+ coverage), 114 integration tests
+- **Tests:** 408 unit tests (80%+ coverage), 174 integration tests
   against the real Anthropic API
 
 This architecture handles a single center with <200 entries. The
