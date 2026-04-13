@@ -279,7 +279,7 @@ describe("POST /api/ask", () => {
     expect(doc.entries.map((e) => e.id)).not.toContain("hours");
   });
 
-  it("excludes a seed entry when an override has the same id", async () => {
+  it("keeps both seed entry and override when they share the same id (correction pattern)", async () => {
     vi.mocked(listHandbookEntries).mockResolvedValueOnce([
       {
         id: "tuition",
@@ -321,7 +321,10 @@ describe("POST /api/ask", () => {
       entries: Array<{ id: string }>;
       overrides: Array<{ id: string }>;
     };
-    expect(doc.entries.map((e) => e.id)).not.toContain("tuition");
+    // Both are present: seed entry provides context, override carries
+    // the operator's correction. The system prompt tells the model
+    // the override wins on overlapping facts.
+    expect(doc.entries.map((e) => e.id)).toContain("tuition");
     expect(doc.overrides.map((o) => o.id)).toContain("tuition");
   });
 });
