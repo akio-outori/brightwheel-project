@@ -140,7 +140,7 @@ describe("ParentChat polling → staff reply surfaced", () => {
 
     // Greeting is visible (disambiguated from the header brand
     // line and the "AI Front Desk" subtitle).
-    expect(screen.getByText(/What can I help you with/i)).toBeTruthy();
+    expect(screen.getByText(/What's on your mind/i)).toBeTruthy();
 
     // Fill in the textarea via the native React value setter so the
     // controlled-input onChange handler picks up the new value.

@@ -99,30 +99,25 @@ export async function loadAgentConfig(configPath: string): Promise<LoadedAgentCo
     // eslint-disable-next-line security/detect-non-literal-fs-filename -- path is built from a hardcoded constant or Zod-validated config
     rawJson = await readFile(absoluteConfigPath, "utf-8");
   } catch (err) {
-    throw new Error(
-      `Agent config file not found or unreadable: ${absoluteConfigPath} (${
-        err instanceof Error ? err.message : String(err)
-      })`,
-    );
+    console.error(`[agent-config] file not found or unreadable: ${absoluteConfigPath}`, err);
+    throw new Error("Agent configuration error: config file not found or unreadable.");
   }
 
   let parsedJson: unknown;
   try {
     parsedJson = JSON.parse(rawJson);
   } catch (err) {
-    throw new Error(
-      `Agent config file is not valid JSON: ${absoluteConfigPath} (${
-        err instanceof Error ? err.message : String(err)
-      })`,
-    );
+    console.error(`[agent-config] invalid JSON in config file: ${absoluteConfigPath}`, err);
+    throw new Error("Agent configuration error: config file is not valid JSON.");
   }
 
   const result = AgentConfigSchema.safeParse(parsedJson);
   if (!result.success) {
-    throw new Error(
-      `Agent config file failed schema validation: ${absoluteConfigPath}\n` +
-        result.error.issues.map((i) => `  - ${i.path.join(".")}: ${i.message}`).join("\n"),
+    console.error(
+      `[agent-config] schema validation failed: ${absoluteConfigPath}`,
+      result.error.issues,
     );
+    throw new Error("Agent configuration error: config file failed schema validation.");
   }
   const cfg = result.data;
 
@@ -138,11 +133,8 @@ export async function loadAgentConfig(configPath: string): Promise<LoadedAgentCo
     // eslint-disable-next-line security/detect-non-literal-fs-filename -- path resolved from Zod-validated config field
     systemPrompt = await readFile(promptPath, "utf-8");
   } catch (err) {
-    throw new Error(
-      `System prompt file referenced by ${absoluteConfigPath} not found: ${promptPath} (${
-        err instanceof Error ? err.message : String(err)
-      })`,
-    );
+    console.error(`[agent-config] system prompt file not found: ${promptPath}`, err);
+    throw new Error("Agent configuration error: system prompt file not found.");
   }
 
   // Resolve the API key from the env var named in the config. Throwing
@@ -151,9 +143,8 @@ export async function loadAgentConfig(configPath: string): Promise<LoadedAgentCo
   // surfacing as an Anthropic 401 two layers down.
   const apiKey = process.env[cfg.metadata.llm_api_key_env];
   if (!apiKey) {
-    throw new Error(
-      `Agent config ${cfg.id} requires env var ${cfg.metadata.llm_api_key_env} to be set, but it is not.`,
-    );
+    console.error(`[agent-config] required env var not set: ${cfg.metadata.llm_api_key_env}`);
+    throw new Error("Agent configuration error: required API key environment variable is not set.");
   }
 
   return Object.freeze({

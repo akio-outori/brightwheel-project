@@ -227,6 +227,10 @@ export async function resolveNeedsAttention(
  * (empty array is a valid answer). Scans the same OPEN_WINDOW_DAYS
  * partitions as the list-open path.
  */
+function isResolvedWithReply(e: NeedsAttentionEvent): e is ResolvedEventWithReply {
+  return !!e.resolvedAt && !!e.operatorReply;
+}
+
 /** Narrowed type for events guaranteed to have been resolved with an operator reply. */
 export type ResolvedEventWithReply = NeedsAttentionEvent & {
   resolvedAt: string;
@@ -265,8 +269,8 @@ export async function getResolvedEventsWithReplies(
     const parsed = NeedsAttentionEventSchema.safeParse(raw);
     if (!parsed.success) continue;
     const migrated = migrateEvent(parsed.data);
-    if (!migrated.resolvedAt || !migrated.operatorReply) continue;
-    events.push(migrated as ResolvedEventWithReply);
+    if (!isResolvedWithReply(migrated)) continue;
+    events.push(migrated);
   }
 
   return events;

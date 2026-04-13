@@ -89,11 +89,18 @@ Parent question
 
 ## Documentation
 
+### Submission documents
+
+| Document | |
+|----------|-|
+| [Product overview](docs/submission-product.md) | The parent experience, the operator experience, per-center intelligence, privacy position |
+| [Technical overview](docs/submission-technical.md) | Verification architecture, evaluation methodology, scaling plan, production path |
+
 ### Product
 
 | Document | |
 |----------|-|
-| [Product & scaling plan](docs/scaling-plan.md) | Per-center intelligence as the product, with a five-phase engineering plan from prototype to 50,000 centers |
+| [Product & scaling plan](docs/scaling-plan.md) | Per-center intelligence as the product, five-phase engineering plan from prototype to 50,000 centers |
 | [Prototype design pitch](docs/writeup.md) | The trust loop, the three verification layers, what was built and what was cut |
 
 ### Architecture

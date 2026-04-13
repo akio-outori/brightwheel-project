@@ -44,7 +44,7 @@ export function buildPrompt(
     messages: [
       {
         role: "user",
-        content: `<mcp_message>${JSON.stringify(envelope)}</mcp_message>`,
+        content: `<mcp_message>${JSON.stringify(envelope).replace(/</g, "\\u003c")}</mcp_message>`,
       },
     ],
   };

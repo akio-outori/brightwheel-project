@@ -20,7 +20,10 @@ import {
   FileEdit,
 } from "lucide-react";
 import { mutate } from "swr";
+import { z } from "zod";
 import { cn } from "@/lib/utils";
+
+const ErrorResponseSchema = z.object({ error: z.string() });
 
 interface HandbookEntry {
   id: string;
@@ -339,8 +342,9 @@ function AddOverrideForm() {
         }),
       });
       if (!res.ok) {
-        const detail = await res.json().catch(() => ({}));
-        throw new Error((detail as { error?: string }).error ?? `Failed (HTTP ${res.status})`);
+        const rawDetail: unknown = await res.json().catch(() => ({}));
+        const parsed = ErrorResponseSchema.safeParse(rawDetail);
+        throw new Error(parsed.success ? parsed.data.error : `Failed (HTTP ${res.status})`);
       }
       await mutate("/api/handbook");
       setTitle("");

@@ -139,7 +139,7 @@ export default function ChatMessage({ message }: { message: ChatMessageData }) {
             </p>
             {message.type === "escalated" && (
               <p className="text-[11px] text-amber-600/70 mt-1.5">
-                Someone from our team will follow up with you.
+                A real person will get back to you — usually within a few hours during school days.
               </p>
             )}
           </div>
@@ -205,7 +205,7 @@ export default function ChatMessage({ message }: { message: ChatMessageData }) {
               <div className="flex items-start justify-between gap-3 border-b border-gray-100 px-5 py-4">
                 <div>
                   <p className="text-xs font-medium uppercase tracking-wide text-indigo-600">
-                    Cited source
+                    From our handbook
                   </p>
                   <h2 className="mt-0.5 text-base font-semibold text-gray-900">
                     {openEntry.title}

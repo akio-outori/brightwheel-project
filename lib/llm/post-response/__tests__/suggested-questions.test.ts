@@ -107,33 +107,28 @@ interface SuggestedCase {
 const SUGGESTED_CASES: ReadonlyArray<SuggestedCase> = [
   // ---- from SUGGESTED_QUESTIONS ----
   {
-    question: "Are you open on Veterans Day?",
-    // Closure list is exhaustive — Veterans Day isn't on it, so
-    // absence is the answer. "Veterans Day" appears in the question,
-    // not the source, which is why this case specifically exercises
-    // the "question text is part of the grounding corpus" fix in
-    // the entities channel.
+    question: "What do kids eat for lunch?",
     answer:
-      "Yes, we're open on Veterans Day. Sunflower is closed on New Year's Day, Martin Luther King Jr. Day, Memorial Day, Juneteenth, Independence Day, Labor Day, Thanksgiving (Thursday and Friday), and one week between Christmas and New Year's, plus four staff development days — Veterans Day isn't on that list.",
-    cited: ["closures"],
-  },
-  {
-    question: "What immunizations does my child need?",
-    answer:
-      "Texas requires an up-to-date immunization record on file for every child enrolled at Sunflower. You can bring a copy signed by your pediatrician at enrollment. Families who decline immunization for medical or conscientious reasons can provide a current Texas DSHS affidavit of exemption instead.",
-    cited: ["immunizations"],
-  },
-  {
-    question: "Do you provide meals?",
-    answer:
-      "Yes, Sunflower serves breakfast, lunch, and afternoon snack every day, prepared in-house by our kitchen team. Menus run on a 4-week rotation and are posted in the family app each Sunday. All meals are nut-free.",
+      "Sunflower serves breakfast, lunch, and afternoon snack every day, prepared in-house by our kitchen team. Menus run on a 4-week rotation and are posted in the family app each Sunday. All meals are nut-free.",
     cited: ["meals"],
   },
   {
-    question: "What are the late pickup fees?",
+    question: "What's your sick-child policy?",
     answer:
-      "Sunflower closes at 6:00 pm. If you arrive after 6:00 pm, a late pickup fee of $1 per minute is added to your next monthly bill. We understand emergencies happen — please call us at (512) 555-0142 as soon as you know you'll be late.",
-    cited: ["late-fees"],
+      "If your child becomes sick during the day, we'll call you right away and ask you to pick them up within the hour. Children with a fever of 100.4 or higher, vomiting, or diarrhea must stay home until fever-free for 24 hours without medication.",
+    cited: ["illness-policy"],
+  },
+  {
+    question: "How does drop-off work?",
+    answer:
+      "Sunflower is open from 7:00 am to 6:00 pm Monday through Friday. We ask families to aim for drop-off by 9:30 am so children can settle into the morning routine with their friends.",
+    cited: ["hours"],
+  },
+  {
+    question: "What are your hours?",
+    answer:
+      "Sunflower is open Monday through Friday from 7:00 am to 6:00 pm. We ask families to aim for drop-off by 9:30 am so children can settle into the morning routine with their friends. We're closed on weekends.",
+    cited: ["hours"],
   },
   {
     question: "How do I enroll my child?",
@@ -142,18 +137,18 @@ const SUGGESTED_CASES: ReadonlyArray<SuggestedCase> = [
     cited: ["enrollment-process"],
   },
   {
-    question: "What's the phone number for the main office?",
+    question: "What are the late pickup fees?",
     answer:
-      "Sunflower's main office phone number is (512) 555-0142. Our office is staffed Monday through Friday from 7:00 am to 6:00 pm.",
-    cited: ["contact"],
+      "Sunflower closes at 6:00 pm. If you arrive after 6:00 pm, a late pickup fee of $1 per minute is added to your next monthly bill. We understand emergencies happen — please call us at (512) 555-0142 as soon as you know you'll be late.",
+    cited: ["late-fees"],
   },
 
   // ---- from FOLLOWUP_SUGGESTIONS ----
   {
-    question: "What are your hours?",
+    question: "Do you provide meals?",
     answer:
-      "Sunflower is open Monday through Friday from 7:00 am to 6:00 pm. We ask families to aim for drop-off by 9:30 am so children can settle into the morning routine with their friends. We're closed on weekends.",
-    cited: ["hours"],
+      "Yes, Sunflower serves breakfast, lunch, and afternoon snack every day, prepared in-house by our kitchen team. Menus run on a 4-week rotation and are posted in the family app each Sunday. All meals are nut-free.",
+    cited: ["meals"],
   },
   {
     question: "How much is tuition?",

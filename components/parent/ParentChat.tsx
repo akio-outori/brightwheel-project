@@ -10,10 +10,11 @@ import SuggestedQuestions from "@/components/chat/SuggestedQuestions";
 import { SUGGESTED_QUESTIONS, FOLLOWUP_SUGGESTIONS } from "@/data/aiResponses";
 import { CENTER } from "@/data/centerData";
 import { AnswerContractSchema, type AnswerContract } from "@/lib/llm/contract";
+import { z } from "zod";
 
 const GREETING: ChatMessageData = {
   role: "assistant",
-  text: `Hi — I'm ${CENTER.name}'s front desk.\n\nI can answer questions about our hours, tuition, health policies, meals, enrollment, and more \u2014 any time of day.\n\nWhat can I help you with?`,
+  text: `Hi! I'm the front desk at ${CENTER.name}. I can help with any questions about our program, any time of day.\n\nWhat's on your mind?`,
   type: "answer",
 };
 
@@ -107,18 +108,15 @@ function loadPersistedMessages(): ChatMessageData[] {
     if (!raw) return [GREETING];
     const parsed: unknown = JSON.parse(raw);
     if (!Array.isArray(parsed) || parsed.length === 0) return [GREETING];
-    // Shallow-validate: every item must be an object with a role
-    // and text. We're not enforcing the full ChatMessageData shape
-    // here — a future refactor could run this through zod, but
-    // the data producer is us and the worst case of a malformed
-    // entry is a single broken bubble.
+    const StoredMessageSchema = z.object({
+      role: z.enum(["user", "assistant"]),
+      text: z.string(),
+      type: z.enum(["answer", "escalated", "refusal", "staff_reply"]).optional(),
+      source: z.string().nullable().optional(),
+      initials: z.string().optional(),
+    });
     const valid = parsed.filter(
-      (m): m is ChatMessageData =>
-        typeof m === "object" &&
-        m !== null &&
-        "role" in m &&
-        "text" in m &&
-        typeof (m as { text: unknown }).text === "string",
+      (m): m is ChatMessageData => StoredMessageSchema.safeParse(m).success,
     );
     return valid.length > 0 ? valid : [GREETING];
   } catch {

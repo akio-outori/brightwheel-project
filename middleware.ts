@@ -12,6 +12,7 @@
 // A real deployment would use next-auth or iron-session with per-user
 // credentials.
 
+import { timingSafeEqual } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 
 /** Routes that require operator authentication. Matched against the
@@ -50,13 +51,20 @@ export function middleware(request: NextRequest): NextResponse | undefined {
   }
 
   const cookie = request.cookies.get("brightdesk-staff-token");
-  if (!cookie || cookie.value !== expectedToken) {
+  if (!cookie || !constantTimeEqual(cookie.value, expectedToken)) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }
 
   return undefined;
 }
 
+function constantTimeEqual(a: string, b: string): boolean {
+  const bufA = Buffer.from(a);
+  const bufB = Buffer.from(b);
+  if (bufA.length !== bufB.length) return false;
+  return timingSafeEqual(bufA, bufB);
+}
+
 export const config = {
-  matcher: ["/api/overrides/:path*", "/api/needs-attention/:path*"],
+  matcher: ["/api/overrides/:path*", "/api/needs-attention/:path*", "/api/needs-attention"],
 };
