@@ -18,7 +18,7 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { z } from "zod";
 import { getClient, HANDBOOK_BUCKET, EVENTS_BUCKET } from "./client";
-import { writeJson, readJson } from "./minio-json";
+import { writeJson, readJson, listObjectKeys } from "./minio-json";
 
 const SeedEntrySchema = z
   .object({
@@ -104,7 +104,15 @@ async function doInit(): Promise<void> {
     // MinIO may not support versioning in all configs — non-fatal
   }
 
-  // Check sentinel — skip if already seeded
+  // STORAGE_RESET_ON_INIT: clear system activity (needs-attention
+  // events) so every deploy starts with a clean operator console.
+  // Handbook entries and operator overrides are preserved.
+  if (process.env.STORAGE_RESET_ON_INIT === "true") {
+    await drainBucket(evBucket);
+    console.debug("[storage-init] events bucket drained (STORAGE_RESET_ON_INIT)");
+  }
+
+  // Check sentinel — skip seeding if handbook already populated
   const sentinel = await readJson(hbBucket, SENTINEL_KEY);
   if (sentinel) {
     console.debug("[storage-init] sentinel found — already seeded");
@@ -149,6 +157,14 @@ async function doInit(): Promise<void> {
 
   console.debug(`[storage-init] seeded ${seed.entries.length} entries`);
   await writeSentinel(hbBucket);
+}
+
+async function drainBucket(bucket: string): Promise<void> {
+  const client = getClient();
+  const keys = await listObjectKeys(bucket, "");
+  if (keys.length === 0) return;
+  await client.removeObjects(bucket, keys);
+  console.debug(`[storage-init] removed ${keys.length} objects from ${bucket}`);
 }
 
 async function writeSentinel(bucket: string): Promise<void> {
