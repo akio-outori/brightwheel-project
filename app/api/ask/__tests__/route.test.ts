@@ -274,10 +274,9 @@ describe("POST /api/ask", () => {
     const res = await POST(makeRequest({ question: "What are your hours?" }));
     expect(res.status).toBe(200);
     const call = vi.mocked(askLLM).mock.calls[0]!;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test introspection of branded MCPData internals
-    const dataArg = call[2] as any;
-    const entryIds = dataArg.value.document.entries.map((e: { id: string }) => e.id);
-    expect(entryIds).not.toContain("hours");
+    const dataArg = call[2] as unknown as { value: Record<string, unknown> };
+    const doc = dataArg.value["document"] as { entries: Array<{ id: string }> };
+    expect(doc.entries.map((e) => e.id)).not.toContain("hours");
   });
 
   it("excludes a seed entry when an override has the same id", async () => {
@@ -317,11 +316,12 @@ describe("POST /api/ask", () => {
     const res = await POST(makeRequest({ question: "Is there a sibling discount?" }));
     expect(res.status).toBe(200);
     const call = vi.mocked(askLLM).mock.calls[0]!;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test introspection of branded MCPData internals
-    const dataArg = call[2] as any;
-    const entryIds = dataArg.value.document.entries.map((e: { id: string }) => e.id);
-    const overrideIds = dataArg.value.document.overrides.map((o: { id: string }) => o.id);
-    expect(entryIds).not.toContain("tuition");
-    expect(overrideIds).toContain("tuition");
+    const dataArg = call[2] as unknown as { value: Record<string, unknown> };
+    const doc = dataArg.value["document"] as {
+      entries: Array<{ id: string }>;
+      overrides: Array<{ id: string }>;
+    };
+    expect(doc.entries.map((e) => e.id)).not.toContain("tuition");
+    expect(doc.overrides.map((o) => o.id)).toContain("tuition");
   });
 });
