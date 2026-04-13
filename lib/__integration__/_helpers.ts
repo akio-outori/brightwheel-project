@@ -403,6 +403,15 @@ export function expectAnswerContains(
  */
 export function setupIntegrationTest(): void {
   beforeAll(async () => {
+    // Clean up stale overrides and events BEFORE the run starts.
+    // If a prior run crashed or was killed mid-suite, its overrides
+    // and events are still in MinIO and will pollute the current
+    // run (the model sees them and confidently answers from stale
+    // test data instead of escalating). Running cleanup in
+    // beforeAll as well as afterAll guarantees a clean slate.
+    await cleanupTestOverrides();
+    await cleanupAllEvents();
+    __resetDocumentCache();
     await getRealDocument();
   });
 
