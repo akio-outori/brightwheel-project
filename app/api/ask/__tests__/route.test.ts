@@ -258,6 +258,7 @@ describe("POST /api/ask", () => {
         body: "Monday through Friday 8am to 5pm.",
         sourcePages: [],
         createdAt: "2026-04-13T00:00:00.000Z",
+        createdBy: null,
         replacesEntryId: "hours",
       },
     ]);
@@ -272,10 +273,9 @@ describe("POST /api/ask", () => {
 
     const res = await POST(makeRequest({ question: "What are your hours?" }));
     expect(res.status).toBe(200);
-    // Verify the LLM was called and the seed entry was excluded from
-    // the prompt — the override's body should be what the model sees.
     const call = vi.mocked(askLLM).mock.calls[0]!;
-    const dataArg = call[2] as { value: { document: { entries: Array<{ id: string }> } } };
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test introspection of branded MCPData internals
+    const dataArg = call[2] as any;
     const entryIds = dataArg.value.document.entries.map((e: { id: string }) => e.id);
     expect(entryIds).not.toContain("hours");
   });
@@ -301,6 +301,7 @@ describe("POST /api/ask", () => {
         body: "Preschool: $1,380 per month. 5% sibling discount.",
         sourcePages: [],
         createdAt: "2026-04-13T00:00:00.000Z",
+        createdBy: null,
         replacesEntryId: null,
       },
     ]);
@@ -315,12 +316,9 @@ describe("POST /api/ask", () => {
 
     const res = await POST(makeRequest({ question: "Is there a sibling discount?" }));
     expect(res.status).toBe(200);
-    // The seed entry "tuition" should be excluded from the entries
-    // array because the override has the same id.
     const call = vi.mocked(askLLM).mock.calls[0]!;
-    const dataArg = call[2] as {
-      value: { document: { entries: Array<{ id: string }>; overrides: Array<{ id: string }> } };
-    };
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test introspection of branded MCPData internals
+    const dataArg = call[2] as any;
     const entryIds = dataArg.value.document.entries.map((e: { id: string }) => e.id);
     const overrideIds = dataArg.value.document.overrides.map((o: { id: string }) => o.id);
     expect(entryIds).not.toContain("tuition");
