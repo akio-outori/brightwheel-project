@@ -39,7 +39,26 @@ export async function middleware(request: NextRequest): Promise<NextResponse | u
     return true;
   });
 
-  if (!match) return undefined;
+  if (!match) {
+    // Auto-set the staff cookie when visiting /admin so the demo
+    // works without a login step. Middleware can set cookies via
+    // NextResponse.next() — Server Components cannot.
+    if (pathname.startsWith("/admin")) {
+      const token = process.env.STAFF_AUTH_TOKEN;
+      const existing = request.cookies.get("brightdesk-staff-token");
+      if (token && existing?.value !== token) {
+        const res = NextResponse.next();
+        res.cookies.set("brightdesk-staff-token", token, {
+          path: "/",
+          httpOnly: true,
+          sameSite: "lax",
+          maxAge: 60 * 60 * 24 * 7,
+        });
+        return res;
+      }
+    }
+    return undefined;
+  }
 
   // Verify the staff auth cookie against the environment variable
   const expectedToken = process.env.STAFF_AUTH_TOKEN;
@@ -78,5 +97,11 @@ async function constantTimeEqual(a: string, b: string): Promise<boolean> {
 }
 
 export const config = {
-  matcher: ["/api/overrides/:path*", "/api/needs-attention/:path*", "/api/needs-attention"],
+  matcher: [
+    "/api/overrides/:path*",
+    "/api/needs-attention/:path*",
+    "/api/needs-attention",
+    "/admin/:path*",
+    "/admin",
+  ],
 };
