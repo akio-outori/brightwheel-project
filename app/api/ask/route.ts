@@ -165,9 +165,7 @@ export async function POST(req: Request): Promise<Response> {
     const replacedIds = new Set(
       overrides.filter((o) => o.replacesEntryId).map((o) => o.replacesEntryId!),
     );
-    const activeEntries = entries.filter(
-      (e) => !replacedIds.has(e.id) && !overrideIds.has(e.id),
-    );
+    const activeEntries = entries.filter((e) => !replacedIds.has(e.id) && !overrideIds.has(e.id));
 
     const systemPrompt = await getSystemPrompt();
     const mcpData = MCPData({
