@@ -96,7 +96,7 @@ No other code in the project imports the MinIO SDK.
 ## Document selection
 
 `getActiveDocumentId()` in `handbook.ts` returns a constant
-(`"dcfd-family-handbook"`) today. This is the single seam for
+(`"sunflower-handbook"`) today. This is the single seam for
 future per-user document routing — a session layer replaces the
 body of this function; nothing else changes.
 

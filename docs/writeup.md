@@ -40,7 +40,7 @@ The security boundary is a type system. Four branded TypeScript types make user 
 
 The storage is S3-compatible (MinIO locally, AWS in production). Versioning on the handbook bucket, encryption on both, date-partitioned event log. The migration story is "swap the endpoint."
 
-The test suite is 304 unit tests with an 80%+ coverage threshold and 114 integration tests against the real Anthropic API — including 20 prompt injection attacks, 19 sensitive-topic escalations, and a full ask-escalate-fix-reask-cite cycle. CI runs 12 automated checks per PR (typecheck, lint, SAST, secrets scanning, dependency audit, container image scanning) plus Claude Code review with 7 specialized agents.
+The test suite is 408 unit tests with an 80%+ coverage threshold and 174 integration tests against the real Anthropic API — including 26 prompt injection attacks, 28 sensitive-topic escalations, and a full ask-escalate-fix-reask-cite cycle. CI runs 13 automated checks per PR (typecheck, lint, SAST, secrets scanning, dependency audit, container image scanning) plus Claude Code review with 7 specialized agents.
 
 ## Where it goes
 

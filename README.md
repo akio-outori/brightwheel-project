@@ -62,8 +62,8 @@ Subsequent boots take under 10 seconds.
 ```bash
 npm install
 npm run dev              # Next.js dev server (needs MinIO running)
-npm test                 # 304 unit tests with coverage
-npm run test:integration # 114 tests against real Anthropic + MinIO
+npm test                 # 408 unit tests with coverage
+npm run test:integration # 174 tests against real Anthropic + MinIO
 npm run typecheck        # TypeScript strict
 npm run lint             # ESLint + security plugin
 ```

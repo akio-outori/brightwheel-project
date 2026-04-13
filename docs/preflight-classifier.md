@@ -93,7 +93,7 @@ The negative set is as important as the positive set:
 
 ## Unit tests
 
-192 targeted tests in
+231 targeted tests in
 `lib/llm/preflight/__tests__/specific-child.test.ts`. Each test
 exercises a distinct decision path — no combinatorial padding.
 

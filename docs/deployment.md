@@ -33,7 +33,7 @@ is idempotent:
 
 1. Creates `handbook` and `events` buckets
 2. Enables versioning on `handbook`, SSE-S3 on both
-3. Checks for `.seed-complete-v2` sentinel — exits if present
+3. Checks for `.seed-complete-v3` sentinel — exits if present
 4. Purges any legacy flat-layout keys (one-time migration)
 5. Reads `document.id` from the seed JSON
 6. Writes `documents/{docId}/metadata.json`
@@ -50,6 +50,8 @@ is idempotent:
 | `STORAGE_SECRET_KEY` | No | `minioadmin` | MinIO secret key |
 | `STORAGE_HANDBOOK_BUCKET` | No | `handbook` | Handbook bucket name |
 | `STORAGE_EVENTS_BUCKET` | No | `events` | Events bucket name |
+| `STAFF_AUTH_TOKEN` | No | — | Shared password for operator console login |
+| `STORAGE_RESET_ON_INIT` | No | — | When `true`, drain events bucket on startup |
 
 ## CI workflows
 
@@ -102,6 +104,21 @@ has 0 vulnerabilities across production and dev dependencies.
 | Semgrep | p/typescript, p/react, p/owasp-top-ten, p/nodejs | XSS, injection, OWASP categories |
 | Bearer | Data flow analysis | Input-to-sink tracing, sensitive data exposure |
 | TruffleHog | Verified secrets | Leaked API keys, tokens, passwords |
+
+## Railway (demo)
+
+The demo instance runs on Railway, configured in `railway.toml`:
+
+- Builds from the multi-stage Dockerfile
+- Healthcheck on `/api/health` (30s timeout)
+- Restarts on failure (max 3 retries)
+- MinIO runs as a separate Railway service with persistent volume
+- `STORAGE_RESET_ON_INIT=true` drains the events bucket on each
+  deploy so the operator console starts clean; handbook entries and
+  overrides persist across deploys
+- App-level init (`lib/storage/init.ts`) replaces the minio-init
+  container since Railway doesn't support `depends_on` with
+  `service_completed_successfully`
 
 ## Production deployment notes
 
