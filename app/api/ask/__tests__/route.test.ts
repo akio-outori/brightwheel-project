@@ -69,7 +69,7 @@ vi.mock("@/lib/llm", async (importOriginal) => {
 
 import { POST } from "../route";
 import { askLLM } from "@/lib/llm";
-import { logNeedsAttention } from "@/lib/storage";
+import { logNeedsAttention, listHandbookEntries, listOperatorOverrides } from "@/lib/storage";
 
 function makeRequest(body: unknown): Request {
   return new Request("http://localhost:3000/api/ask", {
@@ -235,5 +235,93 @@ describe("POST /api/ask", () => {
     expect(res.status).toBe(500);
     const data = await res.json();
     expect(data.error).toBe("Something went wrong. Please try again.");
+  });
+
+  it("excludes a seed entry when an override has replacesEntryId pointing to it", async () => {
+    vi.mocked(listHandbookEntries).mockResolvedValueOnce([
+      {
+        id: "hours",
+        docId: "test-doc",
+        title: "Hours of Operation",
+        category: "hours",
+        body: "Monday through Friday 7am to 6pm.",
+        sourcePages: [],
+        lastUpdated: "2026",
+      },
+    ]);
+    vi.mocked(listOperatorOverrides).mockResolvedValueOnce([
+      {
+        id: "updated-hours",
+        docId: "test-doc",
+        title: "Updated Hours",
+        category: "hours",
+        body: "Monday through Friday 8am to 5pm.",
+        sourcePages: [],
+        createdAt: "2026-04-13T00:00:00.000Z",
+        createdBy: null,
+        replacesEntryId: "hours",
+      },
+    ]);
+    vi.mocked(askLLM).mockResolvedValueOnce({
+      answer: "We are open Monday through Friday 8am to 5pm.",
+      confidence: "high",
+      cited_entries: ["updated-hours"],
+      directly_addressed_by: ["updated-hours"],
+      escalate: false,
+      escalation_reason: undefined,
+    });
+
+    const res = await POST(makeRequest({ question: "What are your hours?" }));
+    expect(res.status).toBe(200);
+    const call = vi.mocked(askLLM).mock.calls[0]!;
+    const dataArg = call[2] as unknown as { value: Record<string, unknown> };
+    const doc = dataArg.value["document"] as { entries: Array<{ id: string }> };
+    expect(doc.entries.map((e) => e.id)).not.toContain("hours");
+  });
+
+  it("excludes a seed entry when an override has the same id", async () => {
+    vi.mocked(listHandbookEntries).mockResolvedValueOnce([
+      {
+        id: "tuition",
+        docId: "test-doc",
+        title: "Tuition",
+        category: "fees",
+        body: "Preschool: $1,380 per month. 10% sibling discount.",
+        sourcePages: [],
+        lastUpdated: "2026",
+      },
+    ]);
+    vi.mocked(listOperatorOverrides).mockResolvedValueOnce([
+      {
+        id: "tuition",
+        docId: "test-doc",
+        title: "Tuition",
+        category: "general",
+        body: "Preschool: $1,380 per month. 5% sibling discount.",
+        sourcePages: [],
+        createdAt: "2026-04-13T00:00:00.000Z",
+        createdBy: null,
+        replacesEntryId: null,
+      },
+    ]);
+    vi.mocked(askLLM).mockResolvedValueOnce({
+      answer: "Preschool tuition is $1,380 per month with a 5% sibling discount.",
+      confidence: "high",
+      cited_entries: ["tuition"],
+      directly_addressed_by: ["tuition"],
+      escalate: false,
+      escalation_reason: undefined,
+    });
+
+    const res = await POST(makeRequest({ question: "Is there a sibling discount?" }));
+    expect(res.status).toBe(200);
+    const call = vi.mocked(askLLM).mock.calls[0]!;
+    const dataArg = call[2] as unknown as { value: Record<string, unknown> };
+    const doc = dataArg.value["document"] as {
+      entries: Array<{ id: string }>;
+      overrides: Array<{ id: string }>;
+    };
+    expect(doc.entries.map((e) => e.id)).not.toContain("tuition");
+    expect(doc.overrides.map((o) => o.id)).toContain("tuition");
   });
 });

@@ -158,10 +158,14 @@ export async function POST(req: Request): Promise<Response> {
     // the override — having both in context causes the model to
     // cite both, which violates the trust-loop expectation that
     // a replacement override is the authoritative version.
+    // An override supersedes a seed entry when:
+    //  - it explicitly declares `replacesEntryId`, OR
+    //  - its id collides with a seed entry id (same slug)
+    const overrideIds = new Set(overrides.map((o) => o.id));
     const replacedIds = new Set(
       overrides.filter((o) => o.replacesEntryId).map((o) => o.replacesEntryId!),
     );
-    const activeEntries = entries.filter((e) => !replacedIds.has(e.id));
+    const activeEntries = entries.filter((e) => !replacedIds.has(e.id) && !overrideIds.has(e.id));
 
     const systemPrompt = await getSystemPrompt();
     const mcpData = MCPData({
