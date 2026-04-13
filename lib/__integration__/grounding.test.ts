@@ -10,7 +10,7 @@
 // seed entry still contains the fact under its current wording —
 // the handbook is source-of-truth and tests assert against it.
 
-import { describe, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import {
   askViaRoute,
   expectAnswerContains,
@@ -94,7 +94,12 @@ describe.skipIf(!hasApiKey())("grounding — literal fact recall", () => {
     const result = await askViaRoute("What's the teacher-to-child ratio in the infant room?");
     await expectHighConfidence(result, "ratio-infant");
     // Sunflower's infant ratio is 1 teacher for every 4 children.
-    expectAnswerContains(result, "4");
+    // The model may spell out "four" instead of using the numeral.
+    const lower = result.answer.toLowerCase();
+    expect(
+      lower.includes("4") || lower.includes("four"),
+      `should mention ratio of 4\nanswer was: ${result.answer.slice(0, 500)}`,
+    ).toBe(true);
   });
 
   it("recalls the Reggio Emilia curriculum approach", async () => {
@@ -113,5 +118,91 @@ describe.skipIf(!hasApiKey())("grounding — literal fact recall", () => {
     const result = await askViaRoute("Can my child bring peanut butter sandwiches?");
     await expectHighConfidence(result, "nut-free");
     expectAnswerContains(result, "nut-free");
+  });
+
+  // ----- Tuition amounts ---------------------------------------------------
+
+  it("recalls the toddler monthly tuition", async () => {
+    const result = await askViaRoute("How much is toddler tuition?");
+    await expectHighConfidence(result, "tuition-toddler");
+    expectAnswerContains(result, "$1,560");
+  });
+
+  it("recalls the twos monthly tuition", async () => {
+    const result = await askViaRoute("How much is tuition for the twos room?");
+    await expectHighConfidence(result, "tuition-twos");
+    expectAnswerContains(result, "$1,470");
+  });
+
+  // ----- Fees --------------------------------------------------------------
+
+  it("recalls the annual supply fee", async () => {
+    const result = await askViaRoute("Is there an annual supply fee?");
+    await expectHighConfidence(result, "annual-supply-fee");
+    expectAnswerContains(result, "$120");
+  });
+
+  it("recalls the late payment fee", async () => {
+    const result = await askViaRoute("What happens if I pay tuition late?");
+    await expectHighConfidence(result, "late-payment-fee");
+    expectAnswerContains(result, "$35");
+  });
+
+  it("recalls the sibling discount", async () => {
+    const result = await askViaRoute("Do you offer a sibling discount?");
+    await expectHighConfidence(result, "sibling-discount");
+    expectAnswerContains(result, "10%");
+  });
+
+  // ----- Ratios ------------------------------------------------------------
+
+  it("recalls the toddler ratio", async () => {
+    const result = await askViaRoute("What's the teacher-to-child ratio for toddlers?");
+    await expectHighConfidence(result, "ratio-toddler");
+    // Model may write "6" or "six"
+    const lower = result.answer.toLowerCase();
+    expect(lower.includes("6") || lower.includes("six"), "should mention ratio of 6").toBe(true);
+  });
+
+  it("recalls the twos ratio", async () => {
+    const result = await askViaRoute("What's the ratio in the twos classroom?");
+    await expectHighConfidence(result, "ratio-twos");
+    const lower = result.answer.toLowerCase();
+    expect(lower.includes("8") || lower.includes("eight"), "should mention ratio of 8").toBe(true);
+  });
+
+  it("recalls the preschool ratio", async () => {
+    const result = await askViaRoute("What's the teacher-to-child ratio for preschool?");
+    await expectHighConfidence(result, "ratio-preschool");
+    expectAnswerContains(result, "10");
+  });
+
+  it("recalls the max infant group size", async () => {
+    const result = await askViaRoute("What's the maximum group size in the infant room?");
+    await expectHighConfidence(result, "max-infant-group");
+    expectAnswerContains(result, "8");
+  });
+
+  // ----- Health / outdoor specifics ----------------------------------------
+
+  it("recalls the UV threshold for sunscreen application", async () => {
+    const result = await askViaRoute("When do you apply sunscreen to the kids?");
+    await expectHighConfidence(result, "uv-threshold");
+    expectAnswerContains(result, "3");
+  });
+
+  // ----- Operating hours verbatim ------------------------------------------
+
+  it("recalls the operating hours verbatim", async () => {
+    const result = await askViaRoute("What are Sunflower's exact operating hours?");
+    await expectHighConfidence(result, "operating-hours");
+    expectAnswerContains(result, "7:00");
+    expectAnswerContains(result, "6:00");
+  });
+
+  it("recalls the drop-off deadline", async () => {
+    const result = await askViaRoute("What time should I drop off my child by?");
+    await expectHighConfidence(result, "drop-off-deadline");
+    expectAnswerContains(result, "9:30");
   });
 });

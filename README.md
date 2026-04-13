@@ -89,16 +89,27 @@ Parent question
 
 ## Documentation
 
-Detailed engineering docs for each subsystem:
+### Product
 
-| Document                                                 | Covers                                                                                       |
-| -------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
-| [Trust mechanic & MCP boundary](docs/trust-mechanic.md)  | Four branded input types, prompt assembly, the `AnswerContract`, prompt injection prevention |
-| [Preflight classifier](docs/preflight-classifier.md)     | Specific-child detection, pattern groups, policy-question negatives, calibration             |
-| [Post-response pipeline](docs/post-response-pipeline.md) | Six deterministic channels, short-circuit architecture, stock responses, hold reasons        |
-| [Document model & storage](docs/document-model.md)       | Two-layer architecture (seed entries + operator overrides), MinIO layout, storage adapters   |
-| [Operator loop](docs/operator-loop.md)                   | Needs-attention feed, fix dialog, override CRUD, hold-reason badges                          |
-| [Testing strategy](docs/testing-strategy.md)             | Unit tests, integration tests, coverage thresholds, CI pipeline                              |
-| [Deployment & infrastructure](docs/deployment.md)        | Docker stack, distroless runner, MinIO init, CI workflows, security scanning                 |
-| [Design pitch](docs/writeup.md)                          | The product thesis for reviewers who won't read source code                                  |
-| [Build journal](docs/build-journal.md)                   | Chronological development record — every decision, every reversal                            |
+| Document | |
+|----------|-|
+| [Product & scaling plan](docs/scaling-plan.md) | Per-center intelligence as the product, with a five-phase engineering plan from prototype to 50,000 centers |
+| [Prototype design pitch](docs/writeup.md) | The trust loop, the three verification layers, what was built and what was cut |
+
+### Architecture
+
+| Document | |
+|----------|-|
+| [Trust mechanic & MCP boundary](docs/trust-mechanic.md) | Branded input types, prompt assembly, answer contract, prompt injection prevention |
+| [Preflight classifier](docs/preflight-classifier.md) | Specific-child detection, pattern groups, policy-question negatives |
+| [Post-response pipeline](docs/post-response-pipeline.md) | Six deterministic verification channels, short-circuit architecture, hold reasons |
+| [Document model & storage](docs/document-model.md) | Two-layer architecture (seed entries + operator overrides), MinIO layout, storage adapters |
+| [Operator loop](docs/operator-loop.md) | Needs-attention feed, inline reply, override CRUD, hold-reason badges |
+
+### Infrastructure
+
+| Document | |
+|----------|-|
+| [Testing strategy](docs/testing-strategy.md) | Unit tests, integration tests, coverage thresholds, CI pipeline |
+| [Deployment](docs/deployment.md) | Docker stack, distroless runner, MinIO init, CI workflows, security scanning |
+| [Build journal](docs/build-journal.md) | Chronological development record |

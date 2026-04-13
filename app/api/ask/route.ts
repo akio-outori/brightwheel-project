@@ -152,6 +152,17 @@ export async function POST(req: Request): Promise<Response> {
     }
 
     // 4. Build MCPData and call the LLM.
+    //
+    // Filter out seed entries that have been superseded by an
+    // override with `replacesEntryId`. The model should only see
+    // the override — having both in context causes the model to
+    // cite both, which violates the trust-loop expectation that
+    // a replacement override is the authoritative version.
+    const replacedIds = new Set(
+      overrides.filter((o) => o.replacesEntryId).map((o) => o.replacesEntryId!),
+    );
+    const activeEntries = entries.filter((e) => !replacedIds.has(e.id));
+
     const systemPrompt = await getSystemPrompt();
     const mcpData = MCPData({
       center_name: `${metadata.title} Front Desk`,
@@ -159,7 +170,7 @@ export async function POST(req: Request): Promise<Response> {
         id: metadata.id,
         title: metadata.title,
         version: metadata.version,
-        entries: entries.map((e) => ({
+        entries: activeEntries.map((e) => ({
           id: e.id,
           title: e.title,
           category: e.category,
@@ -204,7 +215,7 @@ export async function POST(req: Request): Promise<Response> {
       // fabricated entry ids. On hold, fall through to the stock
       // response and log to needs-attention.
       const refusalSources: GroundingSource[] = [
-        ...entries.map<GroundingSource>((e) => ({
+        ...activeEntries.map<GroundingSource>((e) => ({
           id: e.id,
           title: e.title,
           body: e.body,
@@ -246,7 +257,7 @@ export async function POST(req: Request): Promise<Response> {
     // of GroundingSource objects so channels don't care which layer
     // a source came from.
     const allSources: GroundingSource[] = [
-      ...entries.map<GroundingSource>((e) => ({
+      ...activeEntries.map<GroundingSource>((e) => ({
         id: e.id,
         title: e.title,
         body: e.body,

@@ -407,6 +407,29 @@ export function classifySpecificChild(question: string): PreflightVerdict {
     };
   }
 
+  // Group 5: active-emergency statements. These are declarative
+  // statements (not questions) about emergencies in progress.
+  // "The ambulance is on its way to the center" doesn't contain a
+  // possessive, a family noun, or a question mark — but it MUST
+  // escalate because it describes an active emergency. The
+  // emergency vocabulary alone is the signal; no health-word or
+  // subject check is needed.
+  //
+  // Gated on !isPolicyQuestion so that general questions like
+  // "What are your emergency procedures?" and "How do you handle
+  // 911 situations?" pass through to the model.
+  /* eslint-disable security/detect-unsafe-regex -- input is parent question capped at 2000 chars */
+  const EMERGENCY_STATEMENT_RE =
+    /\b(?:ambulance|paramedics?|fire\s*truck|fire\s*department|police|called\s+911|calling\s+911|on\s+(?:the|its)\s+way|rushed\s+to|emergency\s+room|taken\s+to\s+(?:the\s+)?hospital|collapsed|unconscious|not\s+breathing|choking|seizure|anaphylaxis|anaphylactic)\b/i;
+  /* eslint-enable security/detect-unsafe-regex */
+  if (EMERGENCY_STATEMENT_RE.test(question) && !isPolicyQuestion(question)) {
+    return {
+      verdict: "hold",
+      reason: "specific_child_question",
+      detail: "active emergency statement",
+    };
+  }
+
   return { verdict: "pass" };
 }
 
