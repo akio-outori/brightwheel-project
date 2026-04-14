@@ -237,49 +237,7 @@ describe("POST /api/ask", () => {
     expect(data.error).toBe("Something went wrong. Please try again.");
   });
 
-  it("excludes a seed entry when an override has replacesEntryId pointing to it", async () => {
-    vi.mocked(listHandbookEntries).mockResolvedValueOnce([
-      {
-        id: "hours",
-        docId: "test-doc",
-        title: "Hours of Operation",
-        category: "hours",
-        body: "Monday through Friday 7am to 6pm.",
-        sourcePages: [],
-        lastUpdated: "2026",
-      },
-    ]);
-    vi.mocked(listOperatorOverrides).mockResolvedValueOnce([
-      {
-        id: "updated-hours",
-        docId: "test-doc",
-        title: "Updated Hours",
-        category: "hours",
-        body: "Monday through Friday 8am to 5pm.",
-        sourcePages: [],
-        createdAt: "2026-04-13T00:00:00.000Z",
-        createdBy: null,
-        replacesEntryId: "hours",
-      },
-    ]);
-    vi.mocked(askLLM).mockResolvedValueOnce({
-      answer: "We are open Monday through Friday 8am to 5pm.",
-      confidence: "high",
-      cited_entries: ["updated-hours"],
-      directly_addressed_by: ["updated-hours"],
-      escalate: false,
-      escalation_reason: undefined,
-    });
-
-    const res = await POST(makeRequest({ question: "What are your hours?" }));
-    expect(res.status).toBe(200);
-    const call = vi.mocked(askLLM).mock.calls[0]!;
-    const dataArg = call[2] as unknown as { value: Record<string, unknown> };
-    const doc = dataArg.value["document"] as { entries: Array<{ id: string }> };
-    expect(doc.entries.map((e) => e.id)).not.toContain("hours");
-  });
-
-  it("keeps both seed entry and override when they share the same id (correction pattern)", async () => {
+  it("keeps both seed entry and override in the prompt when override has replacesEntryId (correction-on-top)", async () => {
     vi.mocked(listHandbookEntries).mockResolvedValueOnce([
       {
         id: "tuition",
@@ -293,22 +251,22 @@ describe("POST /api/ask", () => {
     ]);
     vi.mocked(listOperatorOverrides).mockResolvedValueOnce([
       {
-        id: "tuition",
+        id: "tuition-a7k3",
         docId: "test-doc",
         title: "Tuition",
         category: "general",
-        body: "Preschool: $1,380 per month. 5% sibling discount.",
+        body: "yes, 5%",
         sourcePages: [],
         createdAt: "2026-04-13T00:00:00.000Z",
         createdBy: null,
-        replacesEntryId: null,
+        replacesEntryId: "tuition",
       },
     ]);
     vi.mocked(askLLM).mockResolvedValueOnce({
-      answer: "Preschool tuition is $1,380 per month with a 5% sibling discount.",
+      answer: "Yes, there's a 5% sibling discount on the younger child's tuition.",
       confidence: "high",
-      cited_entries: ["tuition"],
-      directly_addressed_by: ["tuition"],
+      cited_entries: ["tuition-a7k3"],
+      directly_addressed_by: ["tuition-a7k3"],
       escalate: false,
       escalation_reason: undefined,
     });
@@ -319,12 +277,13 @@ describe("POST /api/ask", () => {
     const dataArg = call[2] as unknown as { value: Record<string, unknown> };
     const doc = dataArg.value["document"] as {
       entries: Array<{ id: string }>;
-      overrides: Array<{ id: string }>;
+      overrides: Array<{ id: string; replaces_entry_id: string | null }>;
     };
-    // Both are present: seed entry provides context, override carries
-    // the operator's correction. The system prompt tells the model
-    // the override wins on overlapping facts.
+    // Both are visible to the model. Citations are unambiguous because
+    // override ids don't collide with seed ids.
     expect(doc.entries.map((e) => e.id)).toContain("tuition");
-    expect(doc.overrides.map((o) => o.id)).toContain("tuition");
+    expect(doc.overrides.map((o) => o.id)).toContain("tuition-a7k3");
+    const override = doc.overrides.find((o) => o.id === "tuition-a7k3");
+    expect(override?.replaces_entry_id).toBe("tuition");
   });
 });

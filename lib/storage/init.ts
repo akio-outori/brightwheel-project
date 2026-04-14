@@ -114,6 +114,15 @@ async function doInit(): Promise<void> {
     console.debug("[storage-init] events bucket drained (STORAGE_RESET_ON_INIT)");
   }
 
+  // One-time migration: existing overrides whose id collides with
+  // a seed entry id get renamed with a random suffix, and their
+  // replacesEntryId is set to the colliding seed id. This is the
+  // fix for the tuition override that was shipping confidently-wrong
+  // answers because its citation mapped to both the override AND
+  // the seed entry. Idempotent — after the first run, colliding
+  // overrides no longer exist.
+  await migrateCollidingOverrides(hbBucket);
+
   // Check sentinel — skip seeding if handbook already populated
   const sentinel = await readJson(hbBucket, SENTINEL_KEY);
   if (sentinel) {
@@ -159,6 +168,65 @@ async function doInit(): Promise<void> {
 
   console.debug(`[storage-init] seeded ${seed.entries.length} entries`);
   await writeSentinel(hbBucket);
+}
+
+async function migrateCollidingOverrides(hbBucket: string): Promise<void> {
+  const client = getClient();
+  // Walk every document under documents/{docId}/, detect overrides
+  // whose id matches an entry id in the same document, rename them.
+  const allKeys = await new Promise<string[]>((resolve, reject) => {
+    const keys: string[] = [];
+    const stream = client.listObjectsV2(hbBucket, "documents/", true);
+    stream.on("data", (obj) => {
+      if (obj.name) keys.push(obj.name);
+    });
+    stream.on("end", () => resolve(keys));
+    stream.on("error", reject);
+  });
+
+  // Group by docId
+  const docIds = new Set<string>();
+  for (const k of allKeys) {
+    const m = k.match(/^documents\/([^/]+)\//);
+    if (m) docIds.add(m[1]!);
+  }
+
+  for (const docId of docIds) {
+    const entryPrefix = `documents/${docId}/entries/`;
+    const overridePrefix = `documents/${docId}/overrides/`;
+
+    const entryIds = new Set(
+      allKeys
+        .filter((k) => k.startsWith(entryPrefix) && k.endsWith(".json"))
+        .map((k) => k.slice(entryPrefix.length, -".json".length)),
+    );
+    const overrideKeys = allKeys.filter((k) => k.startsWith(overridePrefix) && k.endsWith(".json"));
+
+    for (const key of overrideKeys) {
+      const oldId = key.slice(overridePrefix.length, -".json".length);
+      if (!entryIds.has(oldId)) continue;
+
+      const raw = await readJson(hbBucket, key);
+      if (!raw || typeof raw !== "object") continue;
+
+      const suffix = Math.floor(Math.random() * 0x10000)
+        .toString(16)
+        .padStart(4, "0");
+      const newId = `${oldId}-${suffix}`;
+      const newKey = `${overridePrefix}${newId}.json`;
+      const rec = raw as Record<string, unknown>;
+      const migrated = {
+        ...rec,
+        id: newId,
+        replacesEntryId: rec["replacesEntryId"] ?? oldId,
+      };
+      await writeJson(hbBucket, newKey, migrated);
+      await client.removeObject(hbBucket, key);
+      console.debug(
+        `[storage-init] migrated colliding override: ${oldId} → ${newId} (replaces ${oldId})`,
+      );
+    }
+  }
 }
 
 async function drainBucket(bucket: string): Promise<void> {

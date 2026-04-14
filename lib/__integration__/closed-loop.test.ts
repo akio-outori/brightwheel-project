@@ -180,16 +180,17 @@ describe.skipIf(!hasApiKey())("closed-loop — full ask-fix-reask cycle", () => 
 
     // The sensitive-topic override may or may not fire on a policy
     // question. If it doesn't escalate, verify the override id is
-    // cited (not the original "illness-policy" entry).
+    // cited. Under the correction-on-top model, the seed entry is
+    // ALSO visible to the model — it may be cited for context. The
+    // key assertion is that the override's content (48 hours, not
+    // 24) wins on the conflicting fact.
     if (!policyResult.escalate) {
       await expectHighConfidence(policyResult, "override-replacement");
       expect(
         policyResult.cited_entries,
-        "should cite the override, not the replaced entry",
+        "should cite the override alongside any context",
       ).toContain(created.id);
-      expect(policyResult.cited_entries, "should NOT cite the replaced entry").not.toContain(
-        "illness-policy",
-      );
+      expect(policyResult.answer, "should use the override's 48-hour value").toContain("48");
     }
     // If it escalates, that's the sensitive-topic guard working as
     // designed — the override still exists, the guard just takes
@@ -294,5 +295,47 @@ describe.skipIf(!hasApiKey())("closed-loop — full ask-fix-reask cycle", () => 
     // sensitive override forces escalate=true.
     expect(result.escalate, "sensitive override must force escalate").toBe(true);
     expect(result.confidence).toBe("low");
+  });
+
+  it("override with colliding title corrects the seed entry's conflicting fact", async () => {
+    // The seed handbook has an entry id `tuition` that says the
+    // sibling discount is 10%. An operator creates an override
+    // titled "Tuition" — the storage layer auto-suffixes the id
+    // (so citations stay unambiguous) and auto-links the override
+    // via replacesEntryId to the seed tuition entry.
+    //
+    // The model should read both, treat the override as a
+    // correction-on-top of the seed entry, and answer with the
+    // override's 5% — NOT the seed's 10%.
+    const createRes = await staffFetch("http://localhost:3000/api/overrides", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        title: "Tuition",
+        category: "fees",
+        body: "The sibling discount is 5%, not 10%.",
+        sourcePages: [],
+        replacesEntryId: null,
+        createdBy: TEST_CREATED_BY,
+      }),
+    });
+    expect(createRes.ok, "overrides POST should succeed").toBe(true);
+    const created = (await createRes.json()) as { id: string; replacesEntryId: string | null };
+
+    // Structural checks: id is suffixed, replacesEntryId auto-linked.
+    expect(created.id).toMatch(/^tuition-[0-9a-f]{4}$/);
+    expect(created.replacesEntryId).toBe("tuition");
+
+    __resetHandbookCache();
+
+    const answer = await askViaRoute("Is there a sibling discount?");
+    await expectHighConfidence(answer, "sibling-discount-with-override");
+    expect(answer.answer, "answer should reflect the override's 5%, not the seed's 10%").toContain(
+      "5%",
+    );
+    expect(answer.answer, "answer must not contain the seed's 10%").not.toContain("10%");
+    // The citation should include the override id (with suffix),
+    // which is structurally distinct from the seed "tuition" id.
+    expect(answer.cited_entries, "citation should include the override id").toContain(created.id);
   });
 });
