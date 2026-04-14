@@ -122,4 +122,69 @@ describe("ensureStorageReady", () => {
     expect(getClient().listBuckets).not.toHaveBeenCalled();
     expect(readJson).not.toHaveBeenCalled();
   });
+
+  it("migrates overrides whose id collides with a seed entry id", async () => {
+    // Stream yielding one colliding override and one non-colliding.
+    // The migration should rename only the colliding one.
+    const client = getClient();
+    vi.mocked(client.listObjectsV2).mockImplementation(() => {
+      const handlers: Record<string, (arg?: unknown) => void> = {};
+      const stream = {
+        on(event: string, cb: (arg?: unknown) => void) {
+          handlers[event] = cb;
+          if (event === "end") {
+            queueMicrotask(() => {
+              handlers["data"]?.({ name: "documents/test-doc/entries/tuition.json" });
+              handlers["data"]?.({ name: "documents/test-doc/overrides/tuition.json" });
+              handlers["data"]?.({ name: "documents/test-doc/overrides/cameras.json" });
+              cb();
+            });
+          }
+          return stream;
+        },
+      };
+      return stream as unknown as ReturnType<typeof client.listObjectsV2>;
+    });
+    vi.mocked(readJson).mockImplementation(async (_bucket, key) => {
+      // Sentinel check — return null to trigger seeding path
+      if (String(key).endsWith(".seed-complete-v3")) return null;
+      // Override object load
+      if (String(key).endsWith("overrides/tuition.json")) {
+        return {
+          id: "tuition",
+          docId: "test-doc",
+          title: "Tuition",
+          category: "general",
+          body: "yes, 5%",
+          sourcePages: [],
+          createdAt: "2026-04-13T00:00:00.000Z",
+          createdBy: null,
+          replacesEntryId: null,
+        };
+      }
+      return null;
+    });
+
+    await ensureStorageReady();
+
+    // The colliding override got renamed with a suffix and replacesEntryId set
+    const renameCall = vi
+      .mocked(writeJson)
+      .mock.calls.find((c) => String(c[1]).match(/overrides\/tuition-[0-9a-f]{4}\.json$/));
+    expect(renameCall).toBeDefined();
+    const migrated = renameCall![2] as { id: string; replacesEntryId: string };
+    expect(migrated.id).toMatch(/^tuition-[0-9a-f]{4}$/);
+    expect(migrated.replacesEntryId).toBe("tuition");
+
+    // Old colliding key got removed
+    expect(client.removeObject).toHaveBeenCalledWith(
+      "handbook-test",
+      "documents/test-doc/overrides/tuition.json",
+    );
+    // Non-colliding override (cameras) was left alone
+    expect(client.removeObject).not.toHaveBeenCalledWith(
+      "handbook-test",
+      "documents/test-doc/overrides/cameras.json",
+    );
+  });
 });
