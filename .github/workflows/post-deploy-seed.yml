@@ -42,3 +42,6 @@ jobs:
 
       - name: Seed demo questions
         run: ./scripts/seed-demo-questions.sh
+
+      - name: Smoke tests
+        run: ./scripts/smoke-test.sh
