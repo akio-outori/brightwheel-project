@@ -153,22 +153,19 @@ export async function POST(req: Request): Promise<Response> {
 
     // 4. Build MCPData and call the LLM.
     //
-    // Filter out seed entries that have been fully superseded by an
-    // override with `replacesEntryId`. The model should only see
-    // the override in that case — having both in context causes the
-    // model to cite both, which violates the trust-loop expectation
-    // that a replacement override is the authoritative version.
+    // Both seed entries AND overrides that target them go into the
+    // prompt. When an override has `replacesEntryId` set, the system
+    // prompt tells the model to treat the override as a CORRECTION
+    // (patch/diff) on the linked seed entry — use the seed as base
+    // context, apply the override's specific facts (numbers, yes/no,
+    // changed policy) on top. This lets operators write terse
+    // corrections like "yes, 5%" without duplicating the handbook's
+    // surrounding context.
     //
-    // Overrides that share an id with a seed entry (without explicit
-    // `replacesEntryId`) are treated as CORRECTIONS, not replacements:
-    // both go into the prompt, and the system prompt tells the model
-    // to apply the override's facts on top of the seed entry's body.
-    // This lets operators write terse corrections ("yes, 5%") without
-    // having to duplicate all the context from the original entry.
-    const replacedIds = new Set(
-      overrides.filter((o) => o.replacesEntryId).map((o) => o.replacesEntryId!),
-    );
-    const activeEntries = entries.filter((e) => !replacedIds.has(e.id));
+    // Override ids are guaranteed not to collide with seed ids (the
+    // override creator auto-suffixes when the title slug would clash),
+    // so citations are unambiguous.
+    const activeEntries = entries;
 
     const systemPrompt = await getSystemPrompt();
     const mcpData = MCPData({

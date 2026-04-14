@@ -220,8 +220,8 @@ describe("operator overrides adapter", () => {
     expect(missing).toBeNull();
   });
 
-  it("createOperatorOverride rejects duplicate slugs", async () => {
-    await createOperatorOverride(TEST_DOC_ID, {
+  it("createOperatorOverride suffixes the id when the base slug collides with an existing override", async () => {
+    const first = await createOperatorOverride(TEST_DOC_ID, {
       title: "Unique Clarification",
       category: "policies",
       body: "First version.",
@@ -229,19 +229,33 @@ describe("operator overrides adapter", () => {
       createdBy: null,
       replacesEntryId: null,
     });
-    await expect(
-      createOperatorOverride(TEST_DOC_ID, {
-        title: "Unique Clarification",
-        category: "policies",
-        body: "Different body, same title → same slug.",
-        sourcePages: [],
-        createdBy: null,
-        replacesEntryId: null,
-      }),
-    ).rejects.toMatchObject({
-      name: "StorageError",
-      code: "already_exists",
+    const second = await createOperatorOverride(TEST_DOC_ID, {
+      title: "Unique Clarification",
+      category: "policies",
+      body: "Different body, same title → suffixed slug.",
+      sourcePages: [],
+      createdBy: null,
+      replacesEntryId: null,
     });
+    expect(first.id).toBe("unique-clarification");
+    expect(second.id).toMatch(/^unique-clarification-[0-9a-f]{4}$/);
+    expect(second.id).not.toBe(first.id);
+  });
+
+  it("createOperatorOverride auto-links to a seed entry when the base slug collides", async () => {
+    // The seed fixture has an entry with id "test-entry". An override
+    // titled "Test Entry" would slugify to the same id — we suffix
+    // the override's id AND auto-set replacesEntryId to the seed id.
+    const ov = await createOperatorOverride(TEST_DOC_ID, {
+      title: "Test Entry",
+      category: "general",
+      body: "yes, 5%",
+      sourcePages: [],
+      createdBy: null,
+      replacesEntryId: null,
+    });
+    expect(ov.id).toMatch(/^test-entry-[0-9a-f]{4}$/);
+    expect(ov.replacesEntryId).toBe("test-entry");
   });
 
   it("updateOperatorOverride on a missing id throws not_found", async () => {

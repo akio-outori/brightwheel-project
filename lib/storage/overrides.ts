@@ -13,6 +13,7 @@
 // normal update/delete flow, not through version history.
 
 import { HANDBOOK_BUCKET } from "./client";
+import { getHandbookEntry } from "./handbook";
 import {
   OperatorOverride,
   OperatorOverrideDraft,
@@ -83,18 +84,51 @@ export async function getOperatorOverride(
 }
 
 /**
- * Create a new operator override. Id is slugged from the title;
- * duplicates throw `already_exists`. `createdAt` is stamped here.
+ * Create a new operator override.
+ *
+ * Id generation:
+ *   - Base slug from the title
+ *   - If the base slug collides with a seed entry id, a short random
+ *     suffix is appended (`tuition` → `tuition-a7k3`) to keep override
+ *     ids structurally distinct from seed ids. This matters for the
+ *     LLM: when a citation maps unambiguously to one source, the model
+ *     can't accidentally conflate an override's facts with the seed's.
+ *   - When the slug collides with a seed entry AND the caller didn't
+ *     pass `replacesEntryId`, we auto-set it to the seed entry id so
+ *     the override is structurally linked to what it's correcting.
+ *   - Collisions with other overrides (rare) get a suffix too.
+ *
+ * `createdAt` is stamped here.
  */
 export async function createOperatorOverride(
   docId: string,
   draft: OperatorOverrideDraft,
 ): Promise<OperatorOverride> {
   const validatedDraft = OperatorOverrideDraftSchema.parse(draft);
-  const id = slugify(validatedDraft.title);
+  const baseSlug = slugify(validatedDraft.title);
 
-  const existing = await getOperatorOverride(docId, id);
-  if (existing) {
+  // Detect collision with a seed entry. If present, suffix the id
+  // and auto-link via replacesEntryId.
+  const collidingEntry = await getHandbookEntry(docId, baseSlug);
+  const collidingOverride = await getOperatorOverride(docId, baseSlug);
+
+  let id = baseSlug;
+  let replacesEntryId = validatedDraft.replacesEntryId ?? null;
+
+  if (collidingEntry) {
+    id = `${baseSlug}-${shortSuffix()}`;
+    if (replacesEntryId === null) {
+      replacesEntryId = collidingEntry.id;
+    }
+  } else if (collidingOverride) {
+    id = `${baseSlug}-${shortSuffix()}`;
+  }
+
+  // Extremely unlikely suffix collision — retry a couple of times.
+  for (let i = 0; i < 3 && (await getOperatorOverride(docId, id)); i++) {
+    id = `${baseSlug}-${shortSuffix()}`;
+  }
+  if (await getOperatorOverride(docId, id)) {
     throw new StorageError(`Operator override already exists in ${docId}: ${id}`, "already_exists");
   }
 
@@ -102,6 +136,7 @@ export async function createOperatorOverride(
     ...validatedDraft,
     id,
     docId,
+    replacesEntryId,
     createdAt: new Date().toISOString(),
   });
 
@@ -154,6 +189,14 @@ export async function deleteOperatorOverride(docId: string, id: string): Promise
 // handbook seed ids but kept local here — the handbook adapter no
 // longer has a slugify function since entries are seeded, not
 // created at runtime.
+// Short random suffix for disambiguating override ids. 4 hex chars
+// gives 65k combinations — plenty for the collision space we expect.
+function shortSuffix(): string {
+  return Math.floor(Math.random() * 0x10000)
+    .toString(16)
+    .padStart(4, "0");
+}
+
 function slugify(title: string): string {
   const base = title
     .toLowerCase()

@@ -61,24 +61,31 @@ The `document` object has two layers:
   the operator's explicit, latest word. When an override directly
   addresses a question, prefer it over a seed entry.
 
-When an override has a `replaces_entry_id` pointing at a seed entry,
-that seed entry is superseded by the override. Treat the override as
-the current version and do not quote the superseded entry directly.
+When an override has `replaces_entry_id` set, it is a **correction
+(patch/diff)** on the named seed entry. The seed entry is still in
+the document — use it as the base context. The override contains the
+operator's specific changes. Apply the override on top of the seed
+entry's body:
 
-When an override shares the same `id` as a seed entry (without
-`replaces_entry_id`), the override is a **correction** to that entry —
-the operator has written a short update to fix or clarify specific
-facts. In this case:
+- Use the seed entry as the base. All facts in the seed entry still
+  apply UNLESS the override contradicts them.
+- For any fact where the override and seed entry disagree (a number,
+  a yes/no, a changed policy), the override is authoritative. Use
+  its value, not the seed's.
+- Cite BOTH ids when you use the merged content — the seed entry
+  provides context, the override provides the correction.
+- Terse overrides are common. `"yes, 5%"` on an entry that already
+  covers the topic means: answer is "yes", and if a percentage is
+  relevant, it is 5%, not whatever the seed entry said. Do not
+  ignore a terse override — it was written by the operator and is
+  the authoritative answer.
 
-- Use the seed entry as background context for topics the override
-  doesn't address.
-- Where the override and seed entry disagree on any fact, the override
-  wins — its value is the authoritative one.
-- Cite both ids (they're the same id) — the override's content takes
-  precedence but the seed entry provides supporting context.
-- A terse override like "yes, 5%" on a tuition entry means: "the
-  sibling discount is 5%, not what the seed entry says" — everything
-  else in the tuition entry still applies.
+Override ids are structurally distinct from seed entry ids (overrides
+are suffixed when the title would collide), so a citation uniquely
+identifies which source you're citing. If you write a number in your
+answer, that number must appear in the specific source you cited —
+not just anywhere in the document. Citing an override but writing a
+number from the seed entry is a contradiction.
 
 You do not need to know or reference the document's title, id, or
 version in your answer unless the parent specifically asks.

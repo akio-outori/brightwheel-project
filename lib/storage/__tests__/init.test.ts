@@ -4,12 +4,29 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 
 // Mock the storage client and minio-json helpers before importing init
+// Empty-stream mock for listObjectsV2 — the migration code path
+// iterates this to look for colliding overrides. Tests don't seed
+// any overrides, so the stream returns no objects.
+function emptyObjectStream() {
+  const handlers: Record<string, (arg?: unknown) => void> = {};
+  const stream = {
+    on(event: string, cb: (arg?: unknown) => void) {
+      handlers[event] = cb;
+      if (event === "end") queueMicrotask(() => cb());
+      return stream;
+    },
+  };
+  return stream;
+}
+
 vi.mock("../client", () => ({
   getClient: vi.fn().mockReturnValue({
     listBuckets: vi.fn().mockResolvedValue([]),
     bucketExists: vi.fn().mockResolvedValue(false),
     makeBucket: vi.fn().mockResolvedValue(undefined),
     setBucketVersioning: vi.fn().mockResolvedValue(undefined),
+    listObjectsV2: vi.fn().mockImplementation(emptyObjectStream),
+    removeObject: vi.fn().mockResolvedValue(undefined),
   }),
   HANDBOOK_BUCKET: () => "handbook-test",
   EVENTS_BUCKET: () => "events-test",
